@@ -2,4 +2,4 @@
 !/.gitignore
 !/levels_json/
 !/*.go
-!/<README.md
+!/README.md
