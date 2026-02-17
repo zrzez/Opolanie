@@ -809,7 +809,7 @@ func drawManaBar(screenX, screenY int32, unit *unit) {
 	rl.DrawRectangle(barX, newY, barW, fillH, rl.Blue)
 }
 
-func drawMilkBar(screenY, screenX int32, unit *unit) {
+func drawMilkBar(screenX, screenY int32, unit *unit) {
 	barW, barH := int32(1), int32(tileHeight)
 	barX := screenX + int32(tileWidth) + 1
 	barY := screenY

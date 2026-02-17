@@ -287,7 +287,7 @@ func (u *unit) addAndMove(cmd uint16, x, y uint8, id uint, bs *battleState, logM
 	u.move(bs)
 }
 
-// Transferuje mleko do gracza
+// Przekazuje mleko do gracza.
 func (u *unit) performMilking(bs *battleState) uint16 {
 	if u.Udder <= 0 {
 		return 0
@@ -298,22 +298,16 @@ func (u *unit) performMilking(bs *battleState) uint16 {
 		ownerState = bs.AIEnemyState
 	}
 
-	// 1. Ustal porcję transferu (stała prędkość)
-	amountToTransfer := uint16(milkingSpeed)
-	if uint16(u.Udder) < amountToTransfer {
-		amountToTransfer = uint16(u.Udder)
-	}
+	// 1. Ustal porcję przekazu (stała prędkość)
+	amountToTransfer := uint16(min(u.Udder, milkingSpeed))
 
 	// 2. Sprawdź miejsce w magazynie
-	spaceInBarn := ownerState.MaxMilk - ownerState.Milk
-	if spaceInBarn <= 0 {
-		return 0
-	}
-	if amountToTransfer > spaceInBarn {
-		amountToTransfer = spaceInBarn
-	}
+	spaceInBarn := max(ownerState.MaxMilk-ownerState.Milk, 0)
 
-	// 3. Wykonaj transfer
+	// 3. Ustal ile można przenieść za jednym razem
+	amountToTransfer = min(amountToTransfer, spaceInBarn)
+
+	// 4. Wykonaj transfer
 	ownerState.Milk += amountToTransfer
 	u.Udder -= uint8(amountToTransfer)
 
