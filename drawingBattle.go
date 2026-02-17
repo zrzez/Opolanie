@@ -1446,6 +1446,9 @@ func drawEffects(bs *battleState, ps *programState) {
 }
 
 // === UI, MINIMAPA, KURSOR ===
+// @reminder: muszę się zastanowić, czy nie przenieść tego poniżej do osobnego pliku, bo
+// tutaj już jest strasznie zagracone.
+
 func drawGameCursorOnRealScreen(bs *battleState, ps *programState, scale float32) {
 	rl.HideCursor()
 
@@ -1456,7 +1459,7 @@ func drawGameCursorOnRealScreen(bs *battleState, ps *programState, scale float32
 
 	// 2. Animacja i rysowanie (to dzieje się niezależnie od tego, skąd wzięliśmy ID)
 	cursorID = animateCursorID(cursorID)
-	drawCursorSprite(ps, cursorID, realMousePos, scale)
+	drawCursorSprite(ps, cursorID, realMousePos, 3*bs.GameCamera.Zoom/scale) // bs.GameCamera.Zoom)
 }
 
 // getCursorIDFromContext - otulina
