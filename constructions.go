@@ -10,12 +10,13 @@ import (
 // constructions.go
 
 // initConstruction odpowiada tylko za techniczne utworzenie obiektu w pamięci i na planszy.
-// Nie mylić z budowaniem nowych w czasie bitwy. To służy tylko ładowaniu z mapy lub zapisu gry.
+// Nie mylić z tryBuildStructure.
 func (bld *building) initConstruction(x, y uint8, buildingType buildingType, owner uint8, bs *battleState) {
 	// 1. Sprawdzamy, czy dany rodzaj budynku był określony wcześniej
 	stats, ok := buildingDefs[buildingType]
 	if !ok {
 		log.Printf("BŁĄD KRYTYCZNY: Brak określenia dla budynku rodzaju %d!", bld.Type)
+
 		return
 	}
 
@@ -51,21 +52,6 @@ func (bld *building) initConstruction(x, y uint8, buildingType buildingType, own
 			}
 		}
 	}
-}
-
-// setAsFinished ustawia budynek jako gotowy (przy wczytywaniu gry, czy nowej bitwy)
-// currentHP = -1 dla MaxHP (nowa mapa) lub inna, aby odtworzyć konkretną wartość HP
-func (bld *building) setAsFinished(bs *battleState, currentHP uint16) {
-	bld.IsUnderConstruction = false
-
-	// Wczytanie obecnego stanu z zapisu gry
-	if currentHP > 0 {
-		bld.HP = min(currentHP, bld.MaxHP)
-	} else {
-		bld.HP = bld.MaxHP
-	}
-
-	bld.applyFinishedGraphics(bs)
 }
 
 // startConstruction odpowiada za postawienie pola budowy
@@ -257,41 +243,58 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 	log.Printf("BUDOWA: Rozpoczęto %s (ID: %d) na (%d,%d).", stats.Name, newBld.ID, tileX, tileY)
 }
 
+func isWithinBoard(constructionX, constructionY uint8, bs *battleState) bool {
+	// @reminder: usunąłem sprawdzenie constructionX i constructionY < 0
+	if constructionX >= boardMaxX || constructionY >= boardMaxY {
+		bs.CurrentMessage.Text = "Poza mapą!"
+		bs.CurrentMessage.Duration = 40
+
+		return false
+	}
+
+	return true
+}
+
+func isOccupied(constructionX, constructionY uint8, bs *battleState) bool {
+	tile := &bs.Board.Tiles[constructionX][constructionY]
+
+	// Czy coś tu stoi?
+	if tile.Unit != nil || tile.Building != nil {
+		bs.CurrentMessage.Text = "Miejsce zajęte!"
+		bs.CurrentMessage.Duration = 40
+
+		return false
+	}
+
+	// Czy teren nadaje się pod budowę?
+	if isObstacle(tile.TextureID) {
+		bs.CurrentMessage.Text = "Nie można na tym!"
+		bs.CurrentMessage.Duration = 40
+
+		return false
+	}
+
+	return true
+}
+
 // isValidConstructionSite sprawdza wszelkie warunki, które należy spełnić, aby można było zasadzić budowlę.
 func isValidConstructionSite(tileX, tileY, width, height uint8, bs *battleState) bool {
 	for dx := range width {
 		for dy := range height {
-			// Po prostu dodajemy offset do kursora. Czysto i przyjemnie.
-			cx, cy := tileX+dx, tileY+dy
+			// Dodajemy przesunięcie do kursora.
+			constructionX, constructionY := tileX+dx, tileY+dy
 
-			// 1. Poza mapą?
-			if cx < 0 || cx >= boardMaxX || cy < 0 || cy >= boardMaxY {
-				bs.CurrentMessage.Text = "Poza mapą!"
-				bs.CurrentMessage.Duration = 40
+			if !isWithinBoard(constructionX, constructionY, bs) {
 				return false
 			}
 
-			tile := &bs.Board.Tiles[cx][cy]
-
-			// 2. Czy coś tu stoi?
-			if tile.Unit != nil || tile.Building != nil {
-				bs.CurrentMessage.Text = "Miejsce zajęte!"
-				bs.CurrentMessage.Duration = 40
-				return false
-			}
-
-			// 3. Czy teren nadaje się pod budowę?
-			if isObstacle(tile.TextureID) {
-				bs.CurrentMessage.Text = "Nie można na tym!"
-				bs.CurrentMessage.Duration = 40
+			if !isOccupied(constructionX, constructionY, bs) {
 				return false
 			}
 		}
 	}
-	// 4. Czy sąsiaduje z drogą
-	// Przekazujemy tileX, tileY jako lewy górny róg.
-	// Pole budowy to zawsze kwadrat.
-	if !isBorderingRoad(tileX, tileY, width, bs) {
+	// Czy sąsiaduje z drogą. Palisada nie musi!
+	if !isBorderingRoad(tileX, tileY, width, bs) && bs.PendingBuildingType != buildingPalisade {
 		return false
 	}
 
@@ -311,6 +314,8 @@ func isObstacle(texID uint16) bool {
 	case texID >= spriteTreeBurntStump00 && texID <= spriteTreeBurntStump01:
 		return true
 	case isSpecialTile(texID):
+		return true
+	case !isLandOrOther(texID):
 		return true
 	}
 
