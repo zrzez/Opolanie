@@ -1971,14 +1971,16 @@ func drawConstructionDebugBox(bs *battleState, ps *programState) {
 	tileY := uint8(worldMousePos.Y / float32(tileHeight))
 
 	drawValidationBox(tileX, tileY, bs)
-	drawValidationBox(tileX+1, tileY, bs)
-	drawValidationBox(tileX+2, tileY, bs)
-	drawValidationBox(tileX, tileY+1, bs)
-	drawValidationBox(tileX+1, tileY+1, bs)
-	drawValidationBox(tileX+2, tileY+1, bs)
-	drawValidationBox(tileX, tileY+2, bs)
-	drawValidationBox(tileX+1, tileY+2, bs)
-	drawValidationBox(tileX+2, tileY+2, bs)
+	if bs.PendingBuildingType != buildingPalisade {
+		drawValidationBox(tileX+1, tileY, bs)
+		drawValidationBox(tileX+2, tileY, bs)
+		drawValidationBox(tileX, tileY+1, bs)
+		drawValidationBox(tileX+1, tileY+1, bs)
+		drawValidationBox(tileX+2, tileY+1, bs)
+		drawValidationBox(tileX, tileY+2, bs)
+		drawValidationBox(tileX+1, tileY+2, bs)
+		drawValidationBox(tileX+2, tileY+2, bs)
+	}
 }
 
 // @todo: z jakiegoś powodu to obecnie nie działa (01.01.2026).
