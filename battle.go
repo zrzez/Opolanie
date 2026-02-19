@@ -434,11 +434,13 @@ func updateProjectiles(bs *battleState) {
 	for _, p := range bs.Projectiles {
 		if p.Exists {
 			p.updateProjectile(bs)
+
 			if p.Exists {
 				activeProjectiles = append(activeProjectiles, p)
 			}
 		}
 	}
+
 	bs.Projectiles = activeProjectiles
 }
 
@@ -464,26 +466,31 @@ func updateBuildings(bs *battleState) {
 
 				if bld.HP <= 0 {
 					bld.HP = 0
-					bld.Exists = false
-					log.Printf("building %d destroyed!", bld.ID)
 
-					switch bld.Owner {
-					case bs.HumanPlayerState.PlayerID:
-						bs.HumanPlayerState.CurrentBuildings--
-					case bs.AIEnemyState.PlayerID:
-						bs.AIEnemyState.CurrentBuildings--
-					}
+					if bld.Type != buildingPalisade {
+						bld.Exists = false
+						log.Printf("building %d destroyed!", bld.ID)
 
-					placeRuins(bs, bld)
+						switch bld.Owner {
+						case bs.HumanPlayerState.PlayerID:
+							bs.HumanPlayerState.CurrentBuildings--
+						case bs.AIEnemyState.PlayerID:
+							bs.AIEnemyState.CurrentBuildings--
+						}
 
-					for _, tile := range bld.OccupiedTiles {
-						if tile.X < boardMaxX && tile.Y < boardMaxY {
-							// Usuwamy odnośnik do budynku z kafelka
-							if bs.Board.Tiles[tile.X][tile.Y].Building == bld {
-								bs.Board.Tiles[tile.X][tile.Y].Building = nil
-								bs.Board.Tiles[tile.X][tile.Y].IsWalkable = true
+						placeRuins(bs, bld)
+
+						for _, tile := range bld.OccupiedTiles {
+							if tile.X < boardMaxX && tile.Y < boardMaxY {
+								// Usuwamy odnośnik do budynku z kafelka
+								if bs.Board.Tiles[tile.X][tile.Y].Building == bld {
+									bs.Board.Tiles[tile.X][tile.Y].Building = nil
+									bs.Board.Tiles[tile.X][tile.Y].IsWalkable = true
+								}
 							}
 						}
+					} else {
+						placeDestroyedPalisade(bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, bld, bs)
 					}
 				}
 			}
@@ -517,7 +524,7 @@ func handleLevelEvents(bs *battleState) {
 				// miejsce przemiany zamienia się w niedźwiedzia, a nie tylko AXEMAN LVL50
 				// KONIECZNIE SPRAWDŹ TO w PIERWOTNYM KODZIE I OGARNIJ O CO CHODZI!!!
 				if unit.Type == unitAxeman && unit.Experience >= 50 {
-					log.Printf("GAME: Transformacja jednostki %d!", unit.ID)
+					log.Printf("GAME: Przemiana jednostki %d!", unit.ID)
 					unit.Type = unitBear
 					// unit.SightRange = UNIT_TYPE_DATA[UNIT_BEAR][0]
 					// unit.AttackRange = UNIT_TYPE_DATA[UNIT_BEAR][1]
@@ -529,6 +536,7 @@ func handleLevelEvents(bs *battleState) {
 					if !ok {
 						panic(fmt.Sprintf("BŁĄD KRYTYCZNY: Nie udało się przemienić jednostki ID%d w UNIT_BEAR", unit.ID))
 					}
+
 					unit.SightRange = stats.SightRange
 					unit.AttackRange = stats.AttackRange
 					unit.Damage = stats.BaseDamage
@@ -536,6 +544,7 @@ func handleLevelEvents(bs *battleState) {
 					unit.MaxHP = stats.MaxHP
 					unit.MaxDelay = stats.MoveDelay
 					unit.Mana = stats.MaxMana
+
 					if unit.HP > stats.MaxHP {
 						unit.HP = stats.MaxHP
 					}
@@ -565,13 +574,17 @@ func handleLevelEvents(bs *battleState) {
 	}
 }
 
-// =======================
+func placeDestroyedPalisade(x, y uint8, bld *building, bs *battleState) {
+	tile := &bs.Board.Tiles[x][y]
+	tile.TextureID = spritePalisadeDestroyed
+	tile.IsWalkable = true
+	bld.IsUnderConstruction = true
+}
+
 func placeRuins(bs *battleState, bld *building) {
 	if len(bld.OccupiedTiles) == 0 {
 		return
 	}
-
-	const graphicsRuinsID = 257
 
 	minX, minY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
 	maxX, maxY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
@@ -598,9 +611,6 @@ func placeRuins(bs *battleState, bld *building) {
 
 	for _, pt := range bld.OccupiedTiles {
 		x, y := pt.X, pt.Y
-		if x >= boardMaxX || y >= boardMaxY {
-			continue
-		}
 
 		tile := &bs.Board.Tiles[x][y]
 
@@ -608,17 +618,12 @@ func placeRuins(bs *battleState, bld *building) {
 		tile.Building = nil
 
 		// Ustawiamy grafikę ruin
-		if bld.Type == buildingPalisade {
-			tile.TextureID = spritePalisadeDestroyed
-			tile.IsWalkable = true
-		} else {
-			dx := pt.X - minX
-			dy := pt.Y - minY
-			idx := dy*width + dx
-			tile.TextureID = graphicsRuinsID + uint16(idx)
-			// Zgliszcza uniemożliwiają ruch
-			tile.IsWalkable = false
-		}
+		dx := pt.X - minX
+		dy := pt.Y - minY
+		idx := dy*width + dx
+		tile.TextureID = spriteRuinStart + uint16(idx)
+		// Zgliszcza uniemożliwiają ruch
+		tile.IsWalkable = false
 	}
 }
 

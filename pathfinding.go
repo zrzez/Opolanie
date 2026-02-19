@@ -138,7 +138,7 @@ func isWalkable(bs *battleState, x, y uint8) bool {
 // isWalkableUnit - Sprawdza czy dana jednostka może wejść na kafelek.
 // Obsługuje wyjątek: Krowa wchodzi do swojej Obory (punkt dojenia).
 func isWalkableUnit(bs *battleState, x, y uint8, mover *unit) bool {
-	if x < 0 || x >= boardMaxX || y < 0 || y >= boardMaxY {
+	if x >= boardMaxX || y >= boardMaxY {
 		return false
 	}
 
@@ -147,9 +147,10 @@ func isWalkableUnit(bs *battleState, x, y uint8, mover *unit) bool {
 	// 1. Sprawdź czy to budynek
 	if currentTile.Building != nil {
 		// WYJĄTEK: Krowa wchodzi do swojej obory w punkt dojenia
-		if mover != nil && mover.Type == unitCow &&
+		if mover != nil && (mover.Type == unitCow &&
 			currentTile.Building.Type == buildingBarn &&
-			currentTile.Building.Owner == mover.Owner {
+			currentTile.Building.Owner == mover.Owner) ||
+			(currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction) {
 
 			mx, my, ok := calculateMilkingSpot(currentTile.Building)
 			if ok {
@@ -205,9 +206,9 @@ func isWaterOrObstacle(id uint16) bool {
 	// Zgliszcza i palisady (jeśli nie mają obiektu building)
 	// UWAGA: Palisady (building) są obsługiwane przez tile.building != nil w isWalkableUnit.
 	// Ale jeśli została sama tekstura (bez Logic building), to blokujemy.
-	if id >= spriteRuinStart && id <= spritePalisadeEnd {
-		return true
-	}
+	// if id >= spriteRuinStart && id <= spritePalisadeEnd {
+	//	return true
+	// }
 
 	return false
 }

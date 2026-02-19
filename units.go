@@ -1130,21 +1130,22 @@ func (u *unit) attack(bs *battleState) {
 		return
 	}
 
+	// Sprawdzanie przerwy
+	if u.AttackCooldown > 0 {
+		u.State = stateIdle
+		u.AnimationType = "idle"
+
+		// Obracamy jednostkę w stronę celu, żeby nie stała bokiem/tyłem
+		u.faceTarget(target)
+
+		// Ustawiamy minimalny Delay (1), aby w następnej klatce
+		// znów wejść do tej funkcji i sprawdzić, czy cooldown już minął.
+		u.Delay = 1
+
+		return
+	}
+
 	if u.canAttackTarget(target) {
-		// Sprawdzanie przerwy
-		if u.AttackCooldown > 0 {
-			u.State = stateIdle
-			u.AnimationType = "idle"
-
-			// Obracamy jednostkę w stronę celu, żeby nie stała bokiem/tyłem
-			u.faceTarget(target)
-
-			// Ustawiamy minimalny Delay (1), aby w następnej klatce
-			// znów wejść do tej funkcji i sprawdzić, czy cooldown już minął.
-			u.Delay = 1
-			return
-		}
-
 		u.performDirectAttack(target, bs)
 	} else {
 		// Jeśli cel oddalił się, gonimy go
@@ -1200,10 +1201,18 @@ func (u *unit) validateAttackTarget(
 		return nil, fmt.Errorf("atak na jednostkę sojuszniczą niedozwolony")
 	}
 
-	if target.Building != nil &&
-		target.Building.Type == buildingPalisade &&
-		!canDamagePalisades(u) {
-		return nil, fmt.Errorf("jednostka nie może niszczyć palisad")
+	if target.Building != nil {
+		if target.Building.Type == buildingPalisade && !canDamagePalisades(u) {
+			return nil, fmt.Errorf("jednostka nie może niszczyć palisad")
+		}
+
+		if target.Building.HP == 0 {
+			return nil, fmt.Errorf("budynek zburzony")
+		}
+	}
+
+	if target.Unit != nil && target.Unit.HP == 0 {
+		return nil, fmt.Errorf("cel już ubity")
 	}
 
 	return target, nil
@@ -1211,6 +1220,7 @@ func (u *unit) validateAttackTarget(
 
 func (u *unit) canAttackTarget(target *combatTarget) bool {
 	distance := u.calculateDistanceToTarget(target)
+
 	return distance <= u.AttackRange
 }
 
@@ -1312,7 +1322,18 @@ func (u *unit) performDirectAttack(target *combatTarget, bs *battleState) {
 }
 
 func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
-	if (targetUnit != nil && !targetUnit.Exists) || (targetBld != nil && !targetBld.Exists) {
+	// Sprawdź czy cel przestał istnieć LUB ma 0 HP
+	var targetDestroyed bool
+
+	if targetUnit != nil && (!targetUnit.Exists || targetUnit.HP == 0) {
+		targetDestroyed = true
+	}
+
+	if targetBld != nil && (!targetBld.Exists || targetBld.HP == 0) {
+		targetDestroyed = true
+	}
+
+	if targetDestroyed {
 		u.setIdleWithReason("cel zniszczony")
 	} else {
 		u.State = stateAttacking
@@ -1321,30 +1342,23 @@ func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
 	}
 }
 
-func (u *unit) transitionToMovementForAttack(effectiveMoveTargetX, effectiveMoveTargetY uint8) {
-	u.State = stateMoving
-	u.AnimationType = "walk"
-	u.Command = cmdAttack
-	u.TargetX = effectiveMoveTargetX
-	u.TargetY = effectiveMoveTargetY
-	u.clearPath()
-}
-
 func (u *unit) gainExperience(targetUnit *unit, targetBuilding *building, bs *battleState) {
 	if u.Experience >= 235 {
 		return
 	}
+
 	isEnemyUnit := false
 	isEnemyBuilding := false
 
 	if targetUnit != nil && targetUnit.Owner != u.Owner {
 		isEnemyUnit = true
 	}
+
 	if targetBuilding != nil && targetBuilding.Owner != u.Owner {
 		isEnemyBuilding = true
 	}
 
-	canGainExp := false
+	var canGainExp bool
 
 	if u.Owner == bs.PlayerID {
 		canGainExp = isEnemyUnit

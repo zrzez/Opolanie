@@ -471,7 +471,7 @@ func drawBuildingInterface(bld *building, bs *battleState) {
 	}
 
 	// Rysowanie paska życia
-	if bld.HP < bld.MaxHP || isBuildingSelected {
+	if (bld.HP < bld.MaxHP || isBuildingSelected) && bld.HP != 0 {
 		drawBuildingHealthBar(bld, bounds)
 	}
 }
