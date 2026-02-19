@@ -7,21 +7,52 @@ package main
 // ============================================================================
 
 // Funkcja do łączenia dróg/palisad
-func joinRoadsPalisade(x, y uint8, baseType uint16, bs *battleState) {
-	if x < 0 || x >= boardMaxX || y < 0 || y >= boardMaxY {
+func joinRoadsPalisade(x, y uint8, bld *building, bs *battleState) {
+	if x >= boardMaxX || y >= boardMaxY {
 		return
 	}
 
-	tile := &bs.Board.Tiles[x][y]
+	// tile := &bs.Board.Tiles[x][y]
 
-	switch baseType {
-	case spriteRoadStart: // droga
-		if tile.TextureID >= spriteRoadStart && tile.TextureID <= spriteRoadEnd {
-			tile.TextureID = spriteRoadStart + 4
+	switch bld.Type {
+	// case buildingRoad: // droga
+	// 	if tile.TextureID >= spriteRoadStart && tile.TextureID <= spriteRoadEnd {
+	// 		tile.TextureID = spriteRoadStart + 4
+	// 	}
+	case buildingPalisade:
+		applyPalisadeProcessing(x, y, bs.Board)
+		updateAdjacentPalisades(x, y, bs.Board)
+	default:
+		return
+	}
+}
+
+func updateAdjacentPalisades(x, y uint8, board *boardData) {
+	// Góra
+	if y > 0 && isPalisade(board.Tiles[x][y-1].TextureID) && board.Tiles[x][y-1].Building != nil {
+		if !board.Tiles[x][y-1].Building.IsUnderConstruction {
+			applyPalisadeProcessing(x, y-1, board)
 		}
-	case spritePalisadeStart: // palisada
-		if tile.TextureID >= spritePalisadeStart && tile.TextureID <= spritePalisadeEnd {
-			tile.TextureID = spritePalisadeStart
+	}
+
+	// Prawo
+	if x < boardMaxX-1 && isPalisade(board.Tiles[x+1][y].TextureID) && board.Tiles[x+1][y].Building != nil {
+		if !board.Tiles[x+1][y].Building.IsUnderConstruction {
+			applyPalisadeProcessing(x+1, y, board)
+		}
+	}
+
+	// Dół
+	if y < boardMaxY-1 && isPalisade(board.Tiles[x][y+1].TextureID) && board.Tiles[x][y+1].Building != nil {
+		if !board.Tiles[x][y+1].Building.IsUnderConstruction {
+			applyPalisadeProcessing(x, y-1, board)
+		}
+	}
+
+	// Lewo
+	if x > 0 && isPalisade(board.Tiles[x-1][y].TextureID) && board.Tiles[x-1][y].Building != nil {
+		if !board.Tiles[x-1][y].Building.IsUnderConstruction {
+			applyPalisadeProcessing(x-1, y, board)
 		}
 	}
 }
@@ -251,7 +282,7 @@ func healingShrine(bs *battleState) {
 	for _, point := range bs.HealingShrines {
 		// Wybieramy kapliczkę
 		tile := &bs.Board.Tiles[point.X][point.Y]
-		// Sprawdzamy, czy w kapliczce ktoś jest
+		// Sprawdzamy, czy w kapliczce ktoś jest
 		if tile.Unit != nil {
 			// bierzemy znalezioną jednostkę
 			u := tile.Unit

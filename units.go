@@ -1228,6 +1228,7 @@ func (u *unit) performDirectAttack(target *combatTarget, bs *battleState) {
 		// === DYSTANSOWE (RANGED) ===
 
 		var missileType string
+
 		switch u.Type {
 		case unitMage:
 			missileType = missileGhost
@@ -1242,7 +1243,9 @@ func (u *unit) performDirectAttack(target *combatTarget, bs *battleState) {
 		default:
 			missileType = missileArrow
 		}
+
 		var ok bool
+
 		targetX, targetY := uint8(0), uint8(0)
 
 		if target.Unit != nil {

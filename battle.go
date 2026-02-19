@@ -580,21 +580,25 @@ func placeRuins(bs *battleState, bld *building) {
 		if pt.X < minX {
 			minX = pt.X
 		}
+
 		if pt.Y < minY {
 			minY = pt.Y
 		}
+
 		if pt.X > maxX {
 			maxX = pt.X
 		}
+
 		if pt.Y > maxY {
 			maxY = pt.Y
 		}
 	}
+
 	width := maxX - minX + 1
 
 	for _, pt := range bld.OccupiedTiles {
 		x, y := pt.X, pt.Y
-		if x < 0 || x >= boardMaxX || y < 0 || y >= boardMaxY {
+		if x >= boardMaxX || y >= boardMaxY {
 			continue
 		}
 
@@ -615,7 +619,6 @@ func placeRuins(bs *battleState, bld *building) {
 			// Zgliszcza uniemożliwiają ruch
 			tile.IsWalkable = false
 		}
-
 	}
 }
 
@@ -629,7 +632,7 @@ func cleanupDeadUnits(bs *battleState) {
 		return
 	}
 
-	log.Println("INFO: Rozpoczynam czyszczenie pamięci (GC jednostek)...")
+	log.Println("INFO: Rozpoczynam czyszczenie pamięci...")
 
 	newUnitsList := make([]*unit, 0, len(bs.Units))
 	for _, u := range bs.Units {

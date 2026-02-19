@@ -97,15 +97,19 @@ func isPath(tileID uint16) bool {
 
 func applyRoadProcessing(x, y uint8, board *boardData) {
 	var mask uint8 = 0
+
 	if y > 0 && isRoad(board.Tiles[x][y-1].TextureID) {
 		mask |= 1
 	}
+
 	if x < boardMaxX-1 && isRoad(board.Tiles[x+1][y].TextureID) {
 		mask |= 2
 	}
+
 	if y < boardMaxY-1 && isRoad(board.Tiles[x][y+1].TextureID) {
 		mask |= 4
 	}
+
 	if x > 0 && isRoad(board.Tiles[x-1][y].TextureID) {
 		mask |= 8
 	}
@@ -148,21 +152,24 @@ func applyRoadProcessing(x, y uint8, board *boardData) {
 
 func applyPalisadeProcessing(x, y uint8, board *boardData) {
 	var mask uint8 = 0
+
 	if y > 0 && isPalisade(board.Tiles[x][y-1].TextureID) {
 		mask |= 1
 	}
+
 	if x < boardMaxX-1 && isPalisade(board.Tiles[x+1][y].TextureID) {
 		mask |= 2
 	}
+
 	if y < boardMaxY-1 && isPalisade(board.Tiles[x][y+1].TextureID) {
 		mask |= 4
 	}
+
 	if x > 0 && isPalisade(board.Tiles[x-1][y].TextureID) {
 		mask |= 8
 	}
 
 	// Mapujemy maskę na konkretne ID z assets_ids.go lub offset
-	// SPRITE_PALISADE_START = 266
 	newID := spritePalisadeStart
 
 	switch mask {
@@ -178,7 +185,6 @@ func applyPalisadeProcessing(x, y uint8, board *boardData) {
 		newID = spritePalisadeStart + 3 // 269
 	case 9:
 		newID = spritePalisadeStart + 4 // 270
-		// case 10 obsłużone w h
 	case 11:
 		newID = spritePalisadeStart + 6 // 272
 	case 12:
@@ -190,12 +196,14 @@ func applyPalisadeProcessing(x, y uint8, board *boardData) {
 	case 15:
 		newID = spritePalisadeStart + 10 // 276
 	}
+
 	board.Tiles[x][y].TextureID = newID
 }
 
 func processMapTiles(bs *battleState) {
 	// Tworzymy snapshot TextureID, aby uniknąć efektów ubocznych podczas iteracji
 	var snapshot [boardMaxX][boardMaxY]uint16
+
 	for x := uint8(0); x < boardMaxX; x++ {
 		for y := uint8(0); y < boardMaxY; y++ {
 			snapshot[x][y] = bs.Board.Tiles[x][y].TextureID
@@ -206,22 +214,22 @@ func processMapTiles(bs *battleState) {
 		for x := uint8(0); x < boardMaxX; x++ {
 			id := bs.Board.Tiles[x][y].TextureID
 
-			if isRoad(id) {
+			switch {
+			case isRoad(id):
 				applyRoadProcessing(x, y, bs.Board)
-			} else if isPalisade(id) {
+			case isPalisade(id):
 				applyPalisadeProcessing(x, y, bs.Board)
-			} else if isWaterTileOnly(id) {
+			case isWaterTileOnly(id):
 				applyWaterProcessing(x, y, bs.Board, snapshot)
-			} else if isHealingShire(id) {
+			case isHealingShire(id):
 				bs.HealingShrines = append(bs.HealingShrines, point{X: x, Y: y})
 			}
 		}
 	}
-	// @todo: sprawdź, czy to odpowiednie miejsce na ogarnięcie trawy
+
 	makeGrassVariations(bs)
 }
 
-// @todo: ogarnij, czy po ostatnich zmianach trzeba/ można coś poprawić
 func applyWaterProcessing(x, y uint8, board *boardData, snapshot [boardMaxX][boardMaxY]uint16) {
 	currentTile := board.Tiles[x][y].TextureID
 	if !isWaterTileOnly(currentTile) {
@@ -305,19 +313,19 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 		return
 	}
 
-	// 2. Pobranie definicji z BAZY (Szybki lookup)
+	// 2. Pobranie definicji
 	def := spriteRegistry[id]
 	if def.w == 0 {
 		return // Pusty wpis (np. ID 0)
 	}
 
-	// 3. Pobranie Tekstury z VRAM
+	// 3. Pobranie Tekstury
 	tex := assets.getAtlas(def.atlasID, ownerColor)
 	if tex.ID == 0 {
 		return // Zabezpieczenie przed brakiem atlasu
 	}
 
-	// 4. Obliczenie Prostokąta Źródłowego (Source)
+	// 4. Obliczenie Prostokąta Źródłowego
 	srcW := float32(def.w)
 
 	if def.flipX {
@@ -326,8 +334,7 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 
 	srcRect := rl.NewRectangle(float32(def.x), float32(def.y), srcW, float32(def.h))
 
-	// 5. Obliczenie Pozycji Docelowej (Dest) z uwzględnieniem Offsetów
-	// Offsety są kluczowe dla jednostek (np. miecznik przy ataku jest szerszy)
+	// 5. Obliczenie Pozycji Docelowej z uwzględnieniem offsetów
 	finalX := destX + float32(def.offX)
 	finalY := destY + float32(def.offY)
 
@@ -360,13 +367,12 @@ func drawSpriteEx(id uint16, destX, destY float32, ownerColor uint8, tint rl.Col
 
 	srcRect := rl.NewRectangle(float32(def.x), float32(def.y), srcW, float32(def.h))
 
-	// Aplikujemy offsety z SpriteDef (ważne dla jednostek melee)
+	// Stosujemy offsety z SpriteDef
 	finalX := destX + float32(def.offX)
 	finalY := destY + float32(def.offY)
 
 	destRect := rl.NewRectangle(finalX, finalY, float32(def.w), float32(def.h))
 
-	// Używamy przekazanego koloru 'tint' zamiast sztywnego rl.White
 	rl.DrawTexturePro(tex, srcRect, destRect, rl.NewVector2(0, 0), 0, tint)
 }
 
@@ -513,115 +519,6 @@ func calculateLegacyPhase(u *unit) uint8 {
 	return phase
 }
 
-func calculateUnitSourceRec(u *unit, tex rl.Texture2D, bs *battleState) (rl.Rectangle, float32, float32, bool) {
-	frameW := float32(tex.Width) / 6.0
-	frameH := float32(tex.Height) / 5.0
-
-	row, col, flipX := calculateUnitAtlasCoords(u, bs)
-
-	sourceRec := rl.NewRectangle(
-		float32(col)*frameW,
-		float32(row)*frameH,
-		frameW,
-		frameH,
-	)
-
-	return sourceRec, frameW, frameH, flipX
-}
-
-func calculateUnitAtlasCoords(u *unit, bs *battleState) (row uint8, col uint8, flipX bool) {
-	phase := calculateLegacyPhase(u)
-	row = phase
-
-	if row > 4 {
-		if row%2 == 0 {
-			row = 4
-		} else {
-			row = 3
-		}
-	}
-
-	if u.AnimationType == "idle" {
-		row = 0
-	}
-
-	dx, dy := getRenderDirection(u, bs)
-	col, flipX = getDirectionColumn(dx, dy)
-
-	return row, col, flipX
-}
-
-func calculateUnitDestRect(u *unit, frameW, frameH float32, bs *battleState) rl.Rectangle {
-	tileX := float32(u.X * tileWidth)
-	tileY := float32(u.Y * tileHeight)
-
-	idx := getLegacyUnitIndex(u.Type)
-	delayIndex := u.Delay
-	if delayIndex < 0 {
-		delayIndex = 0
-	}
-	if delayIndex > 16 {
-		delayIndex = 16
-	}
-
-	shiftX := float32(legacyShiftX[idx][delayIndex])
-	shiftY := float32(legacyShiftY[idx][delayIndex])
-
-	dx, dy := getRenderDirection(u, bs)
-	if dx == 0 && dy == 0 {
-		dy = 1
-	}
-
-	drawX := tileX + (float32(tileWidth)-frameW)/2.0
-	drawY := tileY + float32(tileHeight) - frameH
-
-	isMeleeUnit := u.Type == unitAxeman || u.Type == unitSwordsman ||
-		u.Type == unitCommander || u.Type == unitBear ||
-		u.Type == unitUnknown
-
-	if isMeleeUnit {
-		drawY += 7.0
-
-		if dx > 0 {
-			drawX -= 3.0
-		} else {
-			drawX += 3.0
-		}
-	}
-
-	if u.State == stateMoving {
-		if dx > 0 {
-			drawX -= shiftX
-		} else if dx < 0 {
-			drawX += shiftX
-		}
-
-		if dy > 0 {
-			drawY -= shiftY
-		} else if dy < 0 {
-			drawY += shiftY
-		}
-	}
-
-	phase := calculateLegacyPhase(u)
-
-	if u.AnimationType == "fight" && isMeleeUnit && phase > 2 {
-		if dy > 0 {
-			drawY += 7.0
-		} else if dy < 0 {
-			drawY -= 10.0
-		}
-
-		if dx > 0 {
-			drawX += 12.0
-		} else if dx < 0 {
-			drawX -= 12.0
-		}
-	}
-
-	return rl.NewRectangle(drawX, drawY, frameW, frameH)
-}
-
 func getRenderDirection(u *unit, bs *battleState) (int, int) {
 	if u.AnimationType == "fight" {
 		var targetX, targetY uint8
@@ -743,45 +640,6 @@ func getRenderDirection(u *unit, bs *battleState) (int, int) {
 //
 //	rl.DrawTexturePro(tex, sourceRec, rl.NewRectangle(drawX, drawY, frameW, frameH), rl.NewVector2(0, 0), 0, rl.White)
 //}
-
-func getDirectionColumn(dx, dy int) (uint8, bool) {
-	// flipX określa, czy obracamy duszka (np. mamy grafikę dla "prawo", a idziemy "w lewo")
-	flipX := false
-	col := uint8(0) // Domyślna kolumna (np. dół lub góra)
-
-	// Logika dla dx (Poziom)
-	if dx < 0 {
-		flipX = true // Idziemy w lewo -> obróć grafikę
-	}
-
-	// Poniżej przykładowe mapowanie dla atlasu 5-kolumnowego (tylko jedna strona + środek):
-	// Układ np.: 0:Góra, 1:Góra-Prawo, 2:Prawo, 3:Dół-Prawo, 4:Dół
-	// Dzięki flipX, te same kolumny obsłużą lewą stronę.
-
-	if dy < 0 { // Kierunek: GÓRA (Up)
-		if dx == 0 {
-			col = 0 // Czysta góra (N)
-		} else {
-			col = 1 // Skos góra (NE / NW)
-		}
-	} else if dy > 0 { // Kierunek: DÓŁ (Down)
-		if dx == 0 {
-			col = 4 // Czysty dół (S)
-		} else {
-			col = 3 // Skos dół (SE / SW)
-		}
-	} else { // dy == 0, Kierunek: POZIOM (Side)
-		if dx != 0 {
-			col = 2 // Czysty bok (E / W)
-		} else {
-			// dx == 0 && dy == 0 -> Stoi w miejscu
-			// Możesz tu zwrócić domyślny kierunek (np. dół)
-			col = 4
-		}
-	}
-
-	return col, flipX
-}
 
 // @todo: być może warto połączyć logikę rysowania paska HP budynków i jednostek?
 func drawUnitHealthBar(screenX, screenY int32, unit *unit) {
@@ -1459,7 +1317,7 @@ func drawGameCursorOnRealScreen(bs *battleState, ps *programState, scale float32
 
 	// 2. Animacja i rysowanie (to dzieje się niezależnie od tego, skąd wzięliśmy ID)
 	cursorID = animateCursorID(cursorID)
-	drawCursorSprite(ps, cursorID, realMousePos, 3*bs.GameCamera.Zoom/scale) // bs.GameCamera.Zoom)
+	drawCursorSprite(ps, cursorID, realMousePos, 3*bs.GameCamera.Zoom/scale)
 }
 
 // getCursorIDFromContext - otulina
@@ -1479,18 +1337,17 @@ func getCursorIDFromContext(bs *battleState, ps *programState, realMousePos rl.V
 
 // determineCursorState - powinno się wypierdzielić to do osobnego pliku, bo to logika, a nie rysowanie.
 func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, viewH float32) uint16 {
-	// A. NAJPIERW: Sprawdzamy "Scroll w prawo" na samej krawędzi okna (za UI)
+	// A. Sprawdzamy "Scroll w prawo" na samej krawędzi okna
 	if mousePos.X > totalW-scrollZoneXThreshold {
-		return spriteCursorArrowRight // Prawo (Strzałka)
+		return spriteCursorArrowRight
 	}
 
-	// B. POTEM: Sprawdzamy czy mysz jest nad UI
-	// Jeśli nie jest na samym skraju ekranu (powyższy if), a jest za linią widoku gry → to jest na UI
+	// B. Sprawdzamy czy mysz jest nad UI
 	if mousePos.X >= viewW {
-		return spriteCursorDefaultBig // Kursor systemowy (nad panelem)
+		return spriteCursorDefaultBig
 	}
 
-	// C. POZOSTAŁE STREFY PRZEWIJANIA (w obszarze gry)
+	// C. Pozostałe przewijanie
 	if mousePos.X < scrollZoneXThreshold {
 		return spriteCursorArrowLeft // Lewo
 	}
@@ -1498,20 +1355,18 @@ func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, v
 	if mousePos.Y < scrollZoneYThreshold {
 		return spriteCursorArrowUp // Góra
 	}
-	// Naprawiony dół (względem dynamicznej wysokości)
+
 	if mousePos.Y > viewH-scrollZoneYThreshold {
 		return spriteCursorArrowDown // Dół
 	}
 
-	// D. LOGIKA ŚWIATA GRY (Kafelki)
-	// Musimy przeliczyć pozycję myszy na świat gry używając kamery
+	// D. Musimy przeliczyć pozycję myszy na świat gry używając kamery
 	worldMousePos := rl.GetScreenToWorld2D(mousePos, bs.GameCamera)
 	tileX := uint8(worldMousePos.X / float32(tileWidth))
 	tileY := uint8(worldMousePos.Y / float32(tileHeight))
 
-	// Sprawdzenie granic mapy
 	if tileX < 0 || tileX >= boardMaxX || tileY < 0 || tileY >= boardMaxY {
-		return spriteCursorStop // "Zakaz wjazdu"
+		return spriteCursorStop
 	}
 
 	tile := &bs.Board.Tiles[tileX][tileY]
@@ -1531,7 +1386,6 @@ func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, v
 		(targetBuilding.Type == buildingPalisade || targetBuilding.Owner == bs.PlayerID)
 
 	if hasSelectedOwnUnit {
-		// --- LOGIKA DLA ZAZNACZONEJ WŁASNEJ JEDNOSTKI ---
 		// 0. Chcemy naprawić budynek
 		if bs.MouseCommandMode == cmdRepairStructure {
 			if canBeRepaired {
@@ -1546,38 +1400,37 @@ func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, v
 			if targetBuilding != nil && targetBuilding.Type == buildingPalisade {
 				selectedUnit, ok := getUnitByID(bs.CurrentSelection.UnitID, bs)
 				if ok && !canDamagePalisades(selectedUnit) {
-					return spriteCursorStop // Nie można atakować palisady tym typem jednostki
+					return spriteCursorStop
 				}
 			}
 
-			return spriteCursorCrossRed // Można zaatakować
+			return spriteCursorCrossRed
 		}
 
 		// 2. Sojusznik (lub my sami)
 		if targetOwner == int(bs.PlayerID) {
-			return spriteCursorFrameWhite // Ramka wyboru (Select) 13 @todo: ogarnij białą ramkę, była rysowana
+			return spriteCursorFrameWhite
 		}
 
 		// 3. Puste pole / Teren
 		if targetOwner == -1 {
 			if !tile.IsWalkable {
-				return spriteCursorStop // Przeszkoda (x)
+				return spriteCursorStop
 			}
 
-			return spriteCursorCrossWhite // Ruch
+			return spriteCursorCrossWhite
 		}
 	} else {
-		// --- LOGIKA BEZ ZAZNACZENIA (TRYB INFORMACYJNY) ---
 		if targetOwner != -1 && targetOwner != int(bs.PlayerID) {
-			return spriteCursorFrameRed // Wróg (czerwone nawiasy)
+			return spriteCursorFrameRed
 		}
 
 		if targetOwner == int(bs.PlayerID) {
-			return spriteCursorFrameWhite // Ramka wyboru (Select) 13 @todo: ogarnij białą ramkę, była rysowana
+			return spriteCursorFrameWhite
 		}
 	}
 
-	return spriteCursorDefaultBig // Domyślny
+	return spriteCursorDefaultBig
 }
 
 func animateCursorID(cursorID uint16) uint16 {
@@ -1971,6 +1824,7 @@ func drawConstructionDebugBox(bs *battleState, ps *programState) {
 	tileY := uint8(worldMousePos.Y / float32(tileHeight))
 
 	drawValidationBox(tileX, tileY, bs)
+
 	if bs.PendingBuildingType != buildingPalisade {
 		drawValidationBox(tileX+1, tileY, bs)
 		drawValidationBox(tileX+2, tileY, bs)
@@ -1983,8 +1837,6 @@ func drawConstructionDebugBox(bs *battleState, ps *programState) {
 	}
 }
 
-// @todo: z jakiegoś powodu to obecnie nie działa (01.01.2026).
-// BO DRAWCONSTRUCTIONDEBUGBOX NIE JEST UŻYWANA, GENIUSZU - 06.01.2026
 func drawValidationBox(tileX, tileY uint8, bs *battleState) {
 	// Walidacja
 	//	isValid := isValidConstructionSite(tileX, tileY, stats.Width, stats.Height, bs)
