@@ -35,17 +35,17 @@ func updateAdjacentPalisades(x, y uint8, board *boardData) {
 		}
 	}
 
+	// Dół
+	if y < boardMaxY-1 && isPalisade(board.Tiles[x][y+1].TextureID) && board.Tiles[x][y+1].Building != nil {
+		if !board.Tiles[x][y+1].Building.IsUnderConstruction {
+			applyPalisadeProcessing(x, y+1, board)
+		}
+	}
+
 	// Prawo
 	if x < boardMaxX-1 && isPalisade(board.Tiles[x+1][y].TextureID) && board.Tiles[x+1][y].Building != nil {
 		if !board.Tiles[x+1][y].Building.IsUnderConstruction {
 			applyPalisadeProcessing(x+1, y, board)
-		}
-	}
-
-	// Dół
-	if y < boardMaxY-1 && isPalisade(board.Tiles[x][y+1].TextureID) && board.Tiles[x][y+1].Building != nil {
-		if !board.Tiles[x][y+1].Building.IsUnderConstruction {
-			applyPalisadeProcessing(x, y-1, board)
 		}
 	}
 
