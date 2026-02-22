@@ -44,6 +44,7 @@ func initBoard(bs *battleState) {
 	}
 
 	bs.NextUniqueObjectID = 1
+
 	log.Println("INFO: Zaczyn planszy skończony.")
 }
 
@@ -198,7 +199,7 @@ func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bs *battleState
 			// 3. Przypisanie grafiki
 			tile.TextureID = graphicID
 
-			// 4. Delegacja logiki (Czystość!)
+			// 4. Przetworzenie
 			configureTile(tile, graphicID)
 			l.spawnPalisade(tX, tY, graphicID, bs)
 		}
@@ -212,6 +213,7 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bs *b
 
 	for _, data := range buildingsData {
 		var ownerID uint8
+
 		switch data.Owner {
 		case "ENEMY":
 			ownerID = bs.AIPlayerID
@@ -230,6 +232,7 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bs *b
 		stats, ok := buildingDefs[buildingType]
 		if !ok {
 			log.Printf("BŁĄD: Brak definicji statystyk dla budynku typu %d", buildingType)
+
 			continue
 		}
 
@@ -337,6 +340,7 @@ func (l *jsonLevelLoader) loadJSONLevel(levelNum uint8, bs *battleState) error {
 
 	log.Printf("Załadowano poziom: %s", jsonLevel.Metadata.Name)
 	l.applyJSONLevel(&jsonLevel, bs)
+
 	return nil
 }
 

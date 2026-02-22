@@ -149,8 +149,6 @@ func (bld *building) completeConstruction(bs *battleState) {
 	log.Printf("INFO: Budynek ID %d (Typ %d) został ukończony.", bld.ID, bld.Type)
 }
 
-// applyFinishedGraphics nakłada docelową teksturę na kafelki
-// @todo: dodaj obsługę mostów!
 func (bld *building) applyFinishedGraphics(bs *battleState) {
 	switch bld.Type {
 	case buildingPalisade:
@@ -163,7 +161,7 @@ func (bld *building) applyFinishedGraphics(bs *battleState) {
 
 	case buildingBridge:
 		bs.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].IsWalkable = true
-		// bs.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteBridgeStart
+		joinBridges(bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, bs.Board)
 
 		return
 
@@ -465,9 +463,11 @@ func (bld *building) unregisterUnit(unitID uint) bool {
 		if id == unitID {
 			bld.AssignedUnits = append(bld.AssignedUnits[:i], bld.AssignedUnits[i+1:]...)
 			bld.Food = uint8(len(bld.AssignedUnits))
+
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -477,12 +477,14 @@ func (bld *building) hasSpace() bool {
 
 func (bld *building) getAssignedUnits(bs *battleState) []*unit {
 	var units []*unit
+
 	for _, unitID := range bld.AssignedUnits {
 		unit, ok := getUnitByID(unitID, bs)
 		if ok && unit.Exists {
 			units = append(units, unit)
 		}
 	}
+
 	return units
 }
 

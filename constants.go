@@ -378,7 +378,7 @@ const (
 	capacityMarginY int32 = 2
 )
 
-// Nie wiem, czy tutaj pasuje, ale niech będzie
+// Nie wiem, czy tutaj pasuje, ale niech będzie.
 var frameColor = rl.NewColor(138, 132, 129, 255)
 
 // @todo: Do zrobienia:

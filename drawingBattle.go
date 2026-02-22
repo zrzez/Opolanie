@@ -311,7 +311,7 @@ func applyWaterProcessing(x, y uint8, board *boardData, snapshot [boardMaxX][boa
 }
 
 func calculateWaterTileID(x, y uint8, board *boardData) uint16 {
-	var mask uint8 = 0
+	var mask uint8
 
 	if y > 0 && isWaterOrBridgeForMasking(board.Tiles[x][y-1].TextureID) {
 		mask |= 1
@@ -881,14 +881,7 @@ func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programStat
 				drawSprite(ps.Assets, spriteGrass00, xPos, yPos, colorNone)
 			}
 
-			if isBridge(texID) {
-				waterBaseID := spriteWaterMiddle
-				animationOffset := bs.WaterAnimationCounter * 13
-				drawSprite(ps.Assets, waterBaseID+animationOffset, xPos, yPos, colorNone)
-				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
-			}
-
-			if texID == spriteBridgeConstruction {
+			if isBridge(texID) || texID == spriteBridgeConstruction {
 				waterBaseID := calculateWaterTileID(xAxis, yAxis, bs.Board)
 
 				if waterBaseID == 999 {

@@ -133,6 +133,7 @@ func getID(name string) uint16 {
 	if name != "" {
 		log.Printf("OSTRZEŻENIE: Brak ID dla '%s'. Używam trawy.", name)
 	}
+
 	return spriteGrassStart
 }
 
