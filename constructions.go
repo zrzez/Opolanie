@@ -138,6 +138,14 @@ func (bld *building) completeConstruction(bs *battleState) {
 		bs.CurrentMessage.Duration = 60
 	}
 
+	if bld.Type == buildingBridge {
+		// wywalamy most z listy budynków?
+		// wtedy będzie tak samo jak załadowane z mapy mosty
+		bld.convertToTerrain(bs)
+
+		return
+	}
+
 	log.Printf("INFO: Budynek ID %d (Typ %d) został ukończony.", bld.ID, bld.Type)
 }
 
@@ -480,12 +488,14 @@ func (bld *building) getAssignedUnits(bs *battleState) []*unit {
 
 func (bld *building) cleanupDeadUnits(bs *battleState) {
 	var validUnits []uint
+
 	for _, unitID := range bld.AssignedUnits {
 		unit, ok := getUnitByID(unitID, bs)
 		if ok && unit.Exists {
 			validUnits = append(validUnits, unitID)
 		}
 	}
+
 	bld.AssignedUnits = validUnits
 	bld.Food = uint8(len(bld.AssignedUnits))
 }
@@ -701,16 +711,6 @@ func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8,
 	return bestX, bestY, true
 }
 
-func (bld *building) containsTile(x, y uint8) bool {
-	for _, tile := range bld.OccupiedTiles {
-		if tile.X == x && tile.Y == y {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (bld *building) isValidWalkableTile(x, y uint8, bs *battleState) bool {
 	if x < 0 || x >= boardMaxX || y < 0 || y >= boardMaxY {
 		return false
@@ -903,6 +903,27 @@ func (bld *building) increaseHPBuilding(amount uint16) {
 	if bld.HP >= bld.MaxHP {
 		bld.HP = bld.MaxHP
 	}
+}
+
+func (bld *building) convertToTerrain(bs *battleState) {
+	// 1. Rozsprzężamy kafelki i budynek
+	for _, tilePoint := range bld.OccupiedTiles {
+		// W granicach planszy
+		if tilePoint.X >= boardMaxX || tilePoint.Y >= boardMaxY {
+			continue
+		}
+
+		tile := &bs.Board.Tiles[tilePoint.X][tilePoint.Y]
+
+		tile.Building = nil
+		// @reminder: sprawdź, czy trzeba ustawić przechodniość na sztywno
+		// @reminder: sprawdź, czy trzeb zmieniać teksturę
+	}
+
+	// 2. Usuwamy z bs
+	bs.Buildings = slices.DeleteFunc(bs.Buildings, func(b *building) bool {
+		return b.ID == bld.ID
+	})
 }
 
 // getButtonCommand zastępuje przestarzałe GetProductionCommand.

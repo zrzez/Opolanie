@@ -371,7 +371,7 @@ func canDamagePalisades(unit *unit) bool {
 func (u *unit) resolveApproachPosition(targetID uint, bs *battleState) (uint8, uint8, error) {
 	targetUnit, targetBuilding := getObjectByID(targetID, bs)
 
-	if targetBuilding != nil && targetBuilding.Exists {
+	if targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge) {
 		if u.AttackRange > 1 {
 			x, y, ok := findOptimalRangedAttackTile(
 				u.X, u.Y, targetBuilding, u.AttackRange, bs,
@@ -386,6 +386,7 @@ func (u *unit) resolveApproachPosition(targetID uint, bs *battleState) (uint8, u
 		if ok {
 			return x, y, nil
 		}
+
 		return 0, 0, fmt.Errorf("cel (budynek) jest nieosiągalny")
 	}
 
@@ -541,17 +542,17 @@ func (u *unit) validateCommand(command uint16, targetID uint, bs *battleState) b
 func (u *unit) canAttack(targetID uint, bs *battleState) bool {
 	_, building := getObjectByID(targetID, bs)
 
-	if building == nil || !building.Exists {
+	if building == nil {
+		return true
+	}
+
+	if !building.Exists {
 		return true
 	}
 
 	if building.Type == buildingPalisade && !canDamagePalisades(u) {
 		log.Printf("INFO: Jednostka %d nie może atakować palisad", u.ID)
 
-		return false
-	}
-
-	if building.Type == buildingBridge {
 		return false
 	}
 
@@ -1328,8 +1329,12 @@ func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
 		targetDestroyed = true
 	}
 
-	if targetBld != nil && (!targetBld.Exists || targetBld.HP == 0) {
-		targetDestroyed = true
+	if targetBld != nil {
+		if targetBld.Type == buildingBridge {
+			targetDestroyed = false
+		} else if !targetBld.Exists || targetBld.HP == 0 {
+			targetDestroyed = true
+		}
 	}
 
 	if targetDestroyed {
@@ -1927,6 +1932,11 @@ func (u *unit) isValidMoveTarget(x, y uint8, bs *battleState) bool {
 
 func (u *unit) validateTargetExists(bs *battleState) (*combatTarget, error) {
 	targetUnit, targetBuilding := getObjectByID(u.TargetID, bs)
+
+	if targetBuilding != nil && targetBuilding.Type == buildingBridge {
+		return &combatTarget{Unit: targetUnit, Building: targetBuilding}, nil
+	}
+
 	if (targetUnit == nil || !targetUnit.Exists) && (targetBuilding == nil || !targetBuilding.Exists) {
 		return nil, fmt.Errorf("cel nie istnieje")
 	}

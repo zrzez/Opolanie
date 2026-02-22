@@ -399,5 +399,6 @@ func (l *jsonLevelLoader) initBattle(levelNumber uint8, bs *battleState) error {
 	l.validateScreenPosition(bs)
 
 	log.Println("INFO: Bitwa rozpoczęta pomyślnie.")
+
 	return nil
 }
