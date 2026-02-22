@@ -39,8 +39,8 @@ func (bld *building) initConstruction(x, y uint8, buildingType buildingType, own
 	startX := x
 	startY := y
 
-	for ox := uint8(0); ox < stats.Width; ox++ {
-		for oy := uint8(0); oy < stats.Height; oy++ {
+	for ox := range stats.Width {
+		for oy := range stats.Height {
 			px, py := startX+ox, startY+oy
 
 			if px < boardMaxX && py < boardMaxY {
@@ -73,19 +73,25 @@ func (bld *building) startConstruction(bs *battleState) {
 		// if tilePoint.X >= boardMaxX || tilePoint.Y >= boardMaxY {
 		// 	continue
 		// }
+		tile := &bs.Board.Tiles[tilePoint.X][tilePoint.Y]
 
 		row := index / int(normalBuildingSize)
 		column := index % int(normalBuildingSize)
 
-		if bld.Type != buildingPalisade {
-			bs.Board.Tiles[tilePoint.X][tilePoint.Y].TextureID = constructionTemplatePhase01[column][row]
-			bs.Board.Tiles[tilePoint.X][tilePoint.Y].IsWalkable = false
-		} else {
-			bs.Board.Tiles[tilePoint.X][tilePoint.Y].TextureID = spritePalisadeDestroyed
-			bs.Board.Tiles[tilePoint.X][tilePoint.Y].IsWalkable = true
+		switch {
+		case bld.Type != buildingPalisade && bld.Type != buildingBridge:
+			tile.TextureID = constructionTemplatePhase01[column][row]
+			// bs.Board.Tiles[tilePoint.X][tilePoint.Y].IsWalkable = false
+		case bld.Type == buildingBridge:
+			tile.TextureID = spriteBridgeConstruction
+			// bs.Board.Tiles[tilePoint.X][tilePoint.Y].IsWalkable = false
+		default:
+			tile.TextureID = spritePalisadeDestroyed
+			// bs.Board.Tiles[tilePoint.X][tilePoint.Y].IsWalkable = true
 		}
 
-		bs.Board.Tiles[tilePoint.X][tilePoint.Y].Building = bld
+		tile.Building = bld
+		tile.IsWalkable = tile.TextureID == spritePalisadeDestroyed
 	}
 }
 
@@ -96,16 +102,7 @@ func (bld *building) applyWork(amount uint16, bs *battleState) bool {
 
 	// Budowa
 	if bld.IsUnderConstruction {
-
-		var hpGain uint16
-
-		if bld.Owner == bs.HumanPlayerState.PlayerID {
-			hpGain = repairAmountPlayer
-		} else {
-			hpGain = repairAmountAI
-		}
-
-		bld.increaseHPBuilding(hpGain)
+		bld.increaseHPBuilding(amount)
 
 		// Zaawansowana budowa wymaga innej tekstury
 		if bld.HP >= bld.MaxHP/2 {
@@ -157,6 +154,9 @@ func (bld *building) applyFinishedGraphics(bs *battleState) {
 		return
 
 	case buildingBridge:
+		bs.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].IsWalkable = true
+		// bs.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteBridgeStart
+
 		return
 
 	default:
@@ -209,11 +209,15 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 		return
 	}
 
-	if bs.HumanPlayerState.CurrentBuildings >= maxBuildingsPerPlayer {
-		bs.CurrentMessage.Text = "Limit budynków!"
-		bs.CurrentMessage.Duration = 60
+	// @reminder: mosty i palisady nie powinny być ograniczane przez górną granicę budowli
+	if bs.PendingBuildingType != buildingPalisade && bs.PendingBuildingType != buildingBridge {
+		// @reminder: nie sprawdza, czy SI może postawić budynek!
+		if bs.HumanPlayerState.CurrentBuildings >= maxBuildingsPerPlayer {
+			bs.CurrentMessage.Text = "Limit budynków!"
+			bs.CurrentMessage.Duration = 60
 
-		return
+			return
+		}
 	}
 
 	if bs.HumanPlayerState.Milk < stats.Cost {
@@ -223,15 +227,23 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 		return
 	}
 
-	// Walidacja terenu (Teraz tileX, tileY to lewy górny róg)
-	if !isValidConstructionSite(tileX, tileY, stats.Width, stats.Height, bs) {
-		return
+	switch bs.PendingBuildingType {
+	// @reminder: dodaj tutaj drogę
+	case buildingBridge:
+		if !isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID) {
+			return
+		}
+	default:
+		// Walidacja terenu (Teraz tileX, tileY to lewy górny róg)
+		if !isValidConstructionSite(tileX, tileY, stats.Width, stats.Height, bs) {
+			return
+		}
 	}
 
 	// === DECYZJA POZYTYWNA ===
 	bs.HumanPlayerState.Milk -= stats.Cost
 
-	if bs.PendingBuildingType != buildingPalisade {
+	if bs.PendingBuildingType != buildingPalisade && bs.PendingBuildingType != buildingBridge {
 		for dx := range stats.Width {
 			for dy := range stats.Height {
 				cx, cy := tileX+dx, tileY+dy
@@ -255,9 +267,10 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 			}
 		}
 	}
+
 	bldOwner := colorNone
 
-	if bs.PendingBuildingType != buildingPalisade {
+	if bs.PendingBuildingType != buildingPalisade && bs.PendingBuildingType != buildingBridge {
 		bs.HumanPlayerState.CurrentBuildings++
 		bldOwner = colorRed
 	}
@@ -311,6 +324,7 @@ func isFreeForConstruction(constructionX, constructionY uint8, bs *battleState) 
 			// We wszystkich innych przypadkach budynek blokuje miejsce
 			bs.CurrentMessage.Text = "Miejsce zajęte przez budynek!"
 			bs.CurrentMessage.Duration = 40
+
 			return false
 		}
 	}
@@ -592,8 +606,21 @@ func (bld *building) isValidSpawnTile(x, y int, bs *battleState) bool {
 		return false
 	}
 
-	// 3. Czy pole jest puste?
-	if tile.Unit != nil || tile.Building != nil {
+	// 2. Czy pole jest zajęte przez jednostkę? (zawsze blokuje)
+	if tile.Unit != nil {
+		return false
+	}
+
+	// 3. Czy pole jest zajęte przez budynek?
+	if tile.Building != nil {
+		if tile.Building.Type == buildingBridge && !tile.Building.IsUnderConstruction {
+			return true
+		}
+
+		if tile.Building.Type == buildingPalisade && tile.Building.IsUnderConstruction {
+			return true
+		}
+
 		return false
 	}
 

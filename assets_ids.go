@@ -68,6 +68,8 @@ const (
 	spriteBridge06 uint16 = 58
 	spriteBridge07 uint16 = 59
 
+	spriteBridgeConstruction uint16 = 516
+
 	// --- SUCHA ZIEMIA () ---
 	// były 22-24
 	spriteDryEarth01 uint16 = 60

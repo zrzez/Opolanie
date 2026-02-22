@@ -44,11 +44,11 @@ func isBridge(id uint16) bool {
 }
 
 func isWaterOrBridgeForMasking(id uint16) bool {
-	return isWaterTileOnly(id) || isBridge(id)
+	return isWaterTileOnly(id) || isBridge(id) || id == spriteBridgeConstruction
 }
 
 func isLandOrOther(id uint16) bool {
-	return !isWaterTileOnly(id) && !isBridge(id)
+	return !isWaterTileOnly(id) && !isBridge(id) && id != spriteBridgeConstruction
 }
 
 func isBuildingTerrain(id uint16) bool {
@@ -290,12 +290,15 @@ func applyWaterProcessing(x, y uint8, board *boardData, snapshot [boardMaxX][boa
 		if x > 0 && y > 0 && isLandOrOther(snapshot[x-1][y-1]) {
 			newID = spriteWaterStart + uint16(9)
 		}
+
 		if x < boardMaxX-1 && y > 0 && isLandOrOther(snapshot[x+1][y-1]) {
 			newID = spriteWaterStart + uint16(10)
 		}
+
 		if x < boardMaxX-1 && y < boardMaxY-1 && isLandOrOther(snapshot[x+1][y+1]) {
 			newID = spriteWaterStart + uint16(11)
 		}
+
 		if x > 0 && y < boardMaxY-1 && isLandOrOther(snapshot[x-1][y+1]) {
 			newID = spriteWaterStart + uint16(12)
 		}
@@ -305,6 +308,82 @@ func applyWaterProcessing(x, y uint8, board *boardData, snapshot [boardMaxX][boa
 	}
 
 	board.Tiles[x][y].TextureID = newID
+}
+
+func calculateWaterTileID(x, y uint8, board *boardData) uint16 {
+	var mask uint8 = 0
+
+	if y > 0 && isWaterOrBridgeForMasking(board.Tiles[x][y-1].TextureID) {
+		mask |= 1
+	}
+
+	if x < boardMaxX-1 && isWaterOrBridgeForMasking(board.Tiles[x+1][y].TextureID) {
+		mask |= 2
+	}
+
+	if y < boardMaxY-1 && isWaterOrBridgeForMasking(board.Tiles[x][y+1].TextureID) {
+		mask |= 4
+	}
+
+	if x > 0 && isWaterOrBridgeForMasking(board.Tiles[x-1][y].TextureID) {
+		mask |= 8
+	}
+
+	newID := uint16(0)
+
+	switch mask {
+	case 0:
+		newID = 60
+	case 1:
+		newID = spriteWaterStart + uint16(8)
+	case 3:
+		newID = spriteWaterStart + uint16(0)
+	case 4:
+		newID = spriteWaterStart + uint16(8)
+	case 5:
+		newID = spriteWaterStart + uint16(8)
+	case 6:
+		newID = spriteWaterStart + uint16(1)
+	case 7:
+		newID = spriteWaterStart + uint16(2)
+	case 8:
+		newID = spriteWaterStart + uint16(8)
+	case 9:
+		newID = spriteWaterStart + uint16(3)
+	case 10:
+		newID = spriteWaterStart + uint16(8)
+	case 11:
+		newID = spriteWaterStart + uint16(4)
+	case 12:
+		newID = spriteWaterStart + uint16(5)
+	case 13:
+		newID = spriteWaterStart + uint16(6)
+	case 14:
+		newID = spriteWaterStart + uint16(7)
+	case 15:
+		newID = spriteWaterStart + uint16(8)
+		// Sprawdzenie narożników (diagonale)
+		if x > 0 && y > 0 && isLandOrOther(board.Tiles[x-1][y-1].TextureID) {
+			newID = spriteWaterStart + uint16(9)
+		}
+
+		if x < boardMaxX-1 && y > 0 && isLandOrOther(board.Tiles[x+1][y-1].TextureID) {
+			newID = spriteWaterStart + uint16(10)
+		}
+
+		if x < boardMaxX-1 && y < boardMaxY-1 && isLandOrOther(board.Tiles[x+1][y+1].TextureID) {
+			newID = spriteWaterStart + uint16(11)
+		}
+
+		if x > 0 && y < boardMaxY-1 && isLandOrOther(board.Tiles[x-1][y+1].TextureID) {
+			newID = spriteWaterStart + uint16(12)
+		}
+	case 2:
+		// Przypadek teoretycznie możliwy, ale nie ma dla niego tekstury
+		newID = 999 // @todo: ten przypadek powinien być ręcznie usunięty z każdej mapy
+	}
+
+	return newID
 }
 
 func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColor uint8) {
@@ -804,6 +883,18 @@ func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programStat
 
 			if isBridge(texID) {
 				waterBaseID := spriteWaterMiddle
+				animationOffset := bs.WaterAnimationCounter * 13
+				drawSprite(ps.Assets, waterBaseID+animationOffset, xPos, yPos, colorNone)
+				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
+			}
+
+			if texID == spriteBridgeConstruction {
+				waterBaseID := calculateWaterTileID(xAxis, yAxis, bs.Board)
+
+				if waterBaseID == 999 {
+					waterBaseID = spriteWaterMiddle
+				}
+
 				animationOffset := bs.WaterAnimationCounter * 13
 				drawSprite(ps.Assets, waterBaseID+animationOffset, xPos, yPos, colorNone)
 				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
@@ -1383,7 +1474,7 @@ func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, v
 
 	hasSelectedOwnUnit := bs.CurrentSelection.IsUnit && bs.CurrentSelection.OwnerID == bs.PlayerID
 	canBeRepaired := targetBuilding != nil && targetBuilding.HP < targetBuilding.MaxHP &&
-		(targetBuilding.Type == buildingPalisade || targetBuilding.Owner == bs.PlayerID)
+		(targetBuilding.Type == buildingPalisade || targetBuilding.Type == buildingBridge || targetBuilding.Owner == bs.PlayerID)
 
 	if hasSelectedOwnUnit {
 		// 0. Chcemy naprawić budynek
@@ -1825,7 +1916,7 @@ func drawConstructionDebugBox(bs *battleState, ps *programState) {
 
 	drawValidationBox(tileX, tileY, bs)
 
-	if bs.PendingBuildingType != buildingPalisade {
+	if bs.PendingBuildingType != buildingPalisade && bs.PendingBuildingType != buildingBridge {
 		drawValidationBox(tileX+1, tileY, bs)
 		drawValidationBox(tileX+2, tileY, bs)
 		drawValidationBox(tileX, tileY+1, bs)
@@ -1839,8 +1930,13 @@ func drawConstructionDebugBox(bs *battleState, ps *programState) {
 
 func drawValidationBox(tileX, tileY uint8, bs *battleState) {
 	// Walidacja
-	//	isValid := isValidConstructionSite(tileX, tileY, stats.Width, stats.Height, bs)
-	isValid := isValidConstructionSite(tileX, tileY, 1, 1, bs)
+	var isValid bool
+
+	if bs.PendingBuildingType != buildingBridge {
+		isValid = isValidConstructionSite(tileX, tileY, 1, 1, bs)
+	} else {
+		isValid = isWithinBoard(tileX, tileY, bs) && isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID)
+	}
 
 	posX := float32(tileX) * float32(tileWidth)
 	posY := float32(tileY) * float32(tileHeight)
@@ -1850,11 +1946,11 @@ func drawValidationBox(tileX, tileY uint8, bs *battleState) {
 
 	var color rl.Color
 	if isValid {
-		color = rl.Fade(rl.Green, 0.5)
+		color = rl.Fade(rl.Green, validationAlpha)
 	} else {
-		color = rl.Fade(rl.Red, 0.5)
+		color = rl.Fade(rl.Red, validationAlpha)
 	}
 
 	rl.DrawRectangle(int32(posX), int32(posY), int32(widthPx), int32(heightPx), color)
-	rl.DrawRectangleLines(int32(posX), int32(posY), int32(widthPx), int32(heightPx), rl.White)
+	// rl.DrawRectangleLines(int32(posX), int32(posY), int32(widthPx), int32(heightPx), rl.White)
 }

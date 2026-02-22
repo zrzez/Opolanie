@@ -185,9 +185,14 @@ const (
 	corpsesMaxAlpha         float32 = 255.0
 )
 
+const (
+	// rzeczy związane z walidacją miejsca budowy
+	validationAlpha float32 = 0.5
+)
+
 // @todo: jeszcze nie zrobione w drawingBattle, ale niezbędne!
 var victoryPointColors = []rl.Color{
-	{R: 252, G: 252, B: 188, A: 255}, // LightYellow
+	{R: 252, G: 252, B: 188, A: 255}, //nolint:mnd    // LightYellow
 	rl.Yellow,                        // Yellow
 	rl.Gold,                          // DarkYellow
 	rl.Yellow,                        // Yellow
@@ -410,6 +415,7 @@ var buildingDefs = map[buildingType]buildingStats{
 	}, // @todo 60
 	buildingBridge: {Name: "Most", // todo: wszystkie staty! te są tymczasowe!
 		Width: smallBuildingSize, Height: smallBuildingSize, Cost: 0, MaxHP: 120, BaseTextureID: 127, IsPalisade: true}, // @todo 60
+	// @todo: dodaj drogę!
 }
 
 // Ważne: jednostki czarujące rozpoczynają grę z połową many i maxmana = 60, strzyga 0 many
@@ -737,8 +743,14 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			IconID:       spriteBtnBuildTemple,
 		},
 		// Przycisk 4/5
-		// @todo: dodaj tutaj most!
+		// @todo: dodaj tutaj drogę!
 		// Przycisk 5/5
+		{
+			BuildingType: buildingBridge,
+			Label:        buildingDefs[buildingBridge].Name,
+			MinLevel:     0,
+			IconID:       spriteBridgeEnd,
+		},
 		// N/D główny nie ma piątego przycisku o ile dobrze pamiętam
 
 	},

@@ -368,9 +368,6 @@ func canDamagePalisades(unit *unit) bool {
 	return unit.Type == unitAxeman || unit.Type == unitPriest
 }
 
-// @todo: funkcja jest zbyt rozbudowana. Niepotrzebnie zwraca „error”. -1,-1 powinno wystarczyć.
-// Na tym etapie już nie potrzeba rozróżniać czemu nie da rady podejść. Chodzenie jest ogarnięte
-// Wrócę do tego pod koniec. Nie jest pilne, nic nie szkodzi, ale za dużo robi.
 func (u *unit) resolveApproachPosition(targetID uint, bs *battleState) (uint8, uint8, error) {
 	targetUnit, targetBuilding := getObjectByID(targetID, bs)
 
@@ -554,6 +551,10 @@ func (u *unit) canAttack(targetID uint, bs *battleState) bool {
 		return false
 	}
 
+	if building.Type == buildingBridge {
+		return false
+	}
+
 	return true
 }
 
@@ -638,8 +639,6 @@ func (u *unit) canAttackTargetFromCurrentPosition(bs *battleState) bool {
 
 	target, err := u.validateTargetExists(bs)
 	if err != nil {
-		// log.Println("Cel nie istnieje")
-
 		return false
 	}
 
@@ -1410,7 +1409,7 @@ func (u *unit) repair(bs *battleState) {
 	case bs.AIPlayerID:
 		amount = repairAmountAI
 	}
-	// Wydaje mi się, że powinniśmy przylegać do budynku, ale <= 2 działa
+
 	if distance == 1 {
 		targetBuilding.applyWork(amount, bs)
 	}

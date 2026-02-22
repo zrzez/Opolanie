@@ -127,10 +127,10 @@ func findPath(bs *battleState, moverID uint, startX, startY, endX, endY uint8) [
 			}
 		}
 	}
+
 	return nil
 }
 
-// Wrapper dla starego kodu (zachowanie kompatybilności dla UI/Klikania)
 func isWalkable(bs *battleState, x, y uint8) bool {
 	return isWalkableUnit(bs, x, y, nil)
 }
@@ -146,22 +146,29 @@ func isWalkableUnit(bs *battleState, x, y uint8, mover *unit) bool {
 
 	// 1. Sprawdź czy to budynek
 	if currentTile.Building != nil {
-		// WYJĄTEK: Krowa wchodzi do swojej obory w punkt dojenia
-		if mover != nil && (mover.Type == unitCow &&
+		// 1. Krowa + obora (milking spot) - TYLKO jeden kafelek
+		if mover != nil && mover.Type == unitCow &&
 			currentTile.Building.Type == buildingBarn &&
-			currentTile.Building.Owner == mover.Owner) ||
-			(currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction) {
+			currentTile.Building.Owner == mover.Owner {
 
 			mx, my, ok := calculateMilkingSpot(currentTile.Building)
-			if ok {
-				if x == mx && y == my {
-					// Pozwól wejść, jeśli pod spodem nie ma wody/skał.
-					// Ignorujemy fakt, że to "budynek" (ściana).
-					return !isWaterOrObstacle(currentTile.TextureID)
-				}
+			if ok && x == mx && y == my {
+				return !isWaterOrObstacle(currentTile.TextureID)
 			}
 		}
-		return false // Każdy inny budynek blokuje
+
+		// 2. Palisada w budowie - pozwala na naprawę (cała powierzchnia)
+		if currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction {
+			return true
+		}
+
+		// 3. Ukończony most - przechodni na CAŁEJ powierzchni
+		if currentTile.Building.Type == buildingBridge && !currentTile.Building.IsUnderConstruction {
+			return !isWaterOrObstacle(currentTile.TextureID)
+		}
+
+		// 4. Każdy inny budynek blokuje
+		return false
 	}
 
 	// 2. Standardowa weryfikacja terenu

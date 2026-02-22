@@ -212,7 +212,9 @@ func initTerrainSprites() {
 
 	// Skały
 	setUI(spriteRockEnd, 11+(8*16), 92)
+
 	currentRockID := spriteRockStart
+
 	for i := 0; i <= 12; i++ {
 		if i == 8 {
 			continue
@@ -783,6 +785,9 @@ func initBuildingSprites() {
 	for i := 237; i <= 255; i++ {
 		setBuilding(i, uint16((i-237)*16), 154, 16, 14)
 	}
+
+	// @reminder: spróba wdrożenia mostów w grze 19.02.2026
+	setBuilding(int(spriteBridgeConstruction), 304, 84, 16, 14)
 }
 
 // Mapowanie battleAtlasID → rawAssetDef {TopChunk, BotChunk, PaletteID}.

@@ -409,6 +409,7 @@ func processCommands(bs *battleState) {
 		bs.HumanPlayerState.setCommand(&bs.CurrentCommands[0], bs)
 		bs.CurrentCommands[0].ActionType = cmdIdle
 	}
+
 	if bs.CurrentCommands[1].ActionType != cmdIdle {
 		log.Printf("ProcComm: SI wykonuje komendę. TargetObject: %d, ActionType: %d",
 			bs.CurrentCommands[1].CommandCategory, bs.CurrentCommands[1].ActionType)

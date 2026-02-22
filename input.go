@@ -302,7 +302,7 @@ func handleGameUIClicks(input inputState, bs *battleState, ps *programState) boo
 	// 2. Obsługa kliknięć w przyciski akcji (panel boczny)
 	if input.IsLeftMouseButtonPressed {
 		// Sprawdzamy każdy z 5 przycisków
-		for btnIndex := 0; btnIndex < uiActionMaxButtons; btnIndex++ {
+		for btnIndex := range uiActionMaxButtons {
 			action := bs.UI.CurrentActions[btnIndex]
 
 			// Pomijamy wyłączone przyciski
@@ -664,7 +664,7 @@ func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8)
 		cmd := cmdRepairStructure
 
 		// 2. Możemy naprawiać tylko palisady oraz swoje budynki, które są uszkodzone
-		canRepair := ((targetBld.Owner == bs.PlayerID) || (targetBld.Type == buildingPalisade)) &&
+		canRepair := ((targetBld.Owner == bs.PlayerID) || (targetBld.Type == buildingPalisade) || targetBld.Type == buildingBridge) &&
 			targetBld.HP < targetBld.MaxHP
 
 		if !canRepair {
@@ -699,6 +699,7 @@ func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8)
 
 		// Zmieniamy stan myszki i wracamy
 		bs.MouseCommandMode = cmdIdle
+
 		return true
 
 	// === 2. RZUCANIE CZARÓW ===
