@@ -161,7 +161,8 @@ func (bld *building) applyFinishedGraphics(bs *battleState) {
 
 	case buildingBridge:
 		bs.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].IsWalkable = true
-		joinBridges(bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, bs.Board)
+		// joinBridges(bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, bs.Board)
+		bs.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteBridge01
 
 		return
 

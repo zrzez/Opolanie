@@ -313,7 +313,7 @@ func applyWaterProcessing(x, y uint8, board *boardData, snapshot [boardMaxX][boa
 func calculateWaterTileID(x, y uint8, board *boardData) uint16 {
 	var mask uint8
 
-	if y > 0 && isWaterOrBridgeForMasking(board.Tiles[x][y-1].TextureID) {
+	if isWaterOrBridgeForMasking(board.Tiles[x][y-1].TextureID) {
 		mask |= 1
 	}
 
@@ -325,7 +325,7 @@ func calculateWaterTileID(x, y uint8, board *boardData) uint16 {
 		mask |= 4
 	}
 
-	if x > 0 && isWaterOrBridgeForMasking(board.Tiles[x-1][y].TextureID) {
+	if isWaterOrBridgeForMasking(board.Tiles[x-1][y].TextureID) {
 		mask |= 8
 	}
 

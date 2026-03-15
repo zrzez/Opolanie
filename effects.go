@@ -53,7 +53,9 @@ func updateAdjacentPalisades(x, y uint8, board *boardData) {
 	}
 }
 
-func joinBridges(x, y uint8, board *boardData) {
+// @reminder: przekombinowałem. W oryginale zawsze budowało się środek pionowego mostu.
+// Te dynamiczne zmiany tekstur są zbędne w tej chwili 15.03.2026
+/*func joinBridges(x, y uint8, board *boardData) {
 	applyBridgeProcessing(x, y, board)
 	updateAdjacentBridges(x, y, board)
 }
@@ -111,7 +113,7 @@ func applyBridgeProcessing(x, y uint8, board *boardData) {
 	}
 
 	board.Tiles[x][y].TextureID = newID
-}
+}*/
 
 func updateAnimationCounters(bs *battleState) {
 	bs.WaterAnimationCounter = (bs.WaterAnimationCounter + 1) % 3
