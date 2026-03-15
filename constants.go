@@ -716,18 +716,17 @@ const (
 
 // ===== UI
 // Opis co, kiedy, jak może wytworzyć dany budynek
-// @todo: jak to się dzieje, że dla budynków muszę podać IconID a dla jednostek nie?
 // przecież to aż krzyczy, że coś zrąbałem dla budynków!
 var buildingRecipes = map[buildingType][]buildingAction{
 	buildingMain: {
 		// Przycisk 1/5
 		{
-			// @todo: tekstury zaawansowanej budowy są poprzestawiane (zaczyna się od środka a nie lewej)
-			BuildingType: buildingBarn,
-			Label:        buildingDefs[buildingBarn].Name,
+			BuildingType: buildingTemple,
+			Label:        buildingDefs[buildingTemple].Name,
 			MinLevel:     0,
-			IconID:       spriteBtnBuildBarn,
+			IconID:       spriteBtnBuildTemple,
 		},
+
 		// Przycisk 2/5
 		{
 			BuildingType: buildingBarracks,
@@ -737,10 +736,10 @@ var buildingRecipes = map[buildingType][]buildingAction{
 		},
 		// Przycisk 3/5
 		{
-			BuildingType: buildingTemple,
-			Label:        buildingDefs[buildingTemple].Name,
+			BuildingType: buildingBarn,
+			Label:        buildingDefs[buildingBarn].Name,
 			MinLevel:     0,
-			IconID:       spriteBtnBuildTemple,
+			IconID:       spriteBtnBuildBarn,
 		},
 		// Przycisk 4/5
 		// @todo: dodaj tutaj drogę!
@@ -757,17 +756,17 @@ var buildingRecipes = map[buildingType][]buildingAction{
 	buildingBarn: {
 		// Przycisk 1/5
 		{
-			UnitType: unitCow,
-			Label:    "Krowa",
-			MinLevel: 0,
-			IconID:   0,
-		},
-		// Przycisk 2/5
-		{
 			// @todo: czy pastuj zabierał miejsce w oborze?
 			UnitType: unitShepherd,
 			Label:    "Pastuch",
 			MinLevel: 0, // @todo: SHEPHERD_LEVEL powinno być
+			IconID:   0,
+		},
+		// Przycisk 2/5
+		{
+			UnitType: unitCow,
+			Label:    "Krowa",
+			MinLevel: 0,
 			IconID:   0,
 		},
 		// Przycisk 3/5
@@ -778,10 +777,10 @@ var buildingRecipes = map[buildingType][]buildingAction{
 	buildingBarracks: {
 		// Przycisk 1/5
 		{
-			UnitType: unitAxeman,
-			Label:    "Drwal",
-			MinLevel: 0,
-			IconID:   0,
+			BuildingType: buildingBarracks2,
+			Label:        buildingDefs[buildingBarracks2].Name,
+			MinLevel:     0,
+			IconID:       spriteBtnBuildBarracks2,
 		},
 		// Przycisk 2/5
 		{
@@ -792,10 +791,10 @@ var buildingRecipes = map[buildingType][]buildingAction{
 		},
 		// Przycisk 3/5
 		{
-			BuildingType: buildingBarracks2,
-			Label:        buildingDefs[buildingBarracks2].Name,
-			MinLevel:     0,
-			IconID:       spriteBtnBuildBarracks2,
+			UnitType: unitAxeman,
+			Label:    "Drwal",
+			MinLevel: 0,
+			IconID:   0,
 		},
 		// Przycisk 4/5
 		// Przycisk 5/5
@@ -804,27 +803,27 @@ var buildingRecipes = map[buildingType][]buildingAction{
 	buildingBarracks2: {
 		// Przycisk 1/5
 		{
+			BuildingType: buildingAcademy,
+			Label:        buildingDefs[buildingAcademy].Name,
+			MinLevel:     0,
+			IconID:       spriteBtnBuildAcademy,
+		},
+		// Przycisk 2/5
+		{
 			UnitType: unitSpearman,
 			Label:    "Włócznik",
 			MinLevel: 0,
 			IconID:   0,
 		},
-		// Przycisk 2/5
+		// Przycisk 3/5
 		{
 			UnitType: unitSwordsman,
 			Label:    "Miecznik",
 			MinLevel: 0,
 			IconID:   0,
 		},
-		// Przycisk 3/5
-		{
-			BuildingType: buildingAcademy,
-			Label:        buildingDefs[buildingAcademy].Name,
-			MinLevel:     0,
-			IconID:       spriteBtnBuildAcademy,
-		},
+
 		// Przycisk 4/5
-		// N/D
 		// Przycisk 5/5
 		{
 			BuildingType: buildingPalisade,
@@ -836,8 +835,8 @@ var buildingRecipes = map[buildingType][]buildingAction{
 	buildingTemple: {
 		// Przycisk 1/5
 		{
-			UnitType: unitPriestess,
-			Label:    "Kapłanka",
+			UnitType: unitMage,
+			Label:    "Mag",
 			MinLevel: 0,
 			IconID:   0,
 		},
@@ -850,8 +849,8 @@ var buildingRecipes = map[buildingType][]buildingAction{
 		},
 		// Przycisk 3/5
 		{
-			UnitType: unitMage,
-			Label:    "Mag",
+			UnitType: unitPriestess,
+			Label:    "Kapłanka",
 			MinLevel: 0,
 			IconID:   0,
 		},
@@ -864,25 +863,19 @@ var buildingRecipes = map[buildingType][]buildingAction{
 	buildingAcademy: {
 		// Przycisk 1/5
 		{
-			UnitType: unitCommander,
-			Label:    "Rycerz",
-			MinLevel: 0,
-			IconID:   0,
-		},
-		// Przycisk 2/5
-		{
 			UnitType: unitCrossbowman,
 			Label:    "Kusznik",
 			MinLevel: 0,
 			IconID:   0,
 		},
-		// Przycisk 3/5
+		// Przycisk 2/5
 		{
-			UnitType: unitMage,
-			Label:    "Mag",
+			UnitType: unitCommander,
+			Label:    "Rycerz",
 			MinLevel: 0,
 			IconID:   0,
 		},
+		// Przycisk 3/5
 		// Przycisk 4/5
 		// N/D
 		// Przycisk 5/5

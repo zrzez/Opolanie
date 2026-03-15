@@ -757,8 +757,10 @@ func handleBoardDrag(input inputState, bs *battleState) bool {
 	if distance > dragThresholdPixels {
 		bs.IsSelectingBox = true
 		bs.SelectionStart = bs.InitialClickPos
+
 		return true
 	}
+
 	return false
 }
 
