@@ -556,6 +556,10 @@ func (u *unit) canAttack(targetID uint, bs *battleState) bool {
 		return false
 	}
 
+	if building.Type == buildingBridge {
+		return false
+	}
+
 	return true
 }
 

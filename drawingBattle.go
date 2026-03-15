@@ -1488,6 +1488,11 @@ func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, v
 				}
 			}
 
+			// Nie da się zaatakować mostu
+			if targetBuilding.Type == buildingBridge {
+				return spriteCursorStop
+			}
+
 			return spriteCursorCrossRed
 		}
 
