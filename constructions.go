@@ -161,7 +161,6 @@ func (bld *building) applyFinishedGraphics(bs *battleState) {
 
 	case buildingBridge:
 		bs.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].IsWalkable = true
-		// joinBridges(bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, bs.Board)
 		bs.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteBridge01
 
 		return
@@ -237,9 +236,18 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 	switch bs.PendingBuildingType {
 	// @reminder: dodaj tutaj drogę
 	case buildingBridge:
-		if !isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID) {
+		fmt.Println("wszedłem w case buildingBridge")
+
+		waterTest := !isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID)
+		roadTest := !isBorderingPath(tileX, tileY, smallBuildingSize, bs)
+
+		fmt.Println(waterTest)
+		fmt.Println(roadTest)
+
+		if waterTest || roadTest {
 			return
 		}
+
 	default:
 		// Walidacja terenu (Teraz tileX, tileY to lewy górny róg)
 		if !isValidConstructionSite(tileX, tileY, stats.Width, stats.Height, bs) {
@@ -364,7 +372,7 @@ func isValidConstructionSite(tileX, tileY, width, height uint8, bs *battleState)
 		}
 	}
 	// Czy sąsiaduje z drogą. Palisada nie musi!
-	if !isBorderingRoad(tileX, tileY, width, bs) && bs.PendingBuildingType != buildingPalisade {
+	if !isBorderingPath(tileX, tileY, width, bs) && bs.PendingBuildingType != buildingPalisade {
 		return false
 	}
 
@@ -392,7 +400,7 @@ func isObstacle(texID uint16) bool {
 	return false
 }
 
-func isBorderingRoad(x, y, size uint8, bs *battleState) bool {
+func isBorderingPath(x, y, size uint8, bs *battleState) bool {
 	// 1. Sprawdzamy boki LEWY i PRAWY (iterujemy po wysokości budynku)
 	for i := uint8(0); i < size; i++ {
 		currentY := y + i
@@ -406,14 +414,14 @@ func isBorderingRoad(x, y, size uint8, bs *battleState) bool {
 		// Sprawdzamy tylko, jeśli nie jesteśmy przytuleni do lewej ściany mapy (x=0)
 		// To zapobiega błędowi "uint8 overflow" (0 - 1 = 255)
 		if x > 0 {
-			if isRoad(bs.Board.Tiles[x-1][currentY].TextureID) {
+			if isPath(bs.Board.Tiles[x-1][currentY].TextureID) {
 				return true
 			}
 		}
 
 		// --- PRAWA KRAWĘDŹ (x+size) ---
 		if x+size < boardMaxX {
-			if isRoad(bs.Board.Tiles[x+size][currentY].TextureID) {
+			if isPath(bs.Board.Tiles[x+size][currentY].TextureID) {
 				return true
 			}
 		}
@@ -430,14 +438,14 @@ func isBorderingRoad(x, y, size uint8, bs *battleState) bool {
 		// --- GÓRNA KRAWĘDŹ (y-1) ---
 		// Sprawdzamy tylko, jeśli nie jesteśmy na samej górze mapy (y=0)
 		if y > 0 {
-			if isRoad(bs.Board.Tiles[currentX][y-1].TextureID) {
+			if isPath(bs.Board.Tiles[currentX][y-1].TextureID) {
 				return true
 			}
 		}
 
 		// --- DOLNA KRAWĘDŹ (y+size) ---
 		if y+size < boardMaxY {
-			if isRoad(bs.Board.Tiles[currentX][y+size].TextureID) {
+			if isPath(bs.Board.Tiles[currentX][y+size].TextureID) {
 				return true
 			}
 		}

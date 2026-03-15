@@ -664,8 +664,8 @@ func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8)
 		cmd := cmdRepairStructure
 
 		// 2. Możemy naprawiać tylko palisady oraz swoje budynki, które są uszkodzone
-		canRepair := ((targetBld.Owner == bs.PlayerID) || (targetBld.Type == buildingPalisade) || targetBld.Type == buildingBridge) &&
-			targetBld.HP < targetBld.MaxHP
+		canRepair := ((targetBld.Owner == bs.PlayerID) || (targetBld.Type == buildingPalisade) ||
+			targetBld.Type == buildingBridge) && targetBld.HP < targetBld.MaxHP
 
 		if !canRepair {
 			bs.CurrentMessage.Text = "Nie możesz naprawiać wrogich budynków!"

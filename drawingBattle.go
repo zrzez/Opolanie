@@ -1928,7 +1928,9 @@ func drawValidationBox(tileX, tileY uint8, bs *battleState) {
 	if bs.PendingBuildingType != buildingBridge {
 		isValid = isValidConstructionSite(tileX, tileY, 1, 1, bs)
 	} else {
-		isValid = isWithinBoard(tileX, tileY, bs) && isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID)
+		isValid = isWithinBoard(tileX, tileY, bs) &&
+			isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID) &&
+			isBorderingPath(tileX, tileY, smallBuildingSize, bs)
 	}
 
 	posX := float32(tileX) * float32(tileWidth)
