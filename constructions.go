@@ -215,8 +215,12 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 		return
 	}
 
-	// @reminder: mosty i palisady nie powinny być ograniczane przez górną granicę budowli
-	if bs.PendingBuildingType != buildingPalisade && bs.PendingBuildingType != buildingBridge {
+	pendingType := bs.PendingBuildingType
+
+	// @reminder: mosty, palisady oraz drogi nie powinny być ograniczane przez górną granicę budowli
+	regularBuilding := pendingType != buildingPalisade && pendingType != buildingBridge && pendingType != buildingRoad
+
+	if regularBuilding {
 		// @reminder: nie sprawdza, czy SI może postawić budynek!
 		if bs.HumanPlayerState.CurrentBuildings >= maxBuildingsPerPlayer {
 			bs.CurrentMessage.Text = "Limit budynków!"
@@ -233,8 +237,13 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 		return
 	}
 
-	switch bs.PendingBuildingType {
+	switch pendingType {
 	// @reminder: dodaj tutaj drogę
+	case buildingRoad:
+		// nie możemy stawiać drogi na drodze i moście
+		if isPath(bs.Board.Tiles[tileX][tileY].TextureID) {
+			return
+		}
 	case buildingBridge:
 		fmt.Println("wszedłem w case buildingBridge")
 
@@ -258,7 +267,7 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 	// === DECYZJA POZYTYWNA ===
 	bs.HumanPlayerState.Milk -= stats.Cost
 
-	if bs.PendingBuildingType != buildingPalisade && bs.PendingBuildingType != buildingBridge {
+	if regularBuilding {
 		for dx := range stats.Width {
 			for dy := range stats.Height {
 				cx, cy := tileX+dx, tileY+dy
@@ -285,23 +294,41 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 
 	bldOwner := colorNone
 
-	if bs.PendingBuildingType != buildingPalisade && bs.PendingBuildingType != buildingBridge {
+	if regularBuilding {
 		bs.HumanPlayerState.CurrentBuildings++
 		bldOwner = colorRed
 	}
 
-	newBld := &building{}
+	if pendingType != buildingRoad {
+		newBld := &building{}
 
-	// init teraz przyjmie tileX, tileY jako lewy górny róg
-	newBld.initConstruction(tileX, tileY, bs.PendingBuildingType, bldOwner, bs)
+		// init teraz przyjmie tileX, tileY jako lewy górny róg
+		newBld.initConstruction(tileX, tileY, pendingType, bldOwner, bs)
 
-	bs.Buildings = append(bs.Buildings, newBld)
-	newBld.startConstruction(bs)
+		bs.Buildings = append(bs.Buildings, newBld)
+		newBld.startConstruction(bs)
 
-	bs.CurrentMessage.Text = fmt.Sprintf("Wznoszenie: %s", stats.Name)
-	bs.CurrentMessage.Duration = 60
+		bs.CurrentMessage.Text = fmt.Sprintf("Wznoszenie: %s", stats.Name)
+		bs.CurrentMessage.Duration = 60
 
-	log.Printf("BUDOWA: Rozpoczęto %s (ID: %d) na (%d,%d).", stats.Name, newBld.ID, tileX, tileY)
+		log.Printf("BUDOWA: Rozpoczęto %s (ID: %d) na (%d,%d).", stats.Name, newBld.ID, tileX, tileY)
+	} else {
+		bs.Board.Tiles[tileX][tileY].TextureID = spriteRoadStart
+		// todo: brakuje tutaj jakiegoś applyRoad
+		// applyRoadProcessing(tileX, tileY, bs.Board)
+		// processMapTiles(bs)
+		cx := int(tileX)
+		cy := int(tileY)
+
+		refreshRoadTile(cx, cy, bs.Board)
+
+		refreshRoadTile(cx+1, cy, bs.Board) // prawo
+		refreshRoadTile(cx-1, cy, bs.Board) // lewo
+		refreshRoadTile(cx, cy+1, bs.Board) // góra
+		refreshRoadTile(cx, cy-1, bs.Board) // dół
+
+		log.Printf("BUDOWA: Postawiono drogę na (%d,%d).", tileX, tileY)
+	}
 }
 
 func isWithinBoard(constructionX, constructionY uint8, bs *battleState) bool {

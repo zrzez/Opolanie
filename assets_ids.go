@@ -49,10 +49,25 @@ const (
 	spriteRock12 uint16 = 30 // przechodnie! dawne rocks_17.png
 
 	// --- DROGI (31 - 51) ---
-	// były 25-45
-	spriteRoadStart uint16 = 31
-	// nie wiem, czy trzeba dodawać kolejne
-	spriteRoadEnd uint16 = 51
+	spriteRoadStart  uint16 = 31
+	spriteRoadButton uint16 = 46
+	spriteRoadEnd    uint16 = 51
+
+	spriteRoadR    uint16 = 37
+	spriteRoadL    uint16 = 38
+	spriteRoadD    uint16 = 39
+	spriteRoadU    uint16 = 40
+	spriteRoadRU   uint16 = 41
+	spriteRoadUD   uint16 = 42
+	spriteRoadRD   uint16 = 43
+	spriteRoadRUD  uint16 = 44
+	spriteRoadLU   uint16 = 45
+	spriteRoadLR   uint16 = 46
+	spriteRoadLRU  uint16 = 47
+	spriteRoadLD   uint16 = 48
+	spriteRoadLUD  uint16 = 49
+	spriteRoadLRD  uint16 = 50
+	spriteRoadLRUD uint16 = 51
 
 	// --- MOSTY (55 - 62) ---
 	// były 46-53

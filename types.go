@@ -172,7 +172,7 @@ type buildingStats struct {
 	Cost          uint16 // Cena w mleku
 	MaxHP         uint16 // Górna granica wytrzymałości
 	MaxFood       uint8  // Ile jednostek może być przypisanych do budynku
-	BaseTextureID int    // ID tekstury, 1x1 całość, 3x3 początek ciągu
+	BaseTextureID uint16 // ID tekstury, 1x1 całość, 3x3 początek ciągu
 	IsPalisade    bool   // Wskaźnik, czy budowla jest palisadą, potrzebna do napraw wrogich palisad
 }
 

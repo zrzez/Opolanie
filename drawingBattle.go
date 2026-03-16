@@ -114,40 +114,54 @@ func applyRoadProcessing(x, y uint8, board *boardData) {
 		mask |= 8
 	}
 
-	offset := uint16(13) // Domyślnie środek (mask 0, 7, 15)
+	var finalSprite uint16
 
 	switch mask {
+	case 0:
+		finalSprite = spriteRoadLU // lewo-góra @reminder: to raczej nie powinno być możliwe
 	case 1:
-		offset = 9
+		finalSprite = spriteRoadU // góra
 	case 2:
-		offset = 6
+		finalSprite = spriteRoadR // prawo
 	case 3:
-		offset = 10
+		finalSprite = spriteRoadRU // góra-prawo
 	case 4:
-		offset = 8
+		finalSprite = spriteRoadD // dół
 	case 5:
-		offset = 11
+		finalSprite = spriteRoadUD // góra-dół
 	case 6:
-		offset = 12
-	case 0, 7, 15:
-		offset = 13
+		finalSprite = spriteRoadRD // prawy-dół
+	case 7:
+		finalSprite = spriteRoadRUD // prawo-góra-dół
 	case 8:
-		offset = 7
+		finalSprite = spriteRoadL // lewo
 	case 9:
-		offset = 14
+		finalSprite = spriteRoadLU // lewo-góra
 	case 10:
-		offset = 15
+		finalSprite = spriteRoadLR // lewo-prawo
 	case 11:
-		offset = 16
+		finalSprite = spriteRoadLRU // lewo-prawo-góra
 	case 12:
-		offset = 17
+		finalSprite = spriteRoadLD // lewo-dół
 	case 13:
-		offset = 18
+		finalSprite = spriteRoadLUD // lewo-góra-dół
 	case 14:
-		offset = 19
+		finalSprite = spriteRoadLRD // lewo-prawo-dół
+	case 15:
+		finalSprite = spriteRoadLRUD // lewo-prawo-góra-doł
 	}
 
-	board.Tiles[x][y].TextureID = spriteRoadStart + offset
+	board.Tiles[x][y].TextureID = finalSprite
+}
+
+func refreshRoadTile(x, y int, board *boardData) {
+	if x < 0 || x >= int(boardMaxX) || y < 0 || y >= int(boardMaxY) {
+		return
+	}
+
+	if isRoad(board.Tiles[x][y].TextureID) {
+		applyRoadProcessing(uint8(x), uint8(y), board)
+	}
 }
 
 func applyPalisadeProcessing(x, y uint8, board *boardData) {
@@ -1914,7 +1928,9 @@ func drawConstructionDebugBox(bs *battleState, ps *programState) {
 
 	drawValidationBox(tileX, tileY, bs)
 
-	if bs.PendingBuildingType != buildingPalisade && bs.PendingBuildingType != buildingBridge {
+	pendingType := bs.PendingBuildingType
+
+	if pendingType != buildingPalisade && pendingType != buildingBridge && pendingType != buildingRoad {
 		drawValidationBox(tileX+1, tileY, bs)
 		drawValidationBox(tileX+2, tileY, bs)
 		drawValidationBox(tileX, tileY+1, bs)
@@ -1936,6 +1952,10 @@ func drawValidationBox(tileX, tileY uint8, bs *battleState) {
 		isValid = isWithinBoard(tileX, tileY, bs) &&
 			isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID) &&
 			isBorderingPath(tileX, tileY, smallBuildingSize, bs)
+	}
+
+	if bs.PendingBuildingType == buildingRoad {
+		isValid = !isPath(bs.Board.Tiles[tileX][tileY].TextureID)
 	}
 
 	posX := float32(tileX) * float32(tileWidth)

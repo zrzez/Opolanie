@@ -387,35 +387,50 @@ var frameColor = rl.NewColor(138, 132, 129, 255)
 var buildingDefs = map[buildingType]buildingStats{
 	buildingMain: {
 		Name:  "Budynek Główny",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 400, MaxFood: 0, BaseTextureID: 127, IsPalisade: false,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 400, MaxFood: 0,
+		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	},
 	buildingBarn: {
 		Name:  "Obora",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 3, BaseTextureID: 127, IsPalisade: false,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 3,
+		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	}, // @todo: cost 650
 	buildingBarracks: {
 		Name:  "Chata mieszkalna",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 6, BaseTextureID: 127, IsPalisade: false,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 6,
+		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	}, // @todo: 850
 	buildingTemple: {
 		Name:  "Dwór mocy",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 3, BaseTextureID: 127, IsPalisade: false,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 3,
+		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	}, // @todo: 1050
 	buildingBarracks2: {
 		Name:  "Chata wojów",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 4, BaseTextureID: 127, IsPalisade: false,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 4,
+		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	}, // @todo ILE TO KOSZTOWAŁO?!
 	buildingAcademy: {
 		Name:  "Dwór rycerza",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 400, MaxFood: 1, BaseTextureID: 127, IsPalisade: false,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 400, MaxFood: 1,
+		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	}, // @todo: 1050
 	buildingPalisade: {
 		Name:  "Palisada",
-		Width: smallBuildingSize, Height: smallBuildingSize, Cost: 0, MaxHP: 120, BaseTextureID: 127, IsPalisade: true,
-	}, // @todo 60
-	buildingBridge: {Name: "Most", // todo: wszystkie staty! te są tymczasowe!
-		Width: smallBuildingSize, Height: smallBuildingSize, Cost: 0, MaxHP: 120, BaseTextureID: 127, IsPalisade: true}, // @todo 60
+		Width: smallBuildingSize, Height: smallBuildingSize, Cost: 0, MaxHP: 120,
+		BaseTextureID: spriteConstructionStart, IsPalisade: true,
+	}, // @todo: 60
+	buildingBridge: {
+		Name:  "Most", // todo: wszystkie staty! te są tymczasowe!
+		Width: smallBuildingSize, Height: smallBuildingSize, Cost: 0, MaxHP: 120,
+		BaseTextureID: spriteConstructionStart, IsPalisade: true,
+	}, // @todo: 60
 	// @todo: dodaj drogę!
+	buildingRoad: {
+		Name:  "Droga", // todo: wszystkie staty! te są tymczasowe!
+		Width: smallBuildingSize, Height: smallBuildingSize, Cost: 0, MaxHP: 0,
+		BaseTextureID: spriteRoadButton, IsPalisade: true,
+	}, // @todo: 45
 }
 
 // Ważne: jednostki czarujące rozpoczynają grę z połową many i maxmana = 60, strzyga 0 many
@@ -572,9 +587,10 @@ const (
 	buildingBarracks                          // Chata mieszkalna
 	buildingTemple                            // Dwór mocy
 	buildingBarracks2                         // Chata wojów
-	buildingAcademy                           // Dwór rycerza (w tamtych czasach nie było jeszcze rycerzy!)
+	buildingAcademy                           // Dwór
 	buildingPalisade                          // Palisada
 	buildingBridge                            // Most
+	buildingRoad                              // Droga @reminder: nie wiem, czy tak zostanie na dłużej
 )
 
 // Tekstura pola budowy
@@ -742,7 +758,12 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			IconID:       spriteBtnBuildBarn,
 		},
 		// Przycisk 4/5
-		// @todo: dodaj tutaj drogę!
+		{
+			BuildingType: buildingRoad,
+			Label:        buildingDefs[buildingRoad].Name,
+			MinLevel:     0,
+			IconID:       spriteRoadButton,
+		},
 		// Przycisk 5/5
 		{
 			BuildingType: buildingBridge,
