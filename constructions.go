@@ -248,7 +248,7 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 		fmt.Println("wszedłem w case buildingBridge")
 
 		waterTest := !isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID)
-		roadTest := !isBorderingPath(tileX, tileY, smallBuildingSize, bs)
+		roadTest := !hasRoadAccess(tileX, tileY, smallBuildingSize, bs)
 
 		fmt.Println(waterTest)
 		fmt.Println(roadTest)
@@ -384,6 +384,18 @@ func isFreeForConstruction(constructionX, constructionY uint8, bs *battleState) 
 
 // isValidConstructionSite sprawdza wszelkie warunki, które należy spełnić, aby można było zasadzić budowlę.
 func isValidConstructionSite(tileX, tileY, width, height uint8, bs *battleState) bool {
+	if !canFitBuilding(tileX, tileY, width, height, bs) {
+		return false
+	}
+
+	if !hasRoadAccess(tileX, tileY, width, bs) && bs.PendingBuildingType != buildingPalisade {
+		return false
+	}
+
+	return true
+}
+
+func canFitBuilding(tileX, tileY, width, height uint8, bs *battleState) bool {
 	for dx := range width {
 		for dy := range height {
 			// Dodajemy przesunięcie do kursora.
@@ -397,10 +409,6 @@ func isValidConstructionSite(tileX, tileY, width, height uint8, bs *battleState)
 				return false
 			}
 		}
-	}
-	// Czy sąsiaduje z drogą. Palisada nie musi!
-	if !isBorderingPath(tileX, tileY, width, bs) && bs.PendingBuildingType != buildingPalisade {
-		return false
 	}
 
 	return true
@@ -427,7 +435,7 @@ func isObstacle(texID uint16) bool {
 	return false
 }
 
-func isBorderingPath(x, y, size uint8, bs *battleState) bool {
+func hasRoadAccess(x, y, size uint8, bs *battleState) bool {
 	// 1. Sprawdzamy boki LEWY i PRAWY (iterujemy po wysokości budynku)
 	for i := uint8(0); i < size; i++ {
 		currentY := y + i

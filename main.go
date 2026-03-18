@@ -475,7 +475,7 @@ func drawSceneToVirtualScreen(bs *battleState, ps *programState) {
 			rl.BeginScissorMode(0, 0, int32(ps.GameViewWidth), int32(ps.VirtualHeight))
 			rl.BeginMode2D(bs.GameCamera)
 			drawWorldAndUnits(bs, ps)
-			drawConstructionDebugBox(bs, ps)
+			drawConstructionValidationBox(bs, ps)
 			rl.EndMode2D()
 			rl.EndScissorMode()
 		}

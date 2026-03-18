@@ -1910,7 +1910,7 @@ func drawMinimapUnits(bs *battleState, minimapX, minimapY, minimapWidth, minimap
 
 // ========= DEBUGOWANIE ZASADZANIA BUDOWLI
 
-func drawConstructionDebugBox(bs *battleState, ps *programState) {
+func drawConstructionValidationBox(bs *battleState, ps *programState) {
 	if bs.MouseCommandMode != cmdBuildStructure {
 		return
 	}
@@ -1923,54 +1923,95 @@ func drawConstructionDebugBox(bs *battleState, ps *programState) {
 	}
 
 	worldMousePos := rl.GetScreenToWorld2D(virtualMouse, bs.GameCamera)
-	tileX := uint8(worldMousePos.X / float32(tileWidth))
-	tileY := uint8(worldMousePos.Y / float32(tileHeight))
 
-	drawValidationBox(tileX, tileY, bs)
+	startX := uint8(worldMousePos.X / float32(tileWidth))
+	startY := uint8(worldMousePos.Y / float32(tileHeight))
 
-	pendingType := bs.PendingBuildingType
+	size := buildingDefs[bs.PendingBuildingType].Width
 
-	if pendingType != buildingPalisade && pendingType != buildingBridge && pendingType != buildingRoad {
-		drawValidationBox(tileX+1, tileY, bs)
-		drawValidationBox(tileX+2, tileY, bs)
-		drawValidationBox(tileX, tileY+1, bs)
-		drawValidationBox(tileX+1, tileY+1, bs)
-		drawValidationBox(tileX+2, tileY+1, bs)
-		drawValidationBox(tileX, tileY+2, bs)
-		drawValidationBox(tileX+1, tileY+2, bs)
-		drawValidationBox(tileX+2, tileY+2, bs)
+	var tileStates [3][3]uint8
+	var hasRoadAccessAnywhere bool
+
+	for dy := uint8(0); dy < size; dy++ {
+		for dx := uint8(0); dx < size; dx++ {
+			cx := startX + dx
+			cy := startY + dy
+
+			rawColor := validationBoxColor(cx, cy, bs)
+
+			var state uint8
+
+			if rawColor == rl.Red {
+				state = 0
+			} else if rawColor == rl.Orange {
+				state = 1
+			} else {
+				state = 2
+				hasRoadAccessAnywhere = true
+			}
+
+			tileStates[dy][dx] = state
+		}
+	}
+
+	for dy := uint8(0); dy < size; dy++ {
+		for dx := uint8(0); dx < size; dx++ {
+			state := tileStates[dy][dx]
+			finalColor := rl.Red
+
+			switch state {
+			case 0:
+				finalColor = rl.Red
+			case 1:
+				if hasRoadAccessAnywhere {
+					finalColor = rl.Lime
+				} else {
+					finalColor = rl.Orange
+				}
+			case 2:
+				finalColor = rl.DarkGreen
+			}
+
+			posX := float32(startX+dx) * float32(tileWidth)
+			posY := float32(startY+dy) * float32(tileHeight)
+
+			rl.DrawRectangle(int32(posX), int32(posY), int32(tileWidth), int32(tileHeight), finalColor)
+		}
 	}
 }
 
-func drawValidationBox(tileX, tileY uint8, bs *battleState) {
-	// Walidacja
-	var isValid bool
+func validationBoxColor(tileX, tileY uint8, bs *battleState) rl.Color {
+	// 1. Walidacja specyficzna dla typu budynku
+	isValid := false
 
-	if bs.PendingBuildingType != buildingBridge {
-		isValid = isValidConstructionSite(tileX, tileY, 1, 1, bs)
-	} else {
+	switch bs.PendingBuildingType {
+	case buildingBridge:
 		isValid = isWithinBoard(tileX, tileY, bs) &&
-			isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID) &&
-			isBorderingPath(tileX, tileY, smallBuildingSize, bs)
+			isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID)
+
+	case buildingRoad:
+		isValid = !isPath(bs.Board.Tiles[tileX][tileY].TextureID) &&
+			canFitBuilding(tileX, tileY, smallBuildingSize, smallBuildingSize, bs)
+
+	default:
+		isValid = canFitBuilding(tileX, tileY, smallBuildingSize, smallBuildingSize, bs)
 	}
 
-	if bs.PendingBuildingType == buildingRoad {
-		isValid = !isPath(bs.Board.Tiles[tileX][tileY].TextureID)
+	// 2. Jeśli miejsce jest nieważne, od razu zwracamy czerwień
+	if !isValid {
+		return rl.Red
 	}
 
-	posX := float32(tileX) * float32(tileWidth)
-	posY := float32(tileY) * float32(tileHeight)
-
-	widthPx := float32(1) * float32(tileWidth)
-	heightPx := float32(1) * float32(tileHeight)
-
-	var color rl.Color
-	if isValid {
-		color = rl.Fade(rl.Green, validationAlpha)
-	} else {
-		color = rl.Fade(rl.Red, validationAlpha)
+	// 3. Palisada nie wymaga dostępu do drogi, więc od razu jest zielona
+	if bs.PendingBuildingType == buildingPalisade {
+		return rl.DarkGreen
 	}
 
-	rl.DrawRectangle(int32(posX), int32(posY), int32(widthPx), int32(heightPx), color)
-	// rl.DrawRectangleLines(int32(posX), int32(posY), int32(widthPx), int32(heightPx), rl.White)
+	// 4. Budynki wymagają drogi
+	if hasRoadAccess(tileX, tileY, smallBuildingSize, bs) {
+		return rl.DarkGreen
+	}
+
+	// 5. Ważne, ale bez dostępu do drogi
+	return rl.Orange
 }
