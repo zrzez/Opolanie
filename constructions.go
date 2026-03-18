@@ -240,20 +240,12 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 	switch pendingType {
 	// @reminder: dodaj tutaj drogę
 	case buildingRoad:
-		// nie możemy stawiać drogi na drodze i moście
-		if isPath(bs.Board.Tiles[tileX][tileY].TextureID) {
+		// nie możemy stawiać drogi na drodze i moście, musi sąsiadować z inną drogą
+		if isPath(bs.Board.Tiles[tileX][tileY].TextureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bs) {
 			return
 		}
 	case buildingBridge:
-		fmt.Println("wszedłem w case buildingBridge")
-
-		waterTest := !isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID)
-		roadTest := !hasRoadAccess(tileX, tileY, smallBuildingSize, bs)
-
-		fmt.Println(waterTest)
-		fmt.Println(roadTest)
-
-		if waterTest || roadTest {
+		if !isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bs) {
 			return
 		}
 
@@ -314,9 +306,6 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 		log.Printf("BUDOWA: Rozpoczęto %s (ID: %d) na (%d,%d).", stats.Name, newBld.ID, tileX, tileY)
 	} else {
 		bs.Board.Tiles[tileX][tileY].TextureID = spriteRoadStart
-		// todo: brakuje tutaj jakiegoś applyRoad
-		// applyRoadProcessing(tileX, tileY, bs.Board)
-		// processMapTiles(bs)
 		cx := int(tileX)
 		cy := int(tileY)
 
