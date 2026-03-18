@@ -123,6 +123,7 @@ func (econ *economyAI) findAvailableBarn(bs *battleState) *building {
 			return building
 		}
 	}
+
 	return nil
 }
 

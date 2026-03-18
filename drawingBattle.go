@@ -96,7 +96,7 @@ func isPath(tileID uint16) bool {
 // === PRZETWARZANIE MAPY ===
 
 func applyRoadProcessing(x, y uint8, board *boardData) {
-	var mask uint8 = 0
+	var mask uint8
 
 	if y > 0 && isRoad(board.Tiles[x][y-1].TextureID) {
 		mask |= 1

@@ -160,6 +160,7 @@ func checkEndConditions(bs *battleState) {
 		for _, unit := range bs.Units {
 			if unit.Exists && unit.Owner == bs.PlayerID {
 				playerStillAlive = true
+
 				break
 			}
 		}
@@ -167,6 +168,7 @@ func checkEndConditions(bs *battleState) {
 			for _, bld := range bs.Buildings {
 				if bld.Exists && bld.Owner == bs.PlayerID && bld.Type == buildingMain {
 					playerStillAlive = true
+
 					break
 				}
 			}
@@ -418,7 +420,7 @@ func processCommands(bs *battleState) {
 	}
 }
 
-// odświeża jednostki, sprawdza, która została zabita itd
+// odświeża jednostki, sprawdza, która została zabita itd.
 func updateUnits(bs *battleState) {
 	for _, unit := range bs.Units {
 		if unit.Exists {
@@ -429,7 +431,7 @@ func updateUnits(bs *battleState) {
 	cleanupDeadUnits(bs)
 }
 
-// updateProjectiles odświeża pociski, sprawdza, czy dodać nowe
+// updateProjectiles odświeża pociski, sprawdza, czy dodać nowe.
 func updateProjectiles(bs *battleState) {
 	activeProjectiles := bs.Projectiles[:0]
 	for _, p := range bs.Projectiles {
@@ -445,7 +447,6 @@ func updateProjectiles(bs *battleState) {
 	bs.Projectiles = activeProjectiles
 }
 
-// updateBuildings TODO: oczyść, ogarnij!
 func updateBuildings(bs *battleState) {
 	for _, bld := range bs.Buildings {
 		if !bld.Exists {
@@ -454,49 +455,64 @@ func updateBuildings(bs *battleState) {
 
 		if bld.AccumulatedDamage > 0 {
 			finalDamage := bld.AccumulatedDamage - uint16(bld.Armor)
+
 			if finalDamage > 0 {
-				// Bez tego bld.HP przekręca się na 65 tys.
-				if bld.HP >= finalDamage {
-					bld.HP -= finalDamage
-				} else {
-					bld.HP = 0
-				}
-
-				log.Printf("building %d took %d final damage. HP: %d/%d",
-					bld.ID, finalDamage, bld.HP, bld.MaxHP)
-
-				if bld.HP <= 0 {
-					bld.HP = 0
-
-					if bld.Type != buildingPalisade {
-						bld.Exists = false
-						log.Printf("building %d destroyed!", bld.ID)
-
-						switch bld.Owner {
-						case bs.HumanPlayerState.PlayerID:
-							bs.HumanPlayerState.CurrentBuildings--
-						case bs.AIEnemyState.PlayerID:
-							bs.AIEnemyState.CurrentBuildings--
-						}
-
-						placeRuins(bs, bld)
-
-						for _, tile := range bld.OccupiedTiles {
-							if tile.X < boardMaxX && tile.Y < boardMaxY {
-								// Usuwamy odnośnik do budynku z kafelka
-								if bs.Board.Tiles[tile.X][tile.Y].Building == bld {
-									bs.Board.Tiles[tile.X][tile.Y].Building = nil
-									bs.Board.Tiles[tile.X][tile.Y].IsWalkable = true
-								}
-							}
-						}
-					} else {
-						placeDestroyedPalisade(bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, bld, bs)
-					}
-				}
+				applyBuildingDamage(bld, finalDamage, bs)
 			}
 
 			bld.AccumulatedDamage = 0
+		}
+	}
+
+	cleanupDestroyedBuildings(bs)
+}
+
+func applyBuildingDamage(bld *building, finalDamage uint16, bs *battleState) {
+	// Bez tego bld.HP przekręca się na 65 tys.
+	if bld.HP >= finalDamage {
+		bld.HP -= finalDamage
+	} else {
+		bld.HP = 0
+	}
+
+	log.Printf("building %d took %d final damage. HP: %d/%d",
+		bld.ID, finalDamage, bld.HP, bld.MaxHP)
+
+	if bld.HP <= 0 {
+		removeBuilding(bld, bs)
+	}
+}
+
+func removeBuilding(bld *building, bs *battleState) {
+	bld.HP = 0
+
+	if bld.Type != buildingPalisade {
+		placeDestroyedBuilding(bld, bs)
+	} else {
+		placeDestroyedPalisade(bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, bld, bs)
+	}
+}
+
+func placeDestroyedBuilding(bld *building, bs *battleState) {
+	bld.Exists = false
+	log.Printf("building %d destroyed!", bld.ID)
+
+	switch bld.Owner {
+	case bs.HumanPlayerState.PlayerID:
+		bs.HumanPlayerState.CurrentBuildings--
+	case bs.AIEnemyState.PlayerID:
+		bs.AIEnemyState.CurrentBuildings--
+	}
+
+	placeRuins(bs, bld)
+
+	for _, tile := range bld.OccupiedTiles {
+		if tile.X < boardMaxX && tile.Y < boardMaxY {
+			// Usuwamy odnośnik do budynku z kafelka
+			if bs.Board.Tiles[tile.X][tile.Y].Building == bld {
+				bs.Board.Tiles[tile.X][tile.Y].Building = nil
+				bs.Board.Tiles[tile.X][tile.Y].IsWalkable = true
+			}
 		}
 	}
 }
@@ -629,16 +645,17 @@ func placeRuins(bs *battleState, bld *building) {
 }
 
 // Usuwa uśmiercone jednostki z bs.
-// Nie mylić z logiką rozkładu zwłok updateCorpses
+// Nie mylić z logiką rozkładu zwłok updateCorpses.
 func cleanupDeadUnits(bs *battleState) {
 	if bs.GlobalFrameCounter%6000 != 0 {
 		return
 	}
-	if len(bs.Units) < 50 {
+
+	if len(bs.Units) < int(maxUnitsPerPlayer)*4 {
 		return
 	}
 
-	log.Println("INFO: Rozpoczynam czyszczenie pamięci...")
+	log.Println("INFO: Rozpoczynam czyszczenie pamięci z jednostek...")
 
 	newUnitsList := make([]*unit, 0, len(bs.Units))
 	for _, u := range bs.Units {
@@ -652,5 +669,31 @@ func cleanupDeadUnits(bs *battleState) {
 
 	if removedCount > 0 {
 		log.Printf("INFO: Wyczyszczono %d martwych jednostek.", removedCount)
+	}
+}
+
+func cleanupDestroyedBuildings(bs *battleState) {
+	if bs.GlobalFrameCounter%6000 != 0 {
+		return
+	}
+
+	if len(bs.Buildings) < int(maxBuildingsPerPlayer)*4 {
+		return
+	}
+
+	log.Println("INFO: Rozpoczynam czyszczenie pamięci z budynków...")
+
+	newBuildingsList := make([]*building, 0, len(bs.Buildings))
+	for _, bld := range bs.Buildings {
+		if bld.Exists {
+			newBuildingsList = append(newBuildingsList, bld)
+		}
+	}
+
+	removedCount := len(bs.Buildings) - len(newBuildingsList)
+	bs.Buildings = newBuildingsList
+
+	if removedCount > 0 {
+		log.Printf("INFO: Wyczyszczono %d zniszczonych budynków.", removedCount)
 	}
 }

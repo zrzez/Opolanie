@@ -163,6 +163,7 @@ func (playerS *playerState) handleMoveCommand(cmd *command, unit *unit, bs *batt
 			"DEBUG: handleMoveCommand: Pathfinding nie znalazł ścieżki dla jednostki %d do (%d,%d). Komenda odrzucona.",
 			unit.ID, cmd.TargetX, cmd.TargetY,
 		)
+
 		return
 	}
 
