@@ -1964,13 +1964,15 @@ func drawConstructionValidationBox(bs *battleState, ps *programState) {
 				finalColor = rl.Red
 			case 1:
 				if hasRoadAccessAnywhere {
-					finalColor = rl.Lime
+					finalColor = rl.Green
 				} else {
 					finalColor = rl.Orange
 				}
 			case 2:
 				finalColor = rl.DarkGreen
 			}
+
+			finalColor = rl.Fade(finalColor, 0.3)
 
 			posX := float32(startX+dx) * float32(tileWidth)
 			posY := float32(startY+dy) * float32(tileHeight)
