@@ -453,7 +453,7 @@ func updateBuildings(bs *battleState) {
 			continue
 		}
 
-		if bld.AccumulatedDamage > 0 {
+		if bld.AccumulatedDamage > uint16(bld.Armor) {
 			finalDamage := bld.AccumulatedDamage - uint16(bld.Armor)
 
 			if finalDamage > 0 {

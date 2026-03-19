@@ -1984,7 +1984,7 @@ func drawConstructionValidationBox(bs *battleState, ps *programState) {
 
 func validationBoxColor(tileX, tileY uint8, bs *battleState) rl.Color {
 	// 1. Walidacja specyficzna dla typu budynku
-	isValid := false
+	var isValid bool
 
 	switch bs.PendingBuildingType {
 	case buildingBridge:
