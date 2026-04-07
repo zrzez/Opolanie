@@ -672,67 +672,68 @@ func getRenderDirection(u *unit, bs *battleState) (int, int) {
 	// Rzutujemy na int, żeby zachować znak
 	dx := int(math.Round(float64(u.Direction.X)))
 	dy := int(math.Round(float64(u.Direction.Y)))
+
 	return dx, dy
 }
 
-//func DrawProjectiles(bs *battleState, ps *programState) {
-//	for _, p := range bs.Projectiles {
-//		if p.Exists {
-//			DrawSingleProjectile(p)
-//		}
-//	}
-//}
+func drawProjectiles(bs *battleState, ps *programState) {
+	for _, p := range bs.Projectiles {
+		if p.Exists {
+			drawSingleProjectile(p, ps)
+		}
+	}
+}
 
-//func DrawSingleProjectile(p *Projectile, ps *programState) {
-//	tex, ok := ps.ProjectileSprites[p.Type]
-//	if !ok {
-//		return
-//	}
-//
-//	dirX := 0
-//	if p.DX > 0.5 {
-//		dirX = 1
-//	} else if p.DX < -0.5 {
-//		dirX = -1
-//	}
-//
-//	dirY := 0
-//	if p.DY > 0.5 {
-//		dirY = 1
-//	} else if p.DY < -0.5 {
-//		dirY = -1
-//	}
-//
-//	frameW := float32(tex.Width) / 2.0
-//	frameH := float32(tex.Height) / 3.0
-//
-//	col := 0
-//	if dirX == 0 {
-//		col = 1 // Pionowo (Góra/Dół)
-//	} else {
-//		col = 0 // Poziomo/Skos
-//	}
-//
-//	row := dirY + 1
-//	if row < 0 {
-//		row = 0
-//	}
-//	if row > 2 {
-//		row = 2
-//	}
-//
-//	flipX := (dirX == 1)
-//
-//	sourceRec := rl.NewRectangle(float32(col)*frameW, float32(row)*frameH, frameW, frameH)
-//	if flipX {
-//		sourceRec.Width = -sourceRec.Width
-//	}
-//
-//	drawX := p.x - (frameW / 2.0)
-//	drawY := p.y - (frameH / 2.0)
-//
-//	rl.DrawTexturePro(tex, sourceRec, rl.NewRectangle(drawX, drawY, frameW, frameH), rl.NewVector2(0, 0), 0, rl.White)
-//}
+func drawSingleProjectile(p *projectile, ps *programState) {
+	tex, ok := ps.ProjectileSprites[p.Type]
+	if !ok {
+		return
+	}
+
+	dirX := 0
+	if p.DX > 0.5 {
+		dirX = 1
+	} else if p.DX < -0.5 {
+		dirX = -1
+	}
+
+	dirY := 0
+	if p.DY > 0.5 {
+		dirY = 1
+	} else if p.DY < -0.5 {
+		dirY = -1
+	}
+
+	frameW := float32(tex.Width) / 2.0
+	frameH := float32(tex.Height) / 3.0
+
+	col := 0
+	if dirX == 0 {
+		col = 1 // Pionowo (Góra/Dół)
+	} else {
+		col = 0 // Poziomo/Skos
+	}
+
+	row := dirY + 1
+	if row < 0 {
+		row = 0
+	}
+	if row > 2 {
+		row = 2
+	}
+
+	flipX := dirX == 1
+
+	sourceRec := rl.NewRectangle(float32(col)*frameW, float32(row)*frameH, frameW, frameH)
+	if flipX {
+		sourceRec.Width = -sourceRec.Width
+	}
+
+	drawX := p.x - (frameW / 2.0)
+	drawY := p.y - (frameH / 2.0)
+
+	rl.DrawTexturePro(tex, sourceRec, rl.NewRectangle(drawX, drawY, frameW, frameH), rl.NewVector2(0, 0), 0, rl.White)
+}
 
 // @todo: być może warto połączyć logikę rysowania paska HP budynków i jednostek?
 func drawUnitHealthBar(screenX, screenY int32, unit *unit) {
@@ -1097,7 +1098,7 @@ func drawWorldAndUnits(bs *battleState, ps *programState) {
 			}
 		}
 	}
-	// DrawProjectiles(bs)
+	drawProjectiles(bs, ps)
 	drawSelectionBox(bs, ps)
 }
 

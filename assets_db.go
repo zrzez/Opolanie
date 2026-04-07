@@ -105,6 +105,13 @@ var idRegistry = map[string]uint16{
 	"SPRITE_FIRE_11": spriteFire11,
 	"SPRITE_FIRE_12": spriteFire12,
 	"SPRITE_FIRE_13": spriteFire13,
+
+	"SPRITE_ARROW":     spriteMissileArrowUp,
+	"SPRITE_BOLT":      spriteMissileBoltUp,
+	"SPRITE_FIRE":      spriteMissileFireUp,
+	"SPRITE_LIGHTNING": spriteMissileLightningUp,
+	"SPRITE_SPEAR":     spriteMissileSpearUp,
+	"SPRITE_GHOST":     spriteMissileGhostUp,
 }
 
 const (
@@ -142,6 +149,7 @@ func init() {
 	initUISprites()
 	initUnitSprites()
 	initBuildingSprites()
+	initProjectileSprites()
 }
 
 func initTerrainSprites() {
@@ -789,6 +797,81 @@ func initBuildingSprites() {
 
 	// @reminder: spróba wdrożenia mostów w grze 19.02.2026
 	setBuilding(int(spriteBridgeConstruction), 304, 84, 16, 14)
+}
+
+func initProjectileSprites() {
+	setProjectile := func(id int, x, y uint16, flip bool) {
+		if id < maxSpriteID {
+			spriteRegistry[id] = spriteDef{
+				atlasID: atlasUnits2,
+				x:       x, y: y,
+				w: 16, h: 14,
+				offX: -8, offY: -7,
+				flipX: flip,
+			}
+		}
+	}
+
+	// === STRZAŁA ===
+	setProjectile(spriteMissileArrowUp, 256, 0, false)
+	setProjectile(spriteMissileArrowUpLeft, 240, 0, false)
+	setProjectile(spriteMissileArrowLeft, 240, 14, false)
+	setProjectile(spriteMissileArrowDownLeft, 240, 28, false)
+	setProjectile(spriteMissileArrowDown, 256, 28, false)
+	setProjectile(spriteMissileArrowUpRight, 240, 0, true)
+	setProjectile(spriteMissileArrowRight, 240, 14, true)
+	setProjectile(spriteMissileArrowDownRight, 240, 28, true)
+
+	// === PIORUN ===
+	setProjectile(spriteMissileLightningUp, 258, 42, false)
+	setProjectile(spriteMissileLightningUpLeft, 242, 40, false)
+	setProjectile(spriteMissileLightningLeft, 242, 54, false)
+	setProjectile(spriteMissileLightningDownLeft, 242, 68, false)
+	setProjectile(spriteMissileLightningDown, 258, 69, false)
+	setProjectile(spriteMissileLightningUpRight, 242, 40, true)
+	setProjectile(spriteMissileLightningRight, 242, 54, true)
+	setProjectile(spriteMissileLightningDownRight, 242, 68, true)
+
+	// === OGIEŃ ===
+	setProjectile(spriteMissileFireUp, 255, 84, false)
+	setProjectile(spriteMissileFireUpLeft, 241, 83, false)
+	setProjectile(spriteMissileFireLeft, 241, 97, false)
+	setProjectile(spriteMissileFireDownLeft, 241, 110, false)
+	setProjectile(spriteMissileFireDown, 255, 111, false)
+	setProjectile(spriteMissileFireUpRight, 241, 83, true)
+	setProjectile(spriteMissileFireRight, 241, 97, true)
+	setProjectile(spriteMissileFireDownRight, 241, 110, true)
+
+	// === WŁÓCZNIA ===
+	setProjectile(spriteMissileSpearUp, 255, 126, false)
+	setProjectile(spriteMissileSpearUpLeft, 239, 125, false)
+	setProjectile(spriteMissileSpearLeft, 239, 139, false)
+	setProjectile(spriteMissileSpearDownLeft, 239, 154, false)
+	setProjectile(spriteMissileSpearDown, 255, 154, false)
+	setProjectile(spriteMissileSpearUpRight, 239, 125, true)
+	setProjectile(spriteMissileSpearRight, 239, 139, true)
+	setProjectile(spriteMissileSpearDownRight, 239, 154, true)
+
+	// === DUCH ===
+	setProjectile(spriteMissileGhostUp, 288, 0, false)
+	setProjectile(spriteMissileGhostUpLeft, 272, 0, false)
+	setProjectile(spriteMissileGhostLeft, 272, 14, false)
+	setProjectile(spriteMissileGhostDownLeft, 272, 28, false)
+	setProjectile(spriteMissileGhostDown, 288, 28, false)
+	setProjectile(spriteMissileGhostUpRight, 272, 0, true)
+	setProjectile(spriteMissileGhostRight, 272, 14, true)
+	setProjectile(spriteMissileGhostDownRight, 272, 28, true)
+	setProjectile(spriteMissileGhostAttack, 288, 14, false)
+
+	// === BEŁT ===
+	setProjectile(spriteMissileBoltUp, 288, 42, false)
+	setProjectile(spriteMissileBoltUpLeft, 272, 42, false)
+	setProjectile(spriteMissileBoltLeft, 272, 56, false)
+	setProjectile(spriteMissileBoltDownLeft, 272, 70, false)
+	setProjectile(spriteMissileBoltDown, 288, 70, false)
+	setProjectile(spriteMissileBoltUpRight, 272, 42, true)
+	setProjectile(spriteMissileBoltRight, 272, 56, true)
+	setProjectile(spriteMissileBoltDownRight, 272, 70, true)
 }
 
 // Mapowanie battleAtlasID → rawAssetDef {TopChunk, BotChunk, PaletteID}.

@@ -255,6 +255,68 @@ const (
 	spriteFire12 uint16 = 634
 	spriteFire13 uint16 = 635
 
+	// --- POCISKI
+	// Strzała
+	spriteMissileArrowUp        = 636
+	spriteMissileArrowUpLeft    = 637
+	spriteMissileArrowLeft      = 638
+	spriteMissileArrowDownLeft  = 639
+	spriteMissileArrowDown      = 640
+	spriteMissileArrowUpRight   = 641
+	spriteMissileArrowRight     = 642
+	spriteMissileArrowDownRight = 643
+
+	// Bełt
+	spriteMissileBoltUp        = 644
+	spriteMissileBoltUpLeft    = 645
+	spriteMissileBoltLeft      = 646
+	spriteMissileBoltDownLeft  = 647
+	spriteMissileBoltDown      = 648
+	spriteMissileBoltUpRight   = 649
+	spriteMissileBoltRight     = 650
+	spriteMissileBoltDownRight = 651
+
+	// Ognisty pocisk
+	spriteMissileFireUp        = 652
+	spriteMissileFireUpLeft    = 653
+	spriteMissileFireLeft      = 654
+	spriteMissileFireDownLeft  = 655
+	spriteMissileFireDown      = 656
+	spriteMissileFireUpRight   = 657
+	spriteMissileFireRight     = 658
+	spriteMissileFireDownRight = 659
+
+	// Piorun
+	spriteMissileLightningUp        = 660
+	spriteMissileLightningUpLeft    = 661
+	spriteMissileLightningLeft      = 662
+	spriteMissileLightningDownLeft  = 663
+	spriteMissileLightningDown      = 664
+	spriteMissileLightningUpRight   = 665
+	spriteMissileLightningRight     = 666
+	spriteMissileLightningDownRight = 667
+
+	// Włócznia
+	spriteMissileSpearUp        = 668
+	spriteMissileSpearUpLeft    = 669
+	spriteMissileSpearLeft      = 670
+	spriteMissileSpearDownLeft  = 671
+	spriteMissileSpearDown      = 672
+	spriteMissileSpearUpRight   = 673
+	spriteMissileSpearRight     = 674
+	spriteMissileSpearDownRight = 675
+
+	// Duch
+	spriteMissileGhostUp        = 676
+	spriteMissileGhostUpLeft    = 677
+	spriteMissileGhostLeft      = 678
+	spriteMissileGhostDownLeft  = 679
+	spriteMissileGhostDown      = 680
+	spriteMissileGhostUpRight   = 681
+	spriteMissileGhostRight     = 682
+	spriteMissileGhostDownRight = 683
+	spriteMissileGhostAttack    = 684
+
 	// 4. JEDNOSTKI (700+)
 	// ID uint16 = 700 + (Type * 200) + (Frame * 8) + Dir.
 	spriteUnitBaseID uint16 = 700
