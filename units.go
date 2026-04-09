@@ -1239,25 +1239,7 @@ func (u *unit) performDirectAttack(target *combatTarget, bs *battleState) {
 	const meleeAnimationDelay = 10
 
 	if u.AttackRange > 1 {
-		// === DYSTANSOWE (RANGED) ===
-
-		var missileType string
-
-		switch u.Type {
-		case unitMage:
-			missileType = missileGhost
-		case unitPriest:
-			missileType = missileFire
-		case unitSpearman:
-			missileType = missileSpear
-		case unitCrossbowman:
-			missileType = missileBolt
-		case unitPriestess:
-			missileType = missileLightning
-		default:
-			missileType = missileArrow
-		}
-
+		// === DYSTANSOWE ===
 		var ok bool
 
 		targetX, targetY := uint8(0), uint8(0)
@@ -1270,12 +1252,13 @@ func (u *unit) performDirectAttack(target *combatTarget, bs *battleState) {
 		}
 
 		if ok {
+			missileKind := unitTypeToMissileType(u.Type)
 			// Stwórz pocisk
 			proj := &projectile{}
-			proj.initProjectile(missileType, u.Owner, u.X, u.Y, targetX, targetY, totalDamage)
+			proj.initProjectile(missileKind, u.Owner, uint16(u.X), uint16(u.Y), uint16(targetX), uint16(targetY), totalDamage)
 			bs.Projectiles = append(bs.Projectiles, proj)
 
-			log.Printf("unit %d fired missile %s at (%d,%d)", u.ID, missileType, targetX, targetY)
+			log.Printf("unit %d fired missile %d at (%d,%d)", u.ID, missileKind, targetX, targetY)
 
 			// 1. Ustawienie czasu PRZEŁADOWANIA (Cooldown)
 			// Jednostka może się ruszać, ale nie może strzelać

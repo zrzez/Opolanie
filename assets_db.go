@@ -86,9 +86,9 @@ var idRegistry = map[string]uint16{
 	"SPRITE_EFFECT_HEAL_00":      spriteEffectHeal00,
 	"SPRITE_EFFECT_TRANSFORM_00": spriteEffectTransform00,
 	"SPRITE_VICTORY_POINT":       spriteVictoryPoint,
-	"SPRITE_EFFECT_SKELETON_00":  spriteEffectSkeleton_00,
-	"SPRITE_EFFECT_SKELETON_01":  spriteEffectSkeleton_01,
-	"SPRITE_EFFECT_SKELETON_02":  spriteEffectSkeleton_02,
+	"SPRITE_EFFECT_SKELETON_00":  spriteeffectskeleton00,
+	"SPRITE_EFFECT_SKELETON_01":  spriteeffectskeleton01,
+	"SPRITE_EFFECT_SKELETON_02":  spriteeffectskeleton02,
 
 	// Ogień
 	"SPRITE_FIRE_00": spriteFire00,
@@ -380,9 +380,9 @@ func initUISprites() {
 
 	// Zwłoki
 	// @todo: kompletnie porąbane nazwy!
-	setUI(spriteEffectSkeleton_00, 219, 50, 16, 14) // dead_0
-	setUI(spriteEffectSkeleton_01, 219, 64, 16, 14) // dead_1
-	setUI(spriteEffectSkeleton_02, 219, 78, 16, 14) // dead_2
+	setUI(spriteeffectskeleton00, 219, 50, 16, 14) // dead_0
+	setUI(spriteeffectskeleton01, 219, 64, 16, 14) // dead_1
+	setUI(spriteeffectskeleton02, 219, 78, 16, 14) // dead_2
 
 	// Rany
 	setUI(615, 219, 8, 16, 14) // hit_0

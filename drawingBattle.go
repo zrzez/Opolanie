@@ -685,54 +685,7 @@ func drawProjectiles(bs *battleState, ps *programState) {
 }
 
 func drawSingleProjectile(p *projectile, ps *programState) {
-	tex, ok := ps.ProjectileSprites[p.Type]
-	if !ok {
-		return
-	}
-
-	dirX := 0
-	if p.DX > 0.5 {
-		dirX = 1
-	} else if p.DX < -0.5 {
-		dirX = -1
-	}
-
-	dirY := 0
-	if p.DY > 0.5 {
-		dirY = 1
-	} else if p.DY < -0.5 {
-		dirY = -1
-	}
-
-	frameW := float32(tex.Width) / 2.0
-	frameH := float32(tex.Height) / 3.0
-
-	col := 0
-	if dirX == 0 {
-		col = 1 // Pionowo (Góra/Dół)
-	} else {
-		col = 0 // Poziomo/Skos
-	}
-
-	row := dirY + 1
-	if row < 0 {
-		row = 0
-	}
-	if row > 2 {
-		row = 2
-	}
-
-	flipX := dirX == 1
-
-	sourceRec := rl.NewRectangle(float32(col)*frameW, float32(row)*frameH, frameW, frameH)
-	if flipX {
-		sourceRec.Width = -sourceRec.Width
-	}
-
-	drawX := p.x - (frameW / 2.0)
-	drawY := p.y - (frameH / 2.0)
-
-	rl.DrawTexturePro(tex, sourceRec, rl.NewRectangle(drawX, drawY, frameW, frameH), rl.NewVector2(0, 0), 0, rl.White)
+	drawSpriteEx(p.Sprite, p.X, p.Y, colorRed, rl.White, ps)
 }
 
 // @todo: być może warto połączyć logikę rysowania paska HP budynków i jednostek?
@@ -1015,7 +968,7 @@ func drawCorpses(y, startX, endX uint8, bs *battleState, ps *programState) {
 				finalID := baseID + corpsesFrameIndexOffset + offsetIndex
 				drawSprite(ps.Assets, finalID, posX, posY, corpse.Owner)
 			} else {
-				cid := spriteEffectSkeleton_00 + uint16(corpse.SkeletonType)
+				cid := spriteeffectskeleton00 + uint16(corpse.SkeletonType)
 				tint := rl.Fade(rl.White, float32(corpse.Alpha)/corpsesMaxAlpha)
 				drawSpriteEx(cid, posX, posY, colorNone, tint, ps)
 			}
@@ -1098,6 +1051,7 @@ func drawWorldAndUnits(bs *battleState, ps *programState) {
 			}
 		}
 	}
+
 	drawProjectiles(bs, ps)
 	drawSelectionBox(bs, ps)
 }
@@ -1109,6 +1063,7 @@ func drawUnit(u *unit, bs *battleState, ps *programState) {
 	screenY := float32(u.Y) * float32(tileHeight)
 
 	// 2. Logika ruchu - Cofanie od celu
+
 	if u.State == stateMoving {
 		idx := getLegacyUnitIndex(u.Type)
 		delayIdx := u.Delay

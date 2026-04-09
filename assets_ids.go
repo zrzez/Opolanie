@@ -221,11 +221,11 @@ const (
 	spriteBtnSpellMagicFire     uint16 = 611
 
 	// --- EFEKTY ---
-	spriteEffectSkeleton_00 uint16 = 612
-	spriteEffectSkeleton_01 uint16 = 613
-	spriteEffectSkeleton_02 uint16 = 614
-	spriteEffectHit00       uint16 = 615
-	spriteEffectHit01       uint16 = 616
+	spriteeffectskeleton00 uint16 = 612
+	spriteeffectskeleton01 uint16 = 613
+	spriteeffectskeleton02 uint16 = 614
+	spriteEffectHit00      uint16 = 615
+	spriteEffectHit01      uint16 = 616
 
 	// --- LECZENIE
 	spriteEffectHeal00 uint16 = 617

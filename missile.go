@@ -8,18 +8,19 @@ import (
 
 // Rodzaje pocisków
 const (
-	missileArrow     = "ARROW"
-	missileBolt      = "CROSSBOW"
-	missileFire      = "FIRE"
-	missileLightning = "LIGHTNING"
-	missileSpear     = "SPEAR"
-	missileGhost     = "GHOST"
+	missileArrow uint8 = iota
+	missileBolt
+	missileFire
+	missileLightning
+	missileSpear
+	missileGhost
 )
 
 type projectile struct {
-	ID    uint
-	Type  string // Klucz do mapy ProjectileSprites
-	Owner uint8  // Kto wystrzelił
+	ID     uint
+	Kind   uint8
+	Sprite uint16
+	Owner  uint8
 
 	// Pozycja
 	X, Y float32
@@ -28,7 +29,7 @@ type projectile struct {
 	DX, DY float32
 
 	// Cel
-	TargetX, TargetY uint8
+	TargetX, TargetY uint16
 
 	// Licznik czasu lotu
 	Lifetime uint
@@ -37,33 +38,34 @@ type projectile struct {
 	Damage uint16
 
 	// Stan
-	Exists bool
+	Exists   bool
+	IsImpact bool // @todo: durna nazwa, muszę zmienić @reminder: dla ducha maga żeby „opętać” cel i razić go
 }
 
-func (p *projectile) initProjectile(typeName string, owner uint8, startX, startY, targetX, targetY uint8, damage uint16) {
-	p.Type = typeName
+func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, targetY uint16, damage uint16) {
+	p.Kind = kind
 	p.Owner = owner
 	p.TargetX = targetX
 	p.TargetY = targetY
 	p.Damage = damage
 	p.Exists = true
+	p.IsImpact = false
 
 	// Przeliczenie kafelków na piksele (środek kafelka)
-	p.X = float32(startX*tileWidth) + float32(tileWidth)/2
-	p.Y = float32(startY*tileHeight) + float32(tileHeight)/2
+	p.X = float32(startX*uint16(tileWidth)) + float32(tileWidth)/2
+	p.Y = float32(startY*uint16(tileHeight)) + float32(tileHeight)/2
 
-	destPixelX := float32(targetX*tileWidth) + float32(tileWidth)/2
-	destPixelY := float32(targetY*tileHeight) + float32(tileHeight)/2
+	destPixelX := float32(targetX*uint16(tileWidth)) + float32(tileWidth)/2
+	destPixelY := float32(targetY*uint16(tileHeight)) + float32(tileHeight)/2
 
 	// Obliczenie wektora różnicy
 	diffX := destPixelX - p.X
 	diffY := destPixelY - p.Y
 
-	// Normalizacja prędkości
-	// ZMIANA: Kusznik (BOLT) ma szybszy pocisk, reszta standardowy.
-	// To przywraca dynamikę z oryginału, gdzie bełt leciał 2x szybciej.
+	// Ustawienie prędkości
+	// kusznik pruł, jak szalony
 	var speed float32 = 4.0
-	if typeName == missileBolt {
+	if kind == missileBolt {
 		speed = 8.0
 	}
 
@@ -77,11 +79,23 @@ func (p *projectile) initProjectile(typeName string, owner uint8, startX, startY
 	} else {
 		p.Exists = false // Cel tożsamy ze startem
 	}
+
+	p.Sprite = resolveProjectileSprite(kind, p.DX, p.DY)
 }
 
 // updateProjectile aktualizuje pozycję pocisku.
 func (p *projectile) updateProjectile(bs *battleState) {
 	if !p.Exists {
+		return
+	}
+
+	// @reminder: duch powinien ruszać się razem z jednostką
+	if p.IsImpact {
+		p.Lifetime--
+		if p.Lifetime <= 0 {
+			p.Exists = false
+		}
+
 		return
 	}
 
@@ -93,37 +107,124 @@ func (p *projectile) updateProjectile(bs *battleState) {
 	// Sprawdzenie trafienia (gdy czas się skończył)
 	if p.Lifetime <= 0 {
 		p.hit(bs)
-		p.Exists = false
 	}
 }
 
 // hit zadaje obrażenia w punkcie docelowym.
 func (p *projectile) hit(bs *battleState) {
-	// Sprawdzamy granice mapy
-	if p.TargetX < boardMaxX && p.TargetY < boardMaxY {
-
-		// === ZMIANA ARCHITEKTONICZNA ===
-		// Pobieramy wskaźnik do kafelka (Tile) w miejscu trafienia.
-		tile := &bs.Board.Tiles[p.TargetX][p.TargetY]
-
-		// Zamiast szukać ID w starej tablicy Plc i potem wołać getObjectByID,
-		// sprawdzamy bezpośrednio, czy na kafelku jest wskaźnik do unit lub building.
-
-		// 1. Trafienie w Jednostkę
-		if tile.Unit != nil && tile.Unit.Exists && tile.Unit.Owner != p.Owner {
-			tile.Unit.takeDamage(p.Damage, bs)
-		}
-
-		// 2. Trafienie w Budynek
-		if tile.Building != nil && tile.Building.Exists && tile.Building.Owner != p.Owner {
-			tile.Building.takeDamage(p.Damage)
-		}
-
-		// 3. Efekt wizualny (np. ogień)
-		// Dawniej: bs.Board.PlcAttackEffects[x][y] = 100
-		// Teraz: tile.EffectID = 100
-		if p.Type == missileFire {
-			// tile.EffectID = 100
-		}
+	if p.TargetX >= uint16(boardMaxX) || p.TargetY >= uint16(boardMaxY) {
+		p.Exists = false
+		return
 	}
+
+	tile := &bs.Board.Tiles[p.TargetX][p.TargetY]
+
+	// 1. Trafienie jednostki
+	if tile.Unit != nil && tile.Unit.Exists && tile.Unit.Owner != p.Owner {
+		tile.Unit.takeDamage(p.Damage, bs) // @todo: czemu jednostka ma argument bs, a budynek nie?
+	}
+
+	// 2. Trafienie budynku
+	if tile.Building != nil && tile.Building.Exists && tile.Building.Owner != p.Owner {
+		tile.Building.takeDamage(p.Damage)
+	}
+
+	// 3. Jeśli to duch (pocisk maga) to zostań widoczny na jednostce
+	if p.Kind == missileGhost {
+		p.IsImpact = true
+		p.Sprite = spriteMissileGhostAttack
+		p.Lifetime = 20 // @todo: liczba z czapy
+
+		return
+	}
+
+	// 4. Ogień musi palić się przez jakiś czas
+	// @todo: czy można uwspólnić logikę ognia i ducha?
+	if p.Kind == missileFire {
+		// @todo: napisać kod odpowiedzialny za ogień w miejscu i zadawanie obrażeń
+	}
+
+	p.Exists = false
+}
+
+func unitTypeToMissileType(unitType unitType) uint8 {
+	switch unitType {
+	case unitArcher:
+		return missileArrow
+	case unitSpearman:
+		return missileSpear
+	case unitPriestess:
+		return missileLightning
+	case unitPriest:
+		return missileFire
+	case unitMage:
+		return missileGhost
+	case unitCrossbowman:
+		return missileBolt
+	default:
+		return missileArrow
+	}
+}
+
+func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
+	// Bazowy duszek dla pocisku
+	var baseSprite uint16
+	switch kind {
+	case missileArrow:
+		baseSprite = spriteMissileArrowUp
+	case missileSpear:
+		baseSprite = spriteMissileSpearUp
+	case missileLightning:
+		baseSprite = spriteMissileLightningUp
+	case missileFire:
+		baseSprite = spriteMissileFireUp
+	case missileGhost:
+		baseSprite = spriteMissileGhostUp
+	case missileBolt:
+		baseSprite = spriteMissileBoltUp
+	default:
+		baseSprite = spriteMissileArrowUp
+	}
+
+	// Określenie kierunku
+	dirX := 0
+
+	if dx > 0.5 {
+		dirX = 1
+	} else if dx < -0.5 {
+		dirX = -1
+	}
+
+	dirY := 0
+
+	if dy > 0.5 {
+		dirY = 1
+	} else if dy < -0.5 {
+		dirY = -1
+	}
+
+	var offset uint16
+
+	switch {
+	case dirX == 0 && dirY == -1:
+		offset = 0 // góra
+	case dirX == -1 && dirY == -1:
+		offset = 1 // góra lewo
+	case dirX == -1 && dirY == 0:
+		offset = 2 // lewo
+	case dirX == -1 && dirY == 1:
+		offset = 3 // lewy dół
+	case dirX == 0 && dirY == 1:
+		offset = 4 // dół
+	case dirX == 1 && dirY == 0:
+		offset = 5 // prawo
+	case dirX == 1 && dirY == -1:
+		offset = 6 // góra prawo
+	case dirX == 1 && dirY == 1:
+		offset = 7 // prawy dół
+	default:
+		offset = 2 // na wszelki wypadek
+	}
+
+	return baseSprite + offset
 }
