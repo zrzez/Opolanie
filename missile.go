@@ -169,6 +169,7 @@ func unitTypeToMissileType(unitType unitType) uint8 {
 func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
 	// Bazowy duszek dla pocisku
 	var baseSprite uint16
+
 	switch kind {
 	case missileArrow:
 		baseSprite = spriteMissileArrowUp
@@ -207,21 +208,21 @@ func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
 
 	switch {
 	case dirX == 0 && dirY == -1:
-		offset = 0 // góra
+		offset = 0 // góra 1
 	case dirX == -1 && dirY == -1:
-		offset = 1 // góra lewo
+		offset = 1 // góra lewo 1
 	case dirX == -1 && dirY == 0:
-		offset = 2 // lewo
+		offset = 2 // lewo 1
 	case dirX == -1 && dirY == 1:
-		offset = 3 // lewy dół
+		offset = 3 // lewy dół 1
 	case dirX == 0 && dirY == 1:
-		offset = 4 // dół
-	case dirX == 1 && dirY == 0:
-		offset = 5 // prawo
+		offset = 4 // dół 1
 	case dirX == 1 && dirY == -1:
-		offset = 6 // góra prawo
+		offset = 5 // góra prawo X
+	case dirX == 1 && dirY == 0:
+		offset = 6 // prawo X
 	case dirX == 1 && dirY == 1:
-		offset = 7 // prawy dół
+		offset = 7 // prawy dół 1
 	default:
 		offset = 2 // na wszelki wypadek
 	}
