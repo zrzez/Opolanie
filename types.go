@@ -322,6 +322,10 @@ type tile struct {
 	GrazedCounter   uint8
 	GrazedOverlayID uint8
 	// @todo: jeśli się sprawdzi (04.01.2026) to dodaj to samo dla ognia
+	// Płomień
+	IsBurning   bool
+	FireCounter uint8
+	FireID      uint8
 
 	// --- WŁAŚCIWOŚCI FIZYCZNE ---
 	IsWalkable   bool    // przechodniość kafelka

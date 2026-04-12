@@ -114,6 +114,7 @@ func (p *projectile) updateProjectile(bs *battleState) {
 func (p *projectile) hit(bs *battleState) {
 	if p.TargetX >= uint16(boardMaxX) || p.TargetY >= uint16(boardMaxY) {
 		p.Exists = false
+
 		return
 	}
 
@@ -142,6 +143,7 @@ func (p *projectile) hit(bs *battleState) {
 	// @todo: czy można uwspólnić logikę ognia i ducha?
 	if p.Kind == missileFire {
 		// @todo: napisać kod odpowiedzialny za ogień w miejscu i zadawanie obrażeń
+		fireball()
 	}
 
 	p.Exists = false
@@ -228,4 +230,16 @@ func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
 	}
 
 	return baseSprite + offset
+}
+
+func fireball() {
+	// 0. efekt to
+	// a. obrażenia
+	// unit/building.takedamage(p.Damage)
+	// b. zapalenie kafelka na którym był cel
+	// burningTileEffect()
+
+	// 1. efekt100 w kafelku, damage
+	// 2. efekt90 w kafelku+1, damage-10
+	// 3. efekt80 w kafelku+2, damagw-20
 }

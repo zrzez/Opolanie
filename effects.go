@@ -53,68 +53,6 @@ func updateAdjacentPalisades(x, y uint8, board *boardData) {
 	}
 }
 
-// @reminder: przekombinowałem. W oryginale zawsze budowało się środek pionowego mostu.
-// Te dynamiczne zmiany tekstur są zbędne w tej chwili 15.03.2026
-/*func joinBridges(x, y uint8, board *boardData) {
-	applyBridgeProcessing(x, y, board)
-	updateAdjacentBridges(x, y, board)
-}
-
-func updateAdjacentBridges(x, y uint8, board *boardData) {
-	// Góra
-	if y > 0 && isBridge(board.Tiles[x][y-1].TextureID) {
-		b := board.Tiles[x][y-1].Building
-		if b == nil || !b.IsUnderConstruction {
-			applyBridgeProcessing(x, y-1, board)
-		}
-	}
-
-	// Dół
-	if y < boardMaxY-1 && isBridge(board.Tiles[x][y+1].TextureID) {
-		b := board.Tiles[x][y+1].Building
-		if b == nil || !b.IsUnderConstruction {
-			applyBridgeProcessing(x, y+1, board)
-		}
-	}
-
-	// Prawo
-	if x < boardMaxX-1 && isBridge(board.Tiles[x+1][y].TextureID) {
-		b := board.Tiles[x+1][y].Building
-		if b == nil || !b.IsUnderConstruction {
-			applyBridgeProcessing(x+1, y, board)
-		}
-	}
-
-	// Lewo
-	if x > 0 && isBridge(board.Tiles[x-1][y].TextureID) {
-		b := board.Tiles[x-1][y].Building
-		if b == nil || !b.IsUnderConstruction {
-			applyBridgeProcessing(x-1, y, board)
-		}
-	}
-}
-
-func applyBridgeProcessing(x, y uint8, board *boardData) {
-	newID := spriteBridgeStart
-
-	// Czy sąsiad poziomo jest mostem?
-	hasHorizontalBridge := (x > 0 && isBridge(board.Tiles[x-1][y].TextureID)) ||
-		(x < boardMaxX-1 && isBridge(board.Tiles[x+1][y].TextureID))
-
-	// Czy sąsiad pionowo jest mostem?
-	hasVerticalBridge := (y > 0 && isBridge(board.Tiles[x][y-1].TextureID)) ||
-		(y < boardMaxY-1 && isBridge(board.Tiles[x][y+1].TextureID))
-
-	// Jeśli most ma sąsiada-mostu, dopasuj kierunek
-	if hasHorizontalBridge {
-		newID = spriteBridgeEnd
-	} else if hasVerticalBridge {
-		newID = spriteBridgeEnd - 1
-	}
-
-	board.Tiles[x][y].TextureID = newID
-}*/
-
 func updateAnimationCounters(bs *battleState) {
 	bs.WaterAnimationCounter = (bs.WaterAnimationCounter + 1) % 3
 	bs.FireAnimationCounter = (bs.FireAnimationCounter + 1) % 14
@@ -197,4 +135,17 @@ func manaRegen(bs *battleState) {
 			}
 		}
 	}
+}
+
+func burningTileEffect() {
+	// 0. Kafelek płonie
+	// tile.IsBurning = true
+	// jeśli płonie to jednostka chce zejść z niego
+
+	// 1. Co osiem tyków zadaje 3 obrażenia i zmniejsza intensywność o 1
+	// tile.FireCounter = powiązany z GrassGrowthCounter
+	// tile.FireID =
+
+	// 2. Jeśli kafelek miał drzewo, to kończy się palić i podmienia teksturę na spalone drzewo
+	// 2a. spalone drzewo powinno się obalić
 }

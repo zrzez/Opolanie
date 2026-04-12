@@ -1374,151 +1374,6 @@ func drawGameCursorOnRealScreen(bs *battleState, ps *programState, scale float32
 	drawCursorSprite(ps, cursorID, realMousePos, 3*bs.GameCamera.Zoom/scale)
 }
 
-// getCursorIDFromContext - otulina
-// Sprawdza stan gry. Jeśli gameScreen → deleguje do determineCursorState.
-// Jeśli inny stan → zwraca domyślny kursor.
-func getCursorIDFromContext(bs *battleState, ps *programState, realMousePos rl.Vector2, scale float32) uint16 {
-	if ps.CurrentState == gameScreen {
-		virtualMouseX := realMousePos.X / scale
-		virtualMouseY := realMousePos.Y / scale
-		virtualMousePos := rl.NewVector2(virtualMouseX, virtualMouseY)
-
-		return determineCursorState(bs, virtualMousePos, ps.GameViewWidth, ps.VirtualWidth, ps.VirtualHeight)
-	}
-
-	return spriteCursorPointer
-}
-
-// determineCursorState - powinno się wypierdzielić to do osobnego pliku, bo to logika, a nie rysowanie.
-func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, viewH float32) uint16 {
-	// A. Sprawdzamy "Scroll w prawo" na samej krawędzi okna
-	if mousePos.X > totalW-scrollZoneXThreshold {
-		return spriteCursorArrowRight
-	}
-
-	// B. Sprawdzamy czy mysz jest nad UI
-	if mousePos.X >= viewW {
-		return spriteCursorDefaultBig
-	}
-
-	// C. Pozostałe przewijanie
-	if mousePos.X < scrollZoneXThreshold {
-		return spriteCursorArrowLeft // Lewo
-	}
-
-	if mousePos.Y < scrollZoneYThreshold {
-		return spriteCursorArrowUp // Góra
-	}
-
-	if mousePos.Y > viewH-scrollZoneYThreshold {
-		return spriteCursorArrowDown // Dół
-	}
-
-	// D. Musimy przeliczyć pozycję myszy na świat gry używając kamery
-	worldMousePos := rl.GetScreenToWorld2D(mousePos, bs.GameCamera)
-	tileX := uint8(worldMousePos.X / float32(tileWidth))
-	tileY := uint8(worldMousePos.Y / float32(tileHeight))
-
-	if tileX < 0 || tileX >= boardMaxX || tileY < 0 || tileY >= boardMaxY {
-		return spriteCursorStop
-	}
-
-	tile := &bs.Board.Tiles[tileX][tileY]
-	targetOwner := -1
-
-	var targetBuilding *building // Potrzebujemy wiedzieć, czy to budynek
-
-	if tile.Unit != nil && tile.Unit.Exists {
-		targetOwner = int(tile.Unit.Owner)
-	} else if tile.Building != nil && tile.Building.Exists {
-		targetOwner = int(tile.Building.Owner)
-		targetBuilding = tile.Building
-	}
-
-	hasSelectedOwnUnit := bs.CurrentSelection.IsUnit && bs.CurrentSelection.OwnerID == bs.PlayerID
-	canBeRepaired := targetBuilding != nil && targetBuilding.HP < targetBuilding.MaxHP &&
-		(targetBuilding.Type == buildingPalisade || targetBuilding.Type == buildingBridge || targetBuilding.Owner == bs.PlayerID)
-
-	if hasSelectedOwnUnit {
-		// 0. Chcemy naprawić budynek
-		if bs.MouseCommandMode == cmdRepairStructure {
-			if canBeRepaired {
-				return spriteBtnRepair
-			}
-
-			return spriteCursorStop
-		}
-		// 1. Wróg
-		if targetOwner != -1 && targetOwner != int(bs.PlayerID) {
-			// Specjalny przypadek: Palisada
-			if targetBuilding != nil && targetBuilding.Type == buildingPalisade {
-				selectedUnit, ok := getUnitByID(bs.CurrentSelection.UnitID, bs)
-				if ok && !canDamagePalisades(selectedUnit) {
-					return spriteCursorStop
-				}
-			}
-
-			// Nie da się zaatakować mostu
-			if targetBuilding.Type == buildingBridge {
-				return spriteCursorStop
-			}
-
-			return spriteCursorCrossRed
-		}
-
-		// 2. Sojusznik (lub my sami)
-		if targetOwner == int(bs.PlayerID) {
-			return spriteCursorFrameWhite
-		}
-
-		// 3. Puste pole / Teren
-		if targetOwner == -1 {
-			if !tile.IsWalkable {
-				return spriteCursorStop
-			}
-
-			return spriteCursorCrossWhite
-		}
-	} else {
-		if targetOwner != -1 && targetOwner != int(bs.PlayerID) {
-			return spriteCursorFrameRed
-		}
-
-		if targetOwner == int(bs.PlayerID) {
-			return spriteCursorFrameWhite
-		}
-	}
-
-	return spriteCursorDefaultBig
-}
-
-func animateCursorID(cursorID uint16) uint16 {
-	const cursorAnimSpeed = 4.0
-	animPhase := int(rl.GetTime()*cursorAnimSpeed) % 2
-
-	if cursorID == spriteCursorCrossWhite {
-		if rl.IsMouseButtonDown(rl.MouseRightButton) {
-			return spriteCursorSmallWhite
-		}
-
-		if animPhase == 1 {
-			return spriteCursorCrossMedWhite
-		}
-	}
-
-	if cursorID == spriteCursorCrossRed {
-		if rl.IsMouseButtonDown(rl.MouseRightButton) {
-			return spriteCursorCrossMedRed
-		}
-
-		if animPhase == 1 {
-			return spriteCursorCrossMedRed
-		}
-	}
-
-	return cursorID
-}
-
 func drawCursorSprite(ps *programState, cursorID uint16, pos rl.Vector2, scale float32) {
 	def := spriteRegistry[cursorID]
 	if def.w == 0 {
@@ -1564,10 +1419,13 @@ func drawMilkBarVisualizer(bs *battleState, ps *programState) {
 	barHeight := milkBarHeight
 
 	currentMilk := float32(bs.HumanPlayerState.Milk)
+
 	fillRatio := currentMilk / maxMilk
+
 	if fillRatio > 1.0 {
 		fillRatio = 1.0
 	}
+
 	filledHeight := barHeight * fillRatio
 	fillY := barY + barHeight - filledHeight
 
@@ -1577,6 +1435,7 @@ func drawMilkBarVisualizer(bs *battleState, ps *programState) {
 	if capacityLineRation > 1.0 {
 		capacityLineRation = 1.0
 	}
+
 	redLineY := barY + barHeight - (barHeight * capacityLineRation)
 
 	rl.DrawLineEx(
