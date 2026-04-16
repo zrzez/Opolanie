@@ -452,7 +452,6 @@ func handleGameShortcuts(bs *battleState) bool {
 }
 
 // handleCameraScroll obsługuje przewijanie kamery.
-// handleCameraScroll obsługuje przewijanie kamery.
 func handleCameraScroll(input inputState, bs *battleState, ps *programState) bool {
 	scrollSpeed := 200.0 * rl.GetFrameTime()
 	moved := false
@@ -511,9 +510,6 @@ func handleCameraScroll(input inputState, bs *battleState, ps *programState) boo
 	}
 
 	// --- 2. Obsługa Myszki (Krawędzie Ekranu) ---
-	// ... reszta kodu bez zmian ...
-
-	// (Poniżej wklejam resztę dla kontekstu, żebyś wiedział gdzie jesteśmy)
 	if input.MousePosition.X < scrollZoneXThreshold && input.MousePosition.X >= 0 {
 		bs.GameCamera.Target.X -= scrollSpeed
 		moved = true
@@ -550,12 +546,14 @@ func handleBoardInitialChecks(input inputState, bs *battleState, ps *programStat
 	tileX := uint8(worldPos.X / float32(tileWidth))
 	tileY := uint8(worldPos.Y / float32(tileHeight))
 
-	if tileX < 0 || tileX >= boardMaxX || tileY < 0 || tileY >= boardMaxY {
+	if tileX >= boardMaxX || tileY >= boardMaxY {
 		if input.IsLeftMouseButtonPressed && !bs.IsSelectingBox {
 			clearSelection(bs)
 		}
+
 		return true, tileX, tileY
 	}
+
 	return false, tileX, tileY
 }
 
@@ -566,55 +564,61 @@ func handleBoardRightClick(input inputState, bs *battleState, tileX, tileY uint8
 			bs.SelectionStart = rl.NewVector2(0, 0)
 			bs.InitialClickPos = rl.NewVector2(0, 0)
 			bs.MouseCommandMode = 1
+
 			return true
 		}
 
 		// Jeżeli jesteśmy w trybie celowania (budowa, naprawa, czar),
-		// to prawy przycisk służy jako "ANULUJ", a nie jako "IDŹ TAM".
+		// to prawy przycisk służy jako „ANULUJ”.
 		if bs.MouseCommandMode > 1 {
 			log.Println("INPUT: Anulowano tryb celowania prawym przyciskiem.")
+
 			bs.MouseCommandMode = cmdIdle
 			bs.PendingBuildingType = 0 // Na wypadek gdybyśmy anulowali budowanie
 			bs.CurrentMessage.Text = "Anulowano"
 			bs.CurrentMessage.Duration = 30
+
 			return true // Zjadamy kliknięcie, nie wysyłamy ruchu!
 		}
 
 		selectedUnits := getSelectedUnits(bs)
 		if len(selectedUnits) > 0 {
-			tile := &bs.Board.Tiles[tileX][tileY]
+			tileUnderCursor := &bs.Board.Tiles[tileX][tileY]
 			targetID := uint(0)
-			var targetOwner uint8 = 0
 
-			if tile.Unit != nil {
-				targetID = tile.Unit.ID
-				targetOwner = tile.Unit.Owner
-			} else if tile.Building != nil {
-				targetID = tile.Building.ID
-				targetOwner = tile.Building.Owner
+			var targetOwner uint8
+
+			if tileUnderCursor.Unit != nil {
+				targetID = tileUnderCursor.Unit.ID
+				targetOwner = tileUnderCursor.Unit.Owner
+			} else if tileUnderCursor.Building != nil {
+				targetID = tileUnderCursor.Building.ID
+				targetOwner = tileUnderCursor.Building.Owner
 			}
 
 			commandType := cmdMove
 
 			if targetID != 0 && targetOwner != bs.PlayerID {
 				commandType = cmdAttack
-			} else {
-				if !isWalkable(bs, tileX, tileY) {
-					bs.CurrentMessage.Text = "Nieprzechodnie!"
-					bs.CurrentMessage.Duration = 60
-					return true
-				}
+			} else if !isWalkable(bs, tileX, tileY) {
+				bs.CurrentMessage.Text = "Nieprzechodnie!"
+				bs.CurrentMessage.Duration = 60
+
+				return true
 			}
 
 			sendUnitCommand(bs, selectedUnits, commandType, tileX, tileY, targetID, input.IsCtrlKeyDown)
+
 			return true
 		}
 
 		if bs.MouseCommandMode != 1 {
 			bs.MouseCommandMode = 1
+
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -705,35 +709,41 @@ func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8)
 	// === 2. RZUCANIE CZARÓW ===
 	case cmdCastSpell:
 		log.Println("DBG_LCLICK: Tryb rzucania czaru.")
+
 		selectedUnit, ok := getUnitByID(bs.CurrentSelection.UnitID, bs)
+
 		if !ok && selectedUnit.Exists {
 			// TODO: Tutaj CMD_MAGIC_FIRE jest na sztywno, docelowo powinno zależeć od wybranego czaru w UI
 			selectedUnit.addUnitCommand(cmdMagicFire, tileX, tileY, 0, bs)
 			log.Printf("DBG_LCLICK: Wydano komendę czaru dla jednostki %d na (%d,%d).", selectedUnit.ID, tileX, tileY)
 		}
+
 		bs.MouseCommandMode = 1
+
 		return true
 
 	// === 3. DOMYŚLNY TRYB (SELEKCJA I RUCH) ===
 	default:
 		// Sprawdzamy, czy kliknięto w obiekt (Jednostkę lub Budynek)
-		tile := &bs.Board.Tiles[tileX][tileY]
+		tileUnderCursor := &bs.Board.Tiles[tileX][tileY]
 		targetID := uint(0)
 
-		if tile.Unit != nil {
-			targetID = tile.Unit.ID
-		} else if tile.Building != nil {
-			targetID = tile.Building.ID
+		if tileUnderCursor.Unit != nil {
+			targetID = tileUnderCursor.Unit.ID
+		} else if tileUnderCursor.Building != nil {
+			targetID = tileUnderCursor.Building.ID
 		}
 
 		if targetID != 0 {
 			log.Println("DBG_LCLICK: Kliknięto na OBIEKT. Wywołuję selectObjectByClick.")
 			selectObjectByClick(tileX, tileY, bs)
+
 			return true
 		}
 
 		// Kliknięto w puste pole -> Początek rysowania prostokąta zaznaczenia (Drag Selection)
 		log.Println("DBG_LCLICK: Kliknięto na puste pole. Początek zaznaczania.")
+
 		if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
 			// Jeśli nie trzymamy Shift, czyścimy poprzednie zaznaczenie
 			clearSelection(bs)
@@ -767,6 +777,8 @@ func handleBoardDrag(input inputState, bs *battleState) bool {
 // @todo: ogarnij czemu to nie działa jako przekazanie STOP do wszystkich
 // zaznaczonych jednostek!
 func sendUnitCommand(bs *battleState, units []*unit, command uint16, x, y uint8, targetID uint, ctrlDown bool) {
+	log.Printf("INFO: input.go wysłano rozkaz.")
+
 	for _, u := range units {
 		u.AllowFriendlyFire = ctrlDown
 	}
@@ -792,6 +804,7 @@ func handleBoardInteraction(input inputState, bs *battleState, ps *programState)
 		performBoxSelection(bs, bs.SelectionStart, input.MousePosition)
 		bs.SelectionStart = rl.NewVector2(0, 0)
 		bs.InitialClickPos = rl.NewVector2(0, 0)
+
 		return
 	}
 
@@ -876,10 +889,12 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 						unit = nt.Unit
 						bld = nt.Building
 						found = true
+
 						break
 					}
 				}
 			}
+
 			if found {
 				break
 			}
@@ -888,6 +903,7 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 		if !found {
 			clearSelection(bs)
 			bs.MouseCommandMode = 1
+
 			return
 		}
 	}
@@ -915,6 +931,7 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 			unit.IsSelected = !unit.IsSelected
 			if !unit.IsSelected && bs.CurrentSelection.UnitID == unit.ID {
 				foundNewPrimary := false
+
 				for _, u := range bs.Units {
 					if u.Exists && u.IsSelected && u.Owner == bs.PlayerID {
 						bs.CurrentSelection = selectionState{OwnerID: u.Owner, IsUnit: true, UnitID: u.ID}
@@ -922,6 +939,7 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 						break
 					}
 				}
+
 				if !foundNewPrimary {
 					bs.CurrentSelection = selectionState{}
 				}
@@ -994,6 +1012,7 @@ func performBoxSelection(bs *battleState, startPos, endPos rl.Vector2) {
 	}
 
 	var selectedCount int
+
 	var firstSelectedUnit *unit
 
 	for _, unit := range bs.Units {
@@ -1051,6 +1070,7 @@ func handleMinimapInteraction(input inputState, bs *battleState, ps *programStat
 		bs.IsMapDragging = false
 		bs.MapInitialClickPos = rl.NewVector2(0.0, 0.0)
 		bs.CameraTargetOnDragStart = rl.NewVector2(0.0, 0.0)
+
 		return true
 	}
 
@@ -1108,6 +1128,7 @@ func handleMinimapLeftMouse(input inputState, bs *battleState, minimapRect rl.Re
 			// Clamping używa dynamicznych wymiarów
 			clampCameraTarget(&bs.GameCamera, fullMapPixelWidth, fullMapPixelHeight,
 				ps.GameViewWidth, ps.VirtualHeight)
+
 			return true
 		}
 	}
@@ -1138,8 +1159,9 @@ func handleMinimapRightMouse(
 	tileY := uint8(math.Min(math.Max(worldY/float64(tileHeight), 0), float64(boardMaxY-1)))
 
 	tile := &bs.Board.Tiles[tileX][tileY]
-	var targetID uint = 0
-	var targetOwner uint8 = 0
+	var targetID uint
+	var targetOwner uint8
+
 	if tile.Unit != nil {
 		targetID = tile.Unit.ID
 		targetOwner = tile.Unit.Owner
@@ -1155,11 +1177,13 @@ func handleMinimapRightMouse(
 	} else if !isWalkable(bs, tileX, tileY) {
 		bs.CurrentMessage.Text = "Nieprzechodnie!"
 		bs.CurrentMessage.Duration = 60
+
 		return true
 	}
 
 	sendUnitCommand(bs, selectedUnits, cmd, tileX, tileY, targetID, input.IsCtrlKeyDown)
 	bs.MouseCommandMode = 1
+
 	return true
 }
 
