@@ -120,9 +120,9 @@ func startFirstCampaign(ps *programState, bs *battleState) {
 	// Zerowanie liczników
 	bs.CheatsEnabled = false
 	bs.CheatSequenceProgress = 0
-	bs.GrassGrowthCounter = 0
-	bs.WaterAnimationCounter = 0
-	bs.FireAnimationCounter = 0
+	bs.GrassGrowthCycle = 0
+	bs.WaterAnimationFrame = 0
+	bs.FireAnimationFrame = 0
 	bs.GlobalFrameCounter = 0
 	bs.NextUniqueObjectID = 1
 

@@ -794,10 +794,10 @@ func newBattleState(ps *programState) *battleState {
 		QuitLevel:             false,
 
 		// Liczniki
-		GrassGrowthCounter:    0,
-		WaterAnimationCounter: 0,
-		FireAnimationCounter:  0,
-		GlobalFrameCounter:    0,
+		GrassGrowthCycle:    0,
+		WaterAnimationFrame: 0,
+		FireAnimationFrame:  0,
+		GlobalFrameCounter:  0,
 
 		CampaignData: campaignData{},
 

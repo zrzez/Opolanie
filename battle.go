@@ -259,6 +259,7 @@ func updateGame(bs *battleState) {
 	logicTickInterval := bs.GameSpeed + uint16(1)
 	if bs.GlobalFrameCounter%logicTickInterval != 0 {
 		updateMessageTimer(bs)
+
 		return
 	}
 
@@ -301,7 +302,6 @@ func updateGame(bs *battleState) {
 
 	// 10. Efekty globalne
 	applyGlobalEffects(bs)
-	updateCorpses(bs) // Pasuje tutaj, ale nie chcę jeszcze wrzucać w applyGlobalEffects
 
 	// 11. Skrypty poziomu (przemiana w niedźwiedzia itd)
 	// @todo: do zrobienia, nie sprawdzałem jeszcze czy w ogóle działają
@@ -353,32 +353,32 @@ func updateCorpses(bs *battleState) {
 	nextFreeIndex := 0
 
 	for scanIndex := range bs.Corpses {
-		corpse := &bs.Corpses[scanIndex]
+		corpseToUpdate := &bs.Corpses[scanIndex]
 
-		corpse.DecayTimer--
+		corpseToUpdate.DecayTimer--
 
-		timePassed := corpseDecayTime - corpse.DecayTimer
+		timePassed := corpseDecayTime - corpseToUpdate.DecayTimer
 		currentPhase := uint8(timePassed / corpsesPhaseDuration)
 
 		if currentPhase > corpsesPhase2 {
 			currentPhase = corpsesPhase2
 		}
 
-		corpse.Phase = currentPhase
+		corpseToUpdate.Phase = currentPhase
 
 		const corpseFadeDuration = 400
 
-		if corpse.DecayTimer > corpseFadeDuration {
-			corpse.Alpha = 255
+		if corpseToUpdate.DecayTimer > corpseFadeDuration {
+			corpseToUpdate.Alpha = 255
 		} else {
-			corpse.Alpha = uint8(float32(corpse.DecayTimer) / float32(corpseFadeDuration) * corpsesMaxAlpha)
+			corpseToUpdate.Alpha = uint8(float32(corpseToUpdate.DecayTimer) / float32(corpseFadeDuration) * corpsesMaxAlpha)
 		}
 
 		// Zwłoki jeszcze się nie rozłożyły całkowicie
-		if corpse.DecayTimer > 0 {
+		if corpseToUpdate.DecayTimer > 0 {
 			// Jeśli zwłoki są pod adresem większym niż wolny adres, to przenosimy.
 			if scanIndex != nextFreeIndex {
-				bs.Corpses[nextFreeIndex] = *corpse
+				bs.Corpses[nextFreeIndex] = *corpseToUpdate
 			}
 
 			nextFreeIndex++
@@ -521,6 +521,8 @@ func applyGlobalEffects(bs *battleState) {
 	// clearAttack(bs)
 	healingShrine(bs)
 	manaRegen(bs)
+	updateCorpses(bs)
+	burningTileEffect(bs)
 }
 
 // handleLevelEvents przemiana w niedźwiedzia, odprowadzenie jednostki do punktu ucieczki

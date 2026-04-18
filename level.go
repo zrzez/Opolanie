@@ -135,9 +135,9 @@ func (l *jsonLevelLoader) clearGameState(bs *battleState) {
 	bs.IsSelectingBox = false
 
 	// Zerowanie liczników animacji
-	bs.GrassGrowthCounter = 0
-	bs.WaterAnimationCounter = 0
-	bs.FireAnimationCounter = 0
+	bs.GrassGrowthCycle = 0
+	bs.WaterAnimationFrame = 0
+	bs.FireAnimationFrame = 0
 	bs.GlobalFrameCounter = 0
 
 	bs.AI = aiState{}

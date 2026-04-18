@@ -103,8 +103,8 @@ var idRegistry = map[string]uint16{
 	"SPRITE_FIRE_09": spriteFire09,
 	"SPRITE_FIRE_10": spriteFire10,
 	"SPRITE_FIRE_11": spriteFire11,
-	"SPRITE_FIRE_12": spriteFire12,
-	"SPRITE_FIRE_13": spriteFire13,
+	"SPRITE_FIRE_12": spriteAsh00,
+	"SPRITE_FIRE_13": spriteAsh01,
 
 	"SPRITE_ARROW":     spriteMissileArrowUp,
 	"SPRITE_BOLT":      spriteMissileBoltUp,

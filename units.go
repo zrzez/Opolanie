@@ -523,11 +523,12 @@ func (u *unit) prepareForNewCommand(command uint16, targetX, targetY uint8, targ
 	u.Delay = 0
 }
 
-// @todo: CmdFlee jest nie ogarnięta i wykrzacza program przez default
+// @todo: CmdFlee jest nie ogarnięta i wykrzacza program przez default.
 func (u *unit) applyCommandState(command uint16) {
 	switch command {
 	case cmdAttack:
 		log.Printf("INFO: units.go applyCommandState cmdAttack")
+
 		u.State = stateAttacking
 		u.AnimationType = "fight"
 		u.AnimationFrame = 3
@@ -1204,7 +1205,8 @@ func (u *unit) performDirectAttack(target *combatTarget, bs *battleState) {
 
 // @todo: funkcja getExperienceBonus powinna być przebudowana, bo robi zbyt wiele
 // Zwraca podwyżkę statystyk i obrażeń, które powinny być „jednorazowe” zmieniając
-// statystyki jednostki a nie każdorazowo dodawać do ataku
+// statystyki jednostki a nie każdorazowo dodawać do ataku.
+// @todo: @reminder: to przypomniało mi, że zapisy gry nie biorą pod uwagę poziomu jednostek!
 func (u *unit) calculateAttackDamage() uint16 {
 	damageBonus, _, _ := u.getExperienceBonus()
 
@@ -1227,6 +1229,7 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bs *batt
 	)
 
 	bs.Projectiles = append(bs.Projectiles, proj)
+
 	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, targetX, targetY, damage)
 }
 
@@ -1253,6 +1256,8 @@ func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, bs *battl
 	}
 }
 
+// @todo: @reminder: wróć i zastanów się, czy to rozdzielenie ma sens, bo wygląda
+// jak przekombinowane, zwykły przełącznik bez podfunkcji powinien też się sprawdzić.
 func (u *unit) setAttackTimings() {
 	if u.AttackRange > 1 {
 		u.setRangedTimings()
@@ -1871,6 +1876,7 @@ func (u *unit) executeActionByDistance(distance uint8, bs *battleState) {
 	if distance > u.SightRange {
 		log.Printf("DEBUG_AI: U %d: cel ID %d poza zasięgiem widzenia. IDLE", u.ID, u.TargetID)
 		u.setIdle()
+
 		return
 	}
 
@@ -1889,6 +1895,7 @@ func (u *unit) executeActionBasedOnDistance(bs *battleState) {
 	target, err := u.validateTargetExists(bs)
 	if err != nil {
 		u.setIdle()
+
 		return
 	}
 
@@ -1944,6 +1951,7 @@ func (bld *building) getClosestOccupiedTile(fromX, fromY uint8) (uint8, uint8, b
 			closestY = tile.Y
 		}
 	}
+
 	return closestX, closestY, true
 }
 

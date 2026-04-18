@@ -762,6 +762,7 @@ func (bld *building) takeDamage(damage uint16) {
 	if !bld.Exists {
 		return
 	}
+
 	bld.AccumulatedDamage += damage
 	log.Printf("building %d received %d damage (accumulated: %d)", bld.ID, damage, bld.AccumulatedDamage)
 }

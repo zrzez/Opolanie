@@ -252,8 +252,10 @@ const (
 	spriteFire09 uint16 = 631
 	spriteFire10 uint16 = 632
 	spriteFire11 uint16 = 633
-	spriteFire12 uint16 = 634
-	spriteFire13 uint16 = 635
+
+	// --- POPIÓŁ
+	spriteAsh00 uint16 = 634
+	spriteAsh01 uint16 = 635
 
 	// --- POCISKI
 	// Strzała

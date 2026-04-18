@@ -186,8 +186,20 @@ const (
 )
 
 const (
-	// rzeczy związane z walidacją miejsca budowy
-	validationAlpha float32 = 0.5
+	// rzeczy związane z płomieniami i popiołem.
+	bigBurn uint16 = 80
+	midBurn uint16 = 224
+	minBurn uint16 = 240
+
+	totalAshLifetime    uint16  = 600
+	ashDecayRate        float32 = 0.005
+	ashAccumulationRate float32 = 0.01
+)
+
+const (
+	// ashBuilding
+	ashDecaying uint8 = iota
+	ashFinished
 )
 
 // @todo: jeszcze nie zrobione w drawingBattle, ale niezbędne!

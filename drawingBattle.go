@@ -165,7 +165,7 @@ func refreshRoadTile(x, y int, board *boardData) {
 }
 
 func applyPalisadeProcessing(x, y uint8, board *boardData) {
-	var mask uint8 = 0
+	var mask uint8
 
 	if y > 0 && isPalisade(board.Tiles[x][y-1].TextureID) {
 		mask |= 1
@@ -856,13 +856,13 @@ func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programStat
 					waterBaseID = spriteWaterMiddle
 				}
 
-				animationOffset := bs.WaterAnimationCounter * 13
+				animationOffset := bs.WaterAnimationFrame * 13
 				drawSprite(ps.Assets, waterBaseID+animationOffset, xPos, yPos, colorNone)
 				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
 			}
 
 			if isWaterTileOnly(texID) {
-				animationOffset := bs.WaterAnimationCounter * 13
+				animationOffset := bs.WaterAnimationFrame * 13
 				drawSprite(ps.Assets, texID+animationOffset, xPos, yPos, colorNone)
 			}
 
@@ -881,7 +881,7 @@ func drawBuilding(startY, endY uint8, bs *battleState, ps *programState) {
 					id := bs.Board.Tiles[tile.X][yAxis].TextureID
 					if isBuildingTerrain(id) {
 						finalID := id
-						if flagID, ok := flagAnimationMap[uint8(id)]; ok && (bs.FireAnimationCounter+uint16(tile.X)+uint16(yAxis))%2 == 1 {
+						if flagID, ok := flagAnimationMap[uint8(id)]; ok && (bs.FireAnimationFrame+uint16(tile.X)+uint16(yAxis))%2 == 1 {
 							finalID = uint16(flagID)
 						}
 
@@ -1289,71 +1289,76 @@ func drawSelectionBox(bs *battleState, ps *programState) {
 	rl.DrawRectangleLinesEx(rect, finalThickness, rl.White) // Zielona ramka, klasyk RTS
 }
 
+// @reminder: Chodzenie po całej planszy i sprawdzanie dwukrotnie, czy mamy jakiś efekt do narysowania jest bardzo
+// niewydajny! Powinienem mieć jakąś podręczną listę na stałe efekty, jak święte miejsce oraz
+// na tymczasowe. Coś, jak ze zwłokami, poręczne szybkie i w ogóle.
+// @todo: zmień tak, żeby nie sprawdzać każdego kafelka. Efekty nie są niewiadomą.
 func drawEffects(bs *battleState, ps *programState) {
-	for y := uint8(0); y < boardMaxY; y++ {
-		for x := uint8(0); x < boardMaxX; x++ {
-			tile := &bs.Board.Tiles[x][y]
-			id := tile.TextureID
+	for y := range boardMaxY {
+		for x := range boardMaxX {
+			affectedTile := &bs.Board.Tiles[x][y]
 
 			xPos := float32(x) * float32(tileWidth)
 			yPos := float32(y) * float32(tileHeight)
 
-			// --- 1. EFEKTY WYNIKAJĄCE Z RODZAJU PODŁOŻA (TextureID) ---
-			switch {
-			// A. Kapliczka leczenia (stare 282/283)
-			case id == spriteEffectHeal00 || id == spriteEffectHeal01:
-				frame := (bs.WaterAnimationCounter + uint16(x+y)) % 2
-				animID := spriteEffectHeal00 + frame
+			// Stałe, u dołu
+			permanentEffects(affectedTile, x, y, xPos, yPos, bs, ps)
 
-				// Logika przeźroczystości (Duch)
-				var tint rl.Color
-				if tile.Unit != nil {
-					tint = rl.White // Pełna widoczność, gdy ktoś stoi
-				} else {
-					tint = rl.Fade(rl.White, 0.4) // Duch, gdy pusto
-				}
-				drawSpriteEx(animID, xPos, yPos, colorNone, tint, ps)
-
-			// B. Małe ognisko (stare 68 -> SPRITE_GADGET_14)
-			case id == spriteGadget14:
-				frame := (bs.FireAnimationCounter + uint16(x+y)) % 4
-				drawSprite(ps.Assets, spriteGadget14, xPos, yPos, colorNone)
-				drawSprite(ps.Assets, spriteFire08+frame, xPos, yPos, colorNone)
-
-			// C. Duże ognisko (stare 69 -> SPRITE_GADGET_15)
-			case id == spriteGadget15:
-				frame := (bs.FireAnimationCounter + uint16(x+y)) % 4
-				drawSprite(ps.Assets, spriteGadget14, xPos, yPos, colorNone)
-				drawSprite(ps.Assets, spriteFire04+frame, xPos, yPos, colorNone)
-
-			// D. Punkt Zwycięstwa (stare 301)
-			case id == spriteVictoryPoint:
-				// Animacja punktu zwycięstwa (zakładamy 4 klatki animacji w atlasie)
-				frame := (bs.FireAnimationCounter) % 4
-				drawSprite(ps.Assets, spriteVictoryPoint+frame, xPos, yPos, colorNone)
-			}
-
-			//// --- 2. EFEKTY NAKŁADANE NA WIERZCH (EffectID / dawne AttackValue) ---
-			//// Np. pożar lasu, wybuchy, obrażenia
-			//effectVal := tile.EffectID
-			//if effectVal > 0 && tile.Visibility != visibilityUnexplored {
-			//	switch {
-			//	// Ogień bitewny (np. podpalony las)
-			//	case effectVal > 70 && effectVal <= 100:
-			//		fireFrame := min(bs.FireAnimationCounter%14, 13)
-			//		// Używamy bazowego ID ognia (np. SPRITE_FIRE_00)
-			//		drawSprite(ps.Assets, spriteFire00+fireFrame, xPos, yPos, colorNone)
-			//
-			//	// Efekt uderzenia / krwi (hit)
-			//	case effectVal > 100 && effectVal < 127:
-			//		// drawSprite(SPRITE_EFFECT_HIT, xPos, yPos, COLOR_NONE)
-			//
-			//	// Zgliszcza / Śmierć obiektu
-			//	case effectVal > 127:
-			//		// drawSprite(SPRITE_EFFECT_DESTROYED, xPos, yPos, COLOR_NONE)
-			//	}
-			//}
+			// Tymczasowe, na wierzchu
+			temporaryEffects(affectedTile, x, y, xPos, yPos, bs, ps)
 		}
+	}
+}
+
+func permanentEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *battleState, ps *programState) {
+	textureID := affectedTile.TextureID
+
+	switch {
+	// A. Kapliczka leczenia (stare 282/283)
+	case textureID == spriteEffectHeal00 || textureID == spriteEffectHeal01:
+		frame := (bs.WaterAnimationFrame + uint16(x+y)) % 2
+		animID := spriteEffectHeal00 + frame
+
+		// Logika przeźroczystości (Duch)
+		var tint rl.Color
+		if affectedTile.Unit != nil {
+			tint = rl.White // Pełna widoczność, gdy ktoś stoi
+		} else {
+			tint = rl.Fade(rl.White, 0.4) // Duch, gdy pusto
+		}
+		drawSpriteEx(animID, xPos, yPos, colorNone, tint, ps)
+
+	// B. Małe ognisko (stare 68 -> SPRITE_GADGET_14)
+	case textureID == spriteGadget14:
+		frame := (bs.FireAnimationFrame + uint16(x+y)) % 4
+		drawSprite(ps.Assets, spriteGadget14, xPos, yPos, colorNone)
+		drawSprite(ps.Assets, spriteFire08+frame, xPos, yPos, colorNone)
+
+	// C. Duże ognisko (stare 69 -> SPRITE_GADGET_15)
+	case textureID == spriteGadget15:
+		frame := (bs.FireAnimationFrame + uint16(x+y)) % 4
+		drawSprite(ps.Assets, spriteGadget14, xPos, yPos, colorNone)
+		drawSprite(ps.Assets, spriteFire04+frame, xPos, yPos, colorNone)
+
+	// D. Punkt Zwycięstwa (stare 301)
+	case textureID == spriteVictoryPoint:
+		// Animacja punktu zwycięstwa (zakładamy 4 klatki animacji w atlasie)
+		frame := (bs.FireAnimationFrame) % 4
+		drawSprite(ps.Assets, spriteVictoryPoint+frame, xPos, yPos, colorNone)
+	}
+}
+
+func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *battleState, ps *programState) {
+	if affectedTile.IsAsh && affectedTile.AshIntensity > 0.01 {
+		alphaFactor := affectedTile.AshIntensity
+		tint := rl.Fade(rl.White, alphaFactor)
+
+		drawSpriteEx(spriteAsh00, xPos, yPos, colorNone, tint, ps)
+	}
+
+	if affectedTile.IsBurning {
+		frame := (bs.FireAnimationFrame + uint16(x+y)) % 4
+		drawSprite(ps.Assets, affectedTile.BurnOverlayID+frame, xPos, yPos, colorNone)
 	}
 }
 

@@ -323,9 +323,17 @@ type tile struct {
 	GrazedOverlayID uint8
 	// @todo: jeśli się sprawdzi (04.01.2026) to dodaj to samo dla ognia
 	// Płomień
-	IsBurning   bool
-	FireCounter uint8
-	FireID      uint8
+	IsBurning     bool
+	BurnElapsed   uint16
+	BurnOverlayID uint16
+
+	// Popiół
+	IsAsh           bool
+	AshIntensity    float32
+	AshAge          uint16 // potrzebne?
+	AshProcessState uint8
+	// AshOverlayID    uint16
+	CurrentAshAlpha float32
 
 	// --- WŁAŚCIWOŚCI FIZYCZNE ---
 	IsWalkable   bool    // przechodniość kafelka
@@ -395,10 +403,10 @@ type battleState struct {
 	CurrentMessage        message         // Wiadomość wyświetlana na ekranie @todo: częściowo wdrożone, nigdy nie użyte
 
 	// === LICZNIKI I URUCHAMIANIE OBRAZÓW
-	GrassGrowthCounter    uint16 // Licznik odrastania trawy oraz innych ogólnych uruchomień
-	WaterAnimationCounter uint16 // Licznik falowania wody
-	FireAnimationCounter  uint16 // Licznik uruchomienia ognia
-	GlobalFrameCounter    uint16 // Ogólny licznik klatek do różnych uruchomień i logiki
+	GrassGrowthCycle    uint16 // Licznik odrastania trawy oraz innych ogólnych uruchomień
+	WaterAnimationFrame uint16 // Wskaźnik falowania wody
+	FireAnimationFrame  uint16 // Wskaźnik uruchomienia ognia
+	GlobalFrameCounter  uint16 // Ogólny licznik klatek do różnych uruchomień i logiki
 	// TODO: może uda się zastąpić czymś z raylib albo Go, bo to raczej przestarzałe
 
 	EnemyCache                map[uint]*enemyCacheEntry

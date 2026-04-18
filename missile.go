@@ -118,20 +118,31 @@ func (p *projectile) hit(bs *battleState) {
 		return
 	}
 
-	tile := &bs.Board.Tiles[p.TargetX][p.TargetY]
+	targetTile := &bs.Board.Tiles[p.TargetX][p.TargetY]
 
 	// 1. Trafienie jednostki
-	if tile.Unit != nil && tile.Unit.Exists && tile.Unit.Owner != p.Owner {
-		tile.Unit.takeDamage(p.Damage, bs) // @todo: czemu jednostka ma argument bs, a budynek nie?
+	if targetTile.Unit != nil && targetTile.Unit.Exists && targetTile.Unit.Owner != p.Owner {
+		targetTile.Unit.takeDamage(p.Damage, bs) // @todo: czemu jednostka ma argument bs, a budynek nie?
 	}
 
 	// 2. Trafienie budynku
-	if tile.Building != nil && tile.Building.Exists && tile.Building.Owner != p.Owner {
-		tile.Building.takeDamage(p.Damage)
+	if targetTile.Building != nil && targetTile.Building.Exists && targetTile.Building.Owner != p.Owner {
+		targetTile.Building.takeDamage(p.Damage)
 	}
 
-	// 3. Jeśli to duch (pocisk maga) to zostań widoczny na jednostce
+	// 3. Efekty dla specjalnych przypadków
+	p.specialProjectiles(targetTile, bs)
+
+	// @reminder: to się gryzie z duchem, który musi przetrwać uderzenie i dusić cel
+	p.Exists = false
+}
+
+func (p *projectile) specialProjectiles(targetTile *tile, bs *battleState) {
+	// 1. Jeśli to duch (pocisk maga) to zostań widoczny na jednostce
+	// @todo: nie wypróbowane! Do zajęcia się później, bo to jednostka z rozszerzenia
 	if p.Kind == missileGhost {
+		// Być może łatwiej byłoby to zamienić na pole w jednostce? Unikam męczącego śledzenia
+		// z drugiej strony budynki też tak muszą mieć
 		p.IsImpact = true
 		p.Sprite = spriteMissileGhostAttack
 		p.Lifetime = 20 // @todo: liczba z czapy
@@ -139,14 +150,44 @@ func (p *projectile) hit(bs *battleState) {
 		return
 	}
 
-	// 4. Ogień musi palić się przez jakiś czas
+	// 2. Ogień musi palić się przez jakiś czas
 	// @todo: czy można uwspólnić logikę ognia i ducha?
 	if p.Kind == missileFire {
 		// @todo: napisać kod odpowiedzialny za ogień w miejscu i zadawanie obrażeń
-		fireball()
+		p.priestFireball(targetTile, bs)
+	}
+}
+
+func (p *projectile) spriteToDirection() (dirX int16, dirY int16) {
+	switch p.Sprite {
+	case spriteMissileArrowUp, spriteMissileBoltUp, spriteMissileFireUp,
+		spriteMissileLightningUp, spriteMissileSpearUp, spriteMissileGhostUp:
+		return 0, -1
+	case spriteMissileArrowUpLeft, spriteMissileBoltUpLeft, spriteMissileFireUpLeft,
+		spriteMissileLightningUpLeft, spriteMissileSpearUpLeft, spriteMissileGhostUpLeft:
+		return -1, -1
+	case spriteMissileArrowLeft, spriteMissileBoltLeft, spriteMissileFireLeft,
+		spriteMissileLightningLeft, spriteMissileSpearLeft, spriteMissileGhostLeft:
+		return -1, 0
+	case spriteMissileArrowDownLeft, spriteMissileBoltDownLeft, spriteMissileFireDownLeft,
+		spriteMissileLightningDownLeft, spriteMissileSpearDownLeft, spriteMissileGhostDownLeft:
+		return -1, 1
+	case spriteMissileArrowDown, spriteMissileBoltDown, spriteMissileFireDown,
+		spriteMissileLightningDown, spriteMissileSpearDown, spriteMissileGhostDown:
+		return 0, 1
+	case spriteMissileArrowDownRight, spriteMissileBoltDownRight, spriteMissileFireDownRight,
+		spriteMissileLightningDownRight, spriteMissileSpearDownRight, spriteMissileGhostDownRight:
+		return 1, 1
+	case spriteMissileArrowRight, spriteMissileBoltRight, spriteMissileFireRight,
+		spriteMissileLightningRight, spriteMissileSpearRight, spriteMissileGhostRight:
+		return 1, 0
+	case spriteMissileArrowUpRight, spriteMissileBoltUpRight, spriteMissileFireUpRight,
+		spriteMissileLightningUpRight, spriteMissileSpearUpRight, spriteMissileGhostUpRight:
+		return 1, -1
 	}
 
-	p.Exists = false
+	// nie powinno się wydarzyć
+	return 0, 0
 }
 
 func unitTypeToMissileType(unitType unitType) uint8 {
@@ -232,7 +273,30 @@ func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
 	return baseSprite + offset
 }
 
-func fireball() {
+func (p *projectile) priestFireball(affedtedTile *tile, bs *battleState) {
+	// zbyt naiwny warunek ponieważ powinno móc się wzmocnić już płonący kafelek, czyli counter podbijać
+	dx, dy := p.spriteToDirection()
+
+	splash1X := int16(p.TargetX) + dx
+	splash1Y := int16(p.TargetY) + dy
+	splash2X := int16(p.TargetX) + dx + dx
+	splash2Y := int16(p.TargetY) + dy + dy
+
+	var splash1 *tile
+	var splash2 *tile
+
+	affedtedTile.setOnFire(bigBurn)
+
+	if splash1X >= 0 && splash1X < int16(boardMaxX) && splash1Y >= 0 && splash1Y < int16(boardMaxY) {
+		splash1 = &bs.Board.Tiles[splash1X][splash1Y]
+		splash1.setOnFire(midBurn)
+	}
+
+	if splash2X >= 0 && splash2X < int16(boardMaxX) && splash2Y >= 0 && splash2Y < int16(boardMaxY) {
+		splash2 = &bs.Board.Tiles[splash2X][splash2Y]
+		splash2.setOnFire(minBurn)
+	}
+
 	// 0. efekt to
 	// a. obrażenia
 	// unit/building.takedamage(p.Damage)
