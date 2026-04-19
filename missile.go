@@ -277,12 +277,13 @@ func (p *projectile) priestFireball(affedtedTile *tile, bs *battleState) {
 	// zbyt naiwny warunek ponieważ powinno móc się wzmocnić już płonący kafelek, czyli counter podbijać
 	dx, dy := p.spriteToDirection()
 
-	splash1X := int16(p.TargetX) + dx
-	splash1Y := int16(p.TargetY) + dy
-	splash2X := int16(p.TargetX) + dx + dx
-	splash2Y := int16(p.TargetY) + dy + dy
+	splash1X := int16(p.TargetX) + dx      //nolint:gosec
+	splash1Y := int16(p.TargetY) + dy      //nolint:gosec
+	splash2X := int16(p.TargetX) + dx + dx //nolint:gosec
+	splash2Y := int16(p.TargetY) + dy + dy //nolint:gosec
 
 	var splash1 *tile
+
 	var splash2 *tile
 
 	affedtedTile.setOnFire(bigBurn)

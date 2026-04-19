@@ -96,12 +96,21 @@ func cursorForSelection(bs *battleState, tileUnderCursor *tile, targetOwner int,
 
 	// Wróg
 	if targetOwner != -1 && targetOwner != int(bs.PlayerID) {
-		return cursorForEnemy(bs, targetBuilding)
+		return cursorForEnemy(bs, tileUnderCursor)
 	}
 
 	// Swój
 	if targetOwner == int(bs.PlayerID) {
 		return spriteCursorFrameWhite
+	}
+
+	selectedUnit, unitOK := getUnitByID(bs.CurrentSelection.UnitID, bs)
+	if unitOK && isTreeStump(tileUnderCursor.TextureID) {
+		if selectedUnit.Type == unitAxeman || selectedUnit.Type == unitPriest {
+			return spriteCursorCrossRed
+		}
+
+		return spriteCursorArrowLeft
 	}
 
 	// Puste pole
@@ -127,8 +136,10 @@ func cursorForNoSelection(targetOwner int, playerID uint8) uint16 {
 	return spriteCursorDefaultBig
 }
 
-func cursorForEnemy(bs *battleState, targetBuilding *building) uint16 {
-	if targetBuilding != nil {
+func cursorForEnemy(bs *battleState, tileUnderCursor *tile) uint16 {
+	targetBuilding := tileUnderCursor.Building
+
+	if targetBuilding != nil && targetBuilding.Exists {
 		if targetBuilding.Type == buildingPalisade {
 			selectedUnit, ok := getUnitByID(bs.CurrentSelection.UnitID, bs)
 

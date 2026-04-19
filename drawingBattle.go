@@ -922,18 +922,18 @@ func drawBuildings(startX, startY, endX, endY uint8, bs *battleState, ps *progra
 }
 
 func drawCorpsesUnitsTrees(startX, startY, endX, endY uint8, bs *battleState, ps *programState) {
-	for y := startY; y < endY; y++ {
-		drawCorpses(y, startX, endX, bs, ps)
+	for boardRow := startY; boardRow < endY; boardRow++ {
+		drawCorpses(boardRow, startX, endX, bs, ps)
 	}
 
-	for y := startY; y < endY; y++ {
-		drawUnits(y, bs, ps)
-		drawTrees(y, startX, endX, bs, ps)
+	for boardRow := startY; boardRow < endY; boardRow++ {
+		drawUnits(boardRow, bs, ps)
+		drawTrees(boardRow, startX, endX, bs, ps)
 	}
 }
 
-func drawUnits(y uint8, bs *battleState, ps *programState) {
-	rowUnits := bs.RenderUnitRows[y]
+func drawUnits(boardRow uint8, bs *battleState, ps *programState) {
+	rowUnits := bs.RenderUnitRows[boardRow]
 	if len(rowUnits) > 0 {
 		sort.Slice(rowUnits, func(i, j int) bool { return rowUnits[i].X < rowUnits[j].X })
 
@@ -976,17 +976,18 @@ func drawCorpses(y, startX, endX uint8, bs *battleState, ps *programState) {
 	}
 }
 
-func drawTrees(y, startX, endX uint8, bs *battleState, ps *programState) {
+// @todo: tutaj muszę dodać logikę rysowania płonących drzew, spalonych oraz ich obalania
+func drawTrees(boardRow, startX, endX uint8, bs *battleState, ps *programState) {
 	for x := startX; x < endX; x++ {
-		texID := bs.Board.Tiles[x][y].TextureID
+		texID := bs.Board.Tiles[x][boardRow].TextureID
 		if texID >= spriteTreeStumpStart && texID <= spriteTreeStumpEnd {
 			drawX := float32(x)*float32(tileWidth) - treeOffsetX
-			drawY := float32(y) * float32(tileHeight)
+			drawY := float32(boardRow) * float32(tileHeight)
 			drawSprite(ps.Assets, texID, drawX, drawY, colorNone)
 
-			if y > 0 {
-				crownY := float32(y-1) * float32(tileHeight)
-				drawSprite(ps.Assets, texID+7, drawX, crownY, colorNone)
+			if boardRow > 0 {
+				crownY := float32(boardRow-1) * float32(tileHeight)
+				drawSprite(ps.Assets, texID+treeCrownOffset, drawX, crownY, colorNone)
 			}
 		}
 	}
@@ -1038,12 +1039,13 @@ func drawWorldAndUnits(bs *battleState, ps *programState) {
 	drawCorpsesUnitsTrees(startX, startY, endX, endY, bs, ps)
 
 	// Nakładki i efekty.
-	drawBuildingsInterfaces(bs)
+	drawBuildingsInterfaces(bs) // @reminder: chyba powinienem to rysować po efektach, bo popiół
+	// pojawia się na pasku życia budynku - 19.04.2026
 	drawEffects(bs, ps)
 	// @reminder: tymczasowy hack
 	// @reminder: 12.02.2026 szkoda, że nie napisałem o co chodziło, bo już nie pamiętam.
-	for y := startY; y < endY; y++ {
-		rowUnits := bs.RenderUnitRows[y]
+	for boardRow := startY; boardRow < endY; boardRow++ {
+		rowUnits := bs.RenderUnitRows[boardRow]
 		if len(rowUnits) > 0 {
 			for _, unit := range rowUnits {
 				// Rysujemy tylko nakładkę dla jednostek, żeby była ponad drzewami itd.
@@ -1140,6 +1142,7 @@ func drawUnit(u *unit, bs *battleState, ps *programState) {
 	}
 }
 
+// @todo: koniecznie wrócić do tej funkcji i ją przepisać, rozbić, bo jest dramat!
 func drawUnitWounds(u *unit, ps *programState, screenX, screenY float32) {
 	// Stałe offsety, aby krew była na środku kafelka 16x14.
 	const centerOffsetX = 8.0
@@ -1221,14 +1224,14 @@ func (bs *battleState) updateRenderCache() {
 		bs.RenderBuildingRows[y] = bs.RenderBuildingRows[y][:0]
 	}
 	// 2. Dodajemy jednostki
-	for _, unit := range bs.Units {
+	for _, currentUnit := range bs.Units {
 		// Uwzględniamy tylko żywe jednostki
 		// Nie da się mieć jednostki poza planszą, więc nie muszę sprawdzać
 		// MAX_X i MAX_Y, pewnie kiedyś tego pożałuję
 		// @check nie sprawdzam MAX_Y oraz MAX_Y, w razie problemów z rysowaniem
 		// tutaj może się kryć przyczyna. Na przyszłość: nie <= bo pierwszy index to 0
-		if unit.Exists { // && unit.y >= 0 && unit.y < MAX_Y
-			bs.RenderUnitRows[unit.Y] = append(bs.RenderUnitRows[unit.Y], unit)
+		if currentUnit.Exists { // && unit.y >= 0 && unit.y < MAX_Y
+			bs.RenderUnitRows[currentUnit.Y] = append(bs.RenderUnitRows[currentUnit.Y], currentUnit)
 		}
 	}
 	// 3. Dodajemy budynki
@@ -1240,13 +1243,13 @@ func (bs *battleState) updateRenderCache() {
 
 		// Ponieważ budynki trzymają informacje o 9 kafelkach, to trzeba się zabezpieczyć
 		lastY := uint8(0)
-		for _, tile := range bld.OccupiedTiles {
-			if tile.Y != lastY {
+		for _, currentTile := range bld.OccupiedTiles {
+			if currentTile.Y != lastY {
 				// if tile.y >= 0 && tile.y < MAX_Y // @reminder Nie sprawdzam legalności!
-				bs.RenderBuildingRows[tile.Y] = append(bs.RenderBuildingRows[tile.Y], bld)
+				bs.RenderBuildingRows[currentTile.Y] = append(bs.RenderBuildingRows[currentTile.Y], bld)
 			}
 
-			lastY = tile.Y
+			lastY = currentTile.Y
 		}
 	}
 }
@@ -1281,6 +1284,7 @@ func drawSelectionBox(bs *battleState, ps *programState) {
 
 	// Linia musi mieć grubość niezależną od przybliżenia, inaczej może stać się niewidoczna
 	const minScreenThicknessPixels = 1.5
+
 	requiredWorldThickness := minScreenThicknessPixels / bs.GameCamera.Zoom
 
 	finalThickness := float32(math.Max(1.0, float64(requiredWorldThickness)))

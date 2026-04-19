@@ -564,28 +564,22 @@ func handleBoardRightClick(input inputState, bs *battleState, tileX, tileY uint8
 			bs.SelectionStart = rl.NewVector2(0, 0)
 			bs.InitialClickPos = rl.NewVector2(0, 0)
 			bs.MouseCommandMode = 1
-
 			return true
 		}
 
-		// Jeżeli jesteśmy w trybie celowania (budowa, naprawa, czar),
-		// to prawy przycisk służy jako „ANULUJ”.
 		if bs.MouseCommandMode > 1 {
 			log.Println("INPUT: Anulowano tryb celowania prawym przyciskiem.")
-
 			bs.MouseCommandMode = cmdIdle
-			bs.PendingBuildingType = 0 // Na wypadek gdybyśmy anulowali budowanie
+			bs.PendingBuildingType = 0
 			bs.CurrentMessage.Text = "Anulowano"
 			bs.CurrentMessage.Duration = 30
-
-			return true // Zjadamy kliknięcie, nie wysyłamy ruchu!
+			return true
 		}
 
 		selectedUnits := getSelectedUnits(bs)
 		if len(selectedUnits) > 0 {
 			tileUnderCursor := &bs.Board.Tiles[tileX][tileY]
 			targetID := uint(0)
-
 			var targetOwner uint8
 
 			if tileUnderCursor.Unit != nil {
@@ -598,27 +592,43 @@ func handleBoardRightClick(input inputState, bs *battleState, tileX, tileY uint8
 
 			commandType := cmdMove
 
+			// 1. Atak na wrogie jednostki/budynki
 			if targetID != 0 && targetOwner != bs.PlayerID {
 				commandType = cmdAttack
-			} else if !isWalkable(bs, tileX, tileY) {
+			} else if isTreeStump(tileUnderCursor.TextureID) {
+				// 2. Atak na drzewa (teren)
+				canAttackTree := false
+				for _, u := range selectedUnits {
+					if u.Type == unitAxeman || u.Type == unitPriest {
+						canAttackTree = true
+						break
+					}
+				}
+
+				if canAttackTree {
+					commandType = cmdAttack
+					// targetID pozostaje 0; koordynaty ataku są przekazywane przez tileX, tileY
+				} else {
+					bs.CurrentMessage.Text = "Zaznaczone jednostki nie mogą atakować drzew!"
+					bs.CurrentMessage.Duration = 60
+					return true
+				}
+			} else if !tileUnderCursor.IsWalkable {
+				// 3. Blokowanie tylko dla nieprzechodniego terenu, który nie jest celem ataku
 				bs.CurrentMessage.Text = "Nieprzechodnie!"
 				bs.CurrentMessage.Duration = 60
-
 				return true
 			}
 
 			sendUnitCommand(bs, selectedUnits, commandType, tileX, tileY, targetID, input.IsCtrlKeyDown)
-
 			return true
 		}
 
 		if bs.MouseCommandMode != 1 {
 			bs.MouseCommandMode = 1
-
 			return true
 		}
 	}
-
 	return false
 }
 

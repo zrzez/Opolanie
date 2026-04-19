@@ -147,7 +147,16 @@ func burningTileEffect(bs *battleState) {
 			affectedTile := &bs.Board.Tiles[x][y]
 
 			processAshDecay(affectedTile)
-			processFire(affectedTile)
+
+			// Róznego rodzaju kafelki różnie się palą
+			// @todo: przemyśl, czy nie lepiej to złączyć w jedną funkcję
+			if isTreeStump(affectedTile.TextureID) {
+				// @reminder: Z tego miejsca mogę przekazać sąsiedni kafelek aby przetworzyć poprawnie
+				// upadające drzewo.
+				processTreeFire(affectedTile)
+			} else {
+				processNormalFire(affectedTile)
+			}
 
 			if bs.GlobalFrameCounter%8 != 0 && affectedTile.IsBurning {
 				if affectedTile.Unit != nil && affectedTile.Unit.Exists {
@@ -172,7 +181,7 @@ func burningTileEffect(bs *battleState) {
 	}
 }
 
-func processFire(affectedTile *tile) {
+func processNormalFire(affectedTile *tile) {
 	if !affectedTile.IsBurning {
 		return
 	}
@@ -248,5 +257,63 @@ func processAshDecay(affectedTile *tile) {
 func (t *tile) setOnFire(fireSize uint16) {
 	t.IsBurning = true
 	t.BurnElapsed = fireSize - bigBurn
-	t.IsAsh = true
+
+	if !isTreeStump(t.TextureID) {
+		t.IsAsh = true
+	}
+}
+
+func processTreeFire(affectedTile *tile) {
+	if !affectedTile.IsBurning {
+		return
+	}
+
+	// Właściwe płonięcie
+	affectedTile.BurnElapsed++
+
+	var currentFireSprite uint16
+
+	switch {
+	case affectedTile.BurnElapsed < bigBurn:
+		{
+			currentFireSprite = spriteFire00
+		}
+	case affectedTile.BurnElapsed < midBurn:
+		{
+			currentFireSprite = spriteFire04
+		}
+	case affectedTile.BurnElapsed < minBurn:
+		{
+			currentFireSprite = spriteFire08
+		}
+	default:
+		affectedTile.IsBurning = false
+		processBurntTree(affectedTile)
+
+		return
+	}
+
+	affectedTile.BurnOverlayID = currentFireSprite
+}
+
+func processBurntTree(affectedTile *tile) {
+	// Ustalamy nowe tekstury na spalone drzewa
+	if affectedTile.TextureID < spriteTreeStump03 {
+		affectedTile.TextureID = spriteTreeBurntStump00
+	} else {
+		affectedTile.TextureID = spriteTreeBurntStump01
+	}
+
+	// Obalamy spalone drzewo
+	affectedTile.treeFall()
+}
+
+func (t *tile) treeFall() {
+	// Po chwili czekania dajemy spriteTreeFalling.
+	// Później spriteTreeFallen.
+	// @todo: problem z tym, że nie wiem, czy to pojedyncze duszki
+	// @todo: potrzebuję dodać obrażenia od spadającej korony
+	// @todo: jeśli na lewo od drzewa jest suche drzewo to ono też ma być obalone
+	// @reminder: potrzebuję dostępu do współrzędnych! bez tego nie mam wpływu na sąsiedni kafelek
+	// kafelek staje się przechodni.
 }

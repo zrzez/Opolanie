@@ -103,7 +103,8 @@ const (
 	msgFontColor = 255
 
 	// Przesunięcie drzew
-	treeOffsetX = 8
+	treeOffsetX            = 8
+	treeCrownOffset uint16 = 7
 
 	// Do uruchomienia obrazów
 	walkAnimationFrames = 5 // Ile klatek ma chodzenie @todo: ustaw prawdziwą wartość!
