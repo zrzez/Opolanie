@@ -541,13 +541,13 @@ func (u *unit) validateCommand(command uint16, targetX, targetY uint8, targetID 
 // caDamageTree sprawdza, czy jednostka może zaatakować dane drzewo.
 // u.Type == unitPriest może zaatakować każde drzewo.
 // u.Type == unitAxeman może zaatakować suche drzewo.
-func (u *unit) canDamageTree(targetX, targetY uint8, bs *battleState) bool {
+func (u *unit) canDamageTree(treetX, treeY uint8, bs *battleState) bool {
 	if u.Type == unitPriest {
 		return true
 	}
 
 	if u.Type == unitAxeman {
-		return bs.Board.Tiles[targetX][targetY].TextureID == spriteDryTreeStump00
+		return bs.Board.Tiles[treetX][treeY].TextureID == spriteDryTreeStump00
 	}
 
 	return false
