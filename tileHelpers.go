@@ -2,7 +2,7 @@ package main
 
 // tileHelpers.go
 
-// === Pomagierzy do rysowania
+// Pomagierzy do sprawdzania rodzaju tekstury kafelka.
 
 // Sprawcza, czy tekstura jest kapliczką leczącą (świętym miejscem).
 func isHealingShire(tileTexID uint16) bool {
@@ -77,12 +77,12 @@ func isGadget(tileTexID uint16) bool {
 	return tileTexID >= spriteGadgetStart && tileTexID <= spriteGadgetEnd
 }
 
-// Sprawdza, czy tekstura jest trawa lub ozdoba/
+// Sprawdza, czy tekstura jest trawa lub ozdoba.
 func isGrassOrGadget(tileTexID uint16) bool {
 	return isGrass(tileTexID) || isGadget(tileTexID)
 }
 
-// Sprawdza, czy tekstura jest
+// Sprawdza, czy tekstura jest kamieniem nieprzechodnim. W ozdobach (gadget) są przechodnie.
 func isRockNonWalkable(tileTexID uint16) bool {
 	return tileTexID >= spriteRockStart && tileTexID < spriteRockEnd
 }
