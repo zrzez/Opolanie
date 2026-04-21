@@ -187,6 +187,7 @@ const (
 	spriteBuildingAcademyBase   uint16 = 237
 
 	spriteBuildingEnd uint16 = 255
+
 	// 3. UI I EFEKTY
 
 	// --- KURSORY ---

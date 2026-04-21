@@ -156,7 +156,7 @@ func configureTile(tile *tile, graphicID uint16) {
 		tile.IsWalkable = false
 	}
 
-	if isRoad(graphicID) {
+	if isDirtRoad(graphicID) {
 		tile.MovementCost = 0.5
 	}
 

@@ -17,100 +17,24 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-// Pomagierzy
-
-func isSpecialTile(id uint16) bool {
-	return id == spriteEffectHeal00 || id == spriteEffectHeal01 || id == spriteVictoryPoint
-}
-
-func isRoad(id uint16) bool {
-	return id >= spriteRoadStart && id <= spriteRoadEnd
-}
-
-func isRuin(id uint16) bool {
-	return id >= spriteRuinStart && id <= spriteRuinEnd
-}
-
-func isPalisade(id uint16) bool {
-	return id >= spritePalisadeStart && id <= spritePalisadeEnd
-}
-
-func isWaterTileOnly(id uint16) bool {
-	return id >= spriteWaterStart && id <= spriteWaterEnd
-}
-
-func isBridge(id uint16) bool {
-	return id >= spriteBridgeStart && id <= spriteBridgeEnd
-}
-
-func isWaterOrBridgeForMasking(id uint16) bool {
-	return isWaterTileOnly(id) || isBridge(id) || id == spriteBridgeConstruction
-}
-
-func isLandOrOther(id uint16) bool {
-	return !isWaterTileOnly(id) && !isBridge(id) && id != spriteBridgeConstruction
-}
-
-func isBuildingTerrain(id uint16) bool {
-	return (id >= spriteConstructionStart && id <= spriteConstructionEnd) ||
-		(id >= spriteBuildingMainBase && id <= spriteBuildingEnd)
-}
-
-func isHealingShire(id uint16) bool {
-	return id == spriteEffectHeal00 || id == spriteEffectHeal01
-}
-
-func isDryEarth(id uint16) bool {
-	return id >= spriteDryEarth01 && id <= spriteDryEarth03
-}
-
-func isGrass(tileID uint16) bool {
-	return tileID >= spriteGrassStart && tileID <= spriteGrassEnd
-}
-
-func isGadget(tileID uint16) bool {
-	return tileID >= spriteGadgetStart && tileID <= spriteGadgetEnd
-}
-
-func isGrassOrGadget(tileID uint16) bool {
-	return isGrass(tileID) || isGadget(tileID)
-}
-
-func isTreeStump(tileID uint16) bool {
-	return tileID >= spriteTreeStumpStart && tileID <= spriteTreeStumpEnd
-}
-
-func isTree(tileID uint16) bool {
-	return tileID >= spriteTreeStumpStart && tileID <= spriteTreeTopEnd ||
-		tileID >= spriteTreeBurntStump00 && tileID <= spriteTreeFallingBurnt02
-}
-
-func isRockNonWalkable(tileID uint16) bool {
-	return tileID >= spriteRockStart && tileID < spriteRockEnd
-}
-
-func isPath(tileID uint16) bool {
-	return isRoad(tileID) || isBridge(tileID)
-}
-
 // === PRZETWARZANIE MAPY ===
 
 func applyRoadProcessing(x, y uint8, board *boardData) {
 	var mask uint8
 
-	if y > 0 && isRoad(board.Tiles[x][y-1].TextureID) {
+	if y > 0 && isDirtRoad(board.Tiles[x][y-1].TextureID) {
 		mask |= 1
 	}
 
-	if x < boardMaxX-1 && isRoad(board.Tiles[x+1][y].TextureID) {
+	if x < boardMaxX-1 && isDirtRoad(board.Tiles[x+1][y].TextureID) {
 		mask |= 2
 	}
 
-	if y < boardMaxY-1 && isRoad(board.Tiles[x][y+1].TextureID) {
+	if y < boardMaxY-1 && isDirtRoad(board.Tiles[x][y+1].TextureID) {
 		mask |= 4
 	}
 
-	if x > 0 && isRoad(board.Tiles[x-1][y].TextureID) {
+	if x > 0 && isDirtRoad(board.Tiles[x-1][y].TextureID) {
 		mask |= 8
 	}
 
@@ -159,7 +83,7 @@ func refreshRoadTile(x, y int, board *boardData) {
 		return
 	}
 
-	if isRoad(board.Tiles[x][y].TextureID) {
+	if isDirtRoad(board.Tiles[x][y].TextureID) {
 		applyRoadProcessing(uint8(x), uint8(y), board)
 	}
 }
@@ -229,7 +153,7 @@ func processMapTiles(bs *battleState) {
 			id := bs.Board.Tiles[x][y].TextureID
 
 			switch {
-			case isRoad(id):
+			case isDirtRoad(id):
 				applyRoadProcessing(x, y, bs.Board)
 			case isPalisade(id):
 				applyPalisadeProcessing(x, y, bs.Board)
@@ -849,7 +773,7 @@ func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programStat
 				drawSprite(ps.Assets, spriteGrass00, xPos, yPos, colorNone)
 			}
 
-			if isBridge(texID) || texID == spriteBridgeConstruction {
+			if isCompletedBridge(texID) || texID == spriteBridgeConstruction {
 				waterBaseID := calculateWaterTileID(xAxis, yAxis, bs.Board)
 
 				if waterBaseID == 999 {

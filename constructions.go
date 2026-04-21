@@ -407,7 +407,7 @@ func isObstacle(texID uint16) bool {
 	switch {
 	case isRockNonWalkable(texID):
 		return true
-	case isBridge(texID):
+	case isCompletedBridge(texID):
 		return true
 	case isGadget(texID):
 		return true
