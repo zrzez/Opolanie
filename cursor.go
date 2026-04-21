@@ -110,7 +110,7 @@ func cursorForSelection(bs *battleState, tileUnderCursor *tile, targetOwner int,
 			return spriteCursorCrossRed
 		}
 
-		return spriteCursorArrowLeft
+		return spriteCursorStop
 	}
 
 	// Puste pole

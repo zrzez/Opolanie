@@ -593,42 +593,45 @@ func handleBoardRightClick(input inputState, bs *battleState, tileX, tileY uint8
 			commandType := cmdMove
 
 			// 1. Atak na wrogie jednostki/budynki
-			if targetID != 0 && targetOwner != bs.PlayerID {
+			switch {
+			case targetID != 0 && targetOwner != bs.PlayerID:
 				commandType = cmdAttack
-			} else if isTreeStump(tileUnderCursor.TextureID) {
-				// 2. Atak na drzewa (teren)
+			case isTreeStump(tileUnderCursor.TextureID):
 				canAttackTree := false
 				for _, u := range selectedUnits {
-					if u.Type == unitAxeman || u.Type == unitPriest {
+					if u.canDamageTree() {
 						canAttackTree = true
+
 						break
 					}
 				}
-
 				if canAttackTree {
 					commandType = cmdAttack
 					// targetID pozostaje 0; koordynaty ataku są przekazywane przez tileX, tileY
 				} else {
 					bs.CurrentMessage.Text = "Zaznaczone jednostki nie mogą atakować drzew!"
 					bs.CurrentMessage.Duration = 60
+
 					return true
 				}
-			} else if !tileUnderCursor.IsWalkable {
-				// 3. Blokowanie tylko dla nieprzechodniego terenu, który nie jest celem ataku
+			case !tileUnderCursor.IsWalkable:
 				bs.CurrentMessage.Text = "Nieprzechodnie!"
 				bs.CurrentMessage.Duration = 60
 				return true
 			}
 
 			sendUnitCommand(bs, selectedUnits, commandType, tileX, tileY, targetID, input.IsCtrlKeyDown)
+
 			return true
 		}
 
 		if bs.MouseCommandMode != 1 {
 			bs.MouseCommandMode = 1
+
 			return true
 		}
 	}
+
 	return false
 }
 

@@ -369,7 +369,7 @@ func canDamagePalisades(unit *unit) bool {
 	return unit.Type == unitAxeman || unit.Type == unitPriest
 }
 
-func (u *unit) resolveApproachPosition(targetID uint, bs *battleState) (uint8, uint8, error) {
+func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, bs *battleState) (uint8, uint8, error) {
 	targetUnit, targetBuilding := getObjectByID(targetID, bs)
 
 	// Cel jest budynkiem
@@ -405,10 +405,10 @@ func (u *unit) resolveApproachPosition(targetID uint, bs *battleState) (uint8, u
 		return bestX, bestY, nil
 	}
 
-	targetTile := &bs.Board.Tiles[u.TargetX][u.TargetY]
+	targetTile := &bs.Board.Tiles[*targetX][*targetY]
 
 	if isTreeStump(targetTile.TextureID) {
-		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(bs)
+		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(*targetX, *targetY, bs)
 		if !ok {
 			return 0, 0, fmt.Errorf("Nie ma pozycji do ataku tego drzewa")
 		}
@@ -419,17 +419,17 @@ func (u *unit) resolveApproachPosition(targetID uint, bs *battleState) (uint8, u
 	return 0, 0, fmt.Errorf("cel ataku ID %d nie istnieje", targetID)
 }
 
-func (u *unit) findOptimalAttackTileAroundTree(bs *battleState) (uint8, uint8, bool) {
+func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bs *battleState) (uint8, uint8, bool) {
 	var bestX, bestY uint8
 
 	minDistance := math.MaxFloat64
 
-	for column := int(u.TargetX) - int(u.AttackRange); column <= int(u.TargetX)+int(u.AttackRange); column++ {
+	for column := int(treeX) - int(u.AttackRange); column <= int(treeX)+int(u.AttackRange); column++ {
 		if column < 0 || column >= int(boardMaxX) {
 			continue // kolumny poza planszą
 		}
 
-		for row := int(u.TargetY) - int(u.AttackRange); row <= int(u.TargetY)+int(u.AttackRange); row++ {
+		for row := int(treeY) - int(u.AttackRange); row <= int(treeY)+int(u.AttackRange); row++ {
 			if row < 0 || row >= int(boardMaxY) {
 				continue // wiersz poza planszą
 			}
@@ -438,11 +438,11 @@ func (u *unit) findOptimalAttackTileAroundTree(bs *battleState) (uint8, uint8, b
 				continue // kafelek nieprzechodni
 			}
 
-			if column+1 == int(u.TargetX) && row == int(u.TargetY) {
+			if column+1 == int(treeX) && row == int(treeY) {
 				continue // pomijamy miejsce na które spadnie drzewo
 			}
 
-			if column == int(u.TargetX) && row == int(u.TargetY) {
+			if column == int(treeX) && row == int(treeY) {
 				continue // pomijamy samo drzewo
 			}
 
@@ -502,11 +502,15 @@ func (u *unit) shouldSkipDuplicate(command uint16, targetX, targetY uint8, targe
 }
 
 func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command uint16, targetID uint, bs *battleState) error {
-	if !isInteractionCommand(command) || targetID == 0 {
+	if !isInteractionCommand(command) {
 		return nil
 	}
 
-	finalX, finalY, err := u.resolveApproachPosition(targetID, bs)
+	if targetID == 0 {
+		u.interactionTargetX, u.interactionTargetY = *targetX, *targetY
+	}
+
+	finalX, finalY, err := u.resolveApproachPosition(targetX, targetY, targetID, bs)
 	if err != nil {
 		return err
 	}
@@ -528,53 +532,57 @@ func isInteractionCommand(command uint16) bool {
 func (u *unit) validateCommand(command uint16, targetX, targetY uint8, targetID uint, bs *battleState) bool {
 	switch command {
 	case cmdAttack:
-		return u.canAttack(targetX, targetY, targetID, bs)
+		return u.canAttack(targetID, bs)
 	default:
 		return true
 	}
 }
 
-func (u *unit) canAttack(targetX, targetY uint8, targetID uint, bs *battleState) bool {
-	targetTile := &bs.Board.Tiles[targetX][targetY]
+func (u *unit) canDamageTree() bool {
+	return u.Type == unitAxeman || u.Type == unitPriest
+}
 
-	if !isTreeStump(targetTile.TextureID) {
-		targetUnit, targetBuilding := getObjectByID(targetID, bs)
-
-		// Jednostki
-		// musi istnieć
-		if targetUnit != nil {
-			// musi być oznaczona jako żywa
-			if !targetUnit.Exists {
-				return false
-			}
-			// Istnieje i jest oznaczona jako żywa
-			return true
-		}
-
-		// Budynki
-		if targetBuilding != nil {
-			if !targetBuilding.Exists {
-				return false
-			}
-
-			if targetBuilding.Type == buildingPalisade && !canDamagePalisades(u) {
-				log.Printf("INFO: Jednostka %d nie może atakować palisad", u.ID)
-
-				return false
-			}
-
-			if targetBuilding.Type == buildingBridge {
-				return false
-			}
-
-			return true
-		}
-	} else {
-		return u.Type == unitAxeman || u.Type == unitPriest
-	}
+func (u *unit) canAttack(targetID uint, bs *battleState) bool {
 	// Drzewa
 	// Kapłan może podpalić każde drzewo
 	// Drwal może ściąć suche drzewo
+	if targetID == 0 {
+		return u.canDamageTree()
+	}
+
+	// targetTile := &bs.Board.Tiles[targetX][targetY]
+
+	targetUnit, targetBuilding := getObjectByID(targetID, bs)
+
+	// Jednostki
+	// musi istnieć
+	if targetUnit != nil {
+		// musi być oznaczona jako żywa
+		if !targetUnit.Exists {
+			return false
+		}
+		// Istnieje i jest oznaczona jako żywa
+		return true
+	}
+
+	// Budynki
+	if targetBuilding != nil {
+		if !targetBuilding.Exists {
+			return false
+		}
+
+		if targetBuilding.Type == buildingPalisade && !canDamagePalisades(u) {
+			log.Printf("INFO: Jednostka %d nie może atakować palisad", u.ID)
+
+			return false
+		}
+
+		if targetBuilding.Type == buildingBridge {
+			return false
+		}
+
+		return true
+	}
 
 	// cel nie istnieje
 	return false
@@ -739,6 +747,10 @@ func (u *unit) hasValidPath(bs *battleState) bool {
 		return false
 	}
 
+	if u.TargetID == 0 {
+		return true
+	}
+
 	if target.Building != nil {
 		return u.TargetID == target.Building.ID
 	}
@@ -763,10 +775,12 @@ func (u *unit) calculateNewPath(bs *battleState) bool {
 
 	if newPath == nil {
 		u.handlePathfindingFailure()
+
 		return false
 	}
 
 	u.setPathAndState(newPath)
+
 	return true
 }
 
@@ -781,6 +795,7 @@ func (u *unit) setPathAndState(path []*pathNode) {
 func (u *unit) moveAlongPath(bs *battleState) {
 	if u.PathIndex >= len(u.Path) {
 		u.clearPath()
+
 		return
 	}
 
@@ -1197,6 +1212,8 @@ func (u *unit) faceTarget(target *combatTarget) {
 	} else if target.Building != nil {
 		// Dla budynków celujemy w ich środek lub najbliższy punkt
 		tx, ty, _ = target.Building.getClosestOccupiedTile(u.X, u.Y)
+	} else if u.TargetID == 0 {
+		tx, ty = u.interactionTargetX, u.interactionTargetY
 	} else {
 		return
 	}
@@ -1303,7 +1320,7 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bs *batt
 	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, targetX, targetY, damage)
 }
 
-func (u *unit) getRangedTargetCoords(target *combatTarget) (targetX, targetY uint8, ok bool) {
+func (u *unit) getRangedTargetCoords(target *combatTarget) (uint8, uint8, bool) {
 	if target.Unit != nil {
 		return target.Unit.X, target.Unit.Y, true
 	} else if target.Building != nil {
@@ -1311,8 +1328,8 @@ func (u *unit) getRangedTargetCoords(target *combatTarget) (targetX, targetY uin
 	}
 
 	// Drzewa
-	if u.TargetX < boardMaxX && u.TargetY < boardMaxY {
-		return u.TargetX, u.TargetY, true
+	if u.TargetID == 0 {
+		return u.interactionTargetX, u.interactionTargetY, true
 	}
 
 	return 0, 0, false
@@ -1929,9 +1946,11 @@ func (u *unit) validateTargetExists(bs *battleState) (*combatTarget, error) {
 	}
 
 	if u.TargetID == 0 {
-		if isTreeStump(bs.Board.Tiles[u.TargetX][u.TargetY].TextureID) {
+		if isTreeStump(bs.Board.Tiles[u.interactionTargetX][u.interactionTargetY].TextureID) {
 			return &combatTarget{Unit: nil, Building: nil}, nil
 		}
+
+		return nil, fmt.Errorf("cel (drzewo) nie istnieje")
 	}
 
 	if (targetUnit == nil || !targetUnit.Exists) && (targetBuilding == nil || !targetBuilding.Exists) {
@@ -1955,8 +1974,8 @@ func (u *unit) calculateDistanceToTarget(target *combatTarget) uint8 {
 
 	// Atak na drzewo
 	return uint8(math.Max(
-		math.Abs(float64(int(u.X)-int(u.TargetX))),
-		math.Abs(float64(int(u.Y)-int(u.TargetY))),
+		math.Abs(float64(int(u.X)-int(u.interactionTargetX))),
+		math.Abs(float64(int(u.Y)-int(u.interactionTargetY))),
 	))
 }
 

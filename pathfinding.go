@@ -184,17 +184,17 @@ func isWalkableUnit(bs *battleState, x, y uint8, mover *unit) bool {
 	return true
 }
 
-func isWaterOrObstacle(id uint16) bool {
+func isWaterOrObstacle(spriteID uint16) bool {
 	// Woda
-	if id >= spriteWaterStart && id <= spriteWaterEnd {
+	if spriteID >= spriteWaterStart && spriteID <= spriteWaterEnd {
 		return true
 	}
 	// Skały
-	if id >= spriteRockStart && id <= spriteRockEnd {
+	if spriteID >= spriteRockStart && spriteID <= spriteRockEnd {
 		return true
 	}
 	// Dół drzewa (pnie)
-	if id >= spriteTreeStumpStart && id <= spriteTreeStumpEnd {
+	if spriteID >= spriteTreeStumpStart && spriteID <= spriteTreeStumpEnd {
 		return true
 	}
 
@@ -205,7 +205,7 @@ func isWaterOrObstacle(id uint16) bool {
 	// Stary kod blokował: 54, 58, 60... (wybiórczo).
 	// Nowy start gadżetów to 363. Stare 54 to teraz 363.
 	// Przykładowo: blokujemy wszystko co wygląda na duży kamień/płot.
-	if id >= spriteGadgetStart && id <= spriteGadgetEnd {
+	if spriteID >= spriteGadgetStart && spriteID <= spriteGadgetEnd {
 		// Tu można dodać wyjątki dla grzybków (przechodnich)
 		return true
 	}

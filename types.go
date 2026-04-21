@@ -80,6 +80,8 @@ type unit struct {
 	IsSelected bool      // Określa czy dana jednostka jest wybrana przez gracza
 	BelongsTo  *building // Określa do którego budynku jest przywiązana dana jednostka
 	IsInQueue  bool      // Wskaźnik, by wiedzieć, czy jednostka jest w kolejce
+	// Do obsługi atakowania drzew, być może zbędne - 20.04.2026
+	interactionTargetX, interactionTargetY uint8
 	// Dodawalibyśmy jednostkę do określonego budynku i w ten sposób śledzimy
 	// kto do kogo przynależy i np. krowy gdzie idą dać się wydoić!
 	AllowFriendlyFire bool // Wskaźnik, czy możemy napaść swoich
