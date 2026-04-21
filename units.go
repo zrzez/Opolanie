@@ -538,8 +538,19 @@ func (u *unit) validateCommand(command uint16, targetX, targetY uint8, targetID 
 	}
 }
 
-func (u *unit) canDamageTree() bool {
-	return u.Type == unitAxeman || u.Type == unitPriest
+// caDamageTree sprawdza, czy jednostka może zaatakować dane drzewo.
+// u.Type == unitPriest może zaatakować każde drzewo.
+// u.Type == unitAxeman może zaatakować suche drzewo.
+func (u *unit) canDamageTree(targetX, targetY uint8, bs *battleState) bool {
+	if u.Type == unitPriest {
+		return true
+	}
+
+	if u.Type == unitAxeman {
+		return bs.Board.Tiles[targetX][targetY].TextureID == spriteDryTreeStump00
+	}
+
+	return false
 }
 
 func (u *unit) canAttack(targetID uint, bs *battleState) bool {
@@ -547,7 +558,7 @@ func (u *unit) canAttack(targetID uint, bs *battleState) bool {
 	// Kapłan może podpalić każde drzewo
 	// Drwal może ściąć suche drzewo
 	if targetID == 0 {
-		return u.canDamageTree()
+		return u.canDamageTree(u.interactionTargetX, u.interactionTargetY, bs)
 	}
 
 	// targetTile := &bs.Board.Tiles[targetX][targetY]

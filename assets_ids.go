@@ -123,21 +123,21 @@ const (
 	spriteTreeTopStart   uint16 = 120 // Korony
 	spriteTreeTopEnd     uint16 = 126
 
-	spriteTreeStump00 uint16 = 113
-	spriteTreeStump01 uint16 = 114
-	spriteTreeStump02 uint16 = 115
-	spriteTreeStump03 uint16 = 116
-	spriteTreeStump04 uint16 = 117
-	spriteTreeStump05 uint16 = 118
-	spriteTreeStump06 uint16 = 119 // Suche
+	spriteTreeStump00    uint16 = 113
+	spriteTreeStump01    uint16 = 114
+	spriteTreeStump02    uint16 = 115
+	spriteTreeStump03    uint16 = 116
+	spriteTreeStump04    uint16 = 117
+	spriteTreeStump05    uint16 = 118
+	spriteDryTreeStump00 uint16 = 119
 
-	spriteTreeTop00 uint16 = 120
-	spriteTreeTop01 uint16 = 121
-	spriteTreeTop02 uint16 = 122
-	spriteTreeTop03 uint16 = 123
-	spriteTreeTop04 uint16 = 124
-	spriteTreeTop05 uint16 = 125
-	spriteTreeTop06 uint16 = 126 // Suche
+	spriteTreeTop00    uint16 = 120
+	spriteTreeTop01    uint16 = 121
+	spriteTreeTop02    uint16 = 122
+	spriteTreeTop03    uint16 = 123
+	spriteTreeTop04    uint16 = 124
+	spriteTreeTop05    uint16 = 125
+	spriteDryTreeTop00 uint16 = 126
 
 	spriteTreeBurntStump00 uint16 = 380 // Spalone stojące
 	spriteTreeBurntStump01 uint16 = 381 // Spalone stojące

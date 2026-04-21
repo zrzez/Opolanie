@@ -598,8 +598,9 @@ func handleBoardRightClick(input inputState, bs *battleState, tileX, tileY uint8
 				commandType = cmdAttack
 			case isTreeStump(tileUnderCursor.TextureID):
 				canAttackTree := false
+
 				for _, u := range selectedUnits {
-					if u.canDamageTree() {
+					if u.canDamageTree(tileX, tileY, bs) {
 						canAttackTree = true
 
 						break

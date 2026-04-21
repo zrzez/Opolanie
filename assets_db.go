@@ -79,7 +79,7 @@ var idRegistry = map[string]uint16{
 	"SPRITE_TREE_STUMP_03":    spriteTreeStump03,
 	"SPRITE_TREE_STUMP_04":    spriteTreeStump04,
 	"SPRITE_TREE_STUMP_05":    spriteTreeStump05,
-	"SPRITE_TREE_STUMP_06":    spriteTreeStump06,
+	"SPRITE_TREE_STUMP_06":    spriteDryTreeStump00,
 
 	// Specjalne
 	"SPRITE_PALISADE_START":      spritePalisadeStart,
