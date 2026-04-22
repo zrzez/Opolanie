@@ -121,7 +121,7 @@ func (t *tile) setOnFire(fireSize uint16, bs *battleState) {
 	t.BurnElapsed = fireSize - bigBurn
 
 	if !isTreeStump(t.TextureID) {
-		t.IsAsh = true
+		t.hasAsh = true
 	}
 
 	bs.BurningTilesList = append(bs.BurningTilesList, t)
@@ -171,7 +171,7 @@ func (t *tile) processAshDecay() {
 	}
 
 	// Jeśli nie ma popiołu lub są śladowe ilości to wychodzimy
-	if !t.IsAsh || t.AshIntensity < 0.01 {
+	if !t.hasAsh || t.AshIntensity < 0.01 {
 		return
 	}
 
@@ -180,7 +180,7 @@ func (t *tile) processAshDecay() {
 		t.AshIntensity *= 1.0 - ashDecayRate
 
 		if t.AshAge >= totalAshLifetime {
-			t.IsAsh = false
+			t.hasAsh = false
 			t.AshIntensity = 0.0
 			t.AshProcessState = ashFinished
 		}

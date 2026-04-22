@@ -330,7 +330,7 @@ type tile struct {
 	BurnOverlayID uint16
 
 	// Popiół
-	IsAsh           bool
+	hasAsh          bool
 	AshIntensity    float32
 	AshAge          uint16 // potrzebne?
 	AshProcessState uint8

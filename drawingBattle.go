@@ -1277,7 +1277,7 @@ func permanentEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *ba
 }
 
 func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *battleState, ps *programState) {
-	if affectedTile.IsAsh && affectedTile.AshIntensity > 0.01 {
+	if affectedTile.hasAsh && affectedTile.AshIntensity > 0.01 {
 		alphaFactor := affectedTile.AshIntensity
 		tint := rl.Fade(rl.White, alphaFactor)
 

@@ -150,7 +150,7 @@ func burningTileEffect(bs *battleState) {
 			if bs.GlobalFrameCounter%8 == 0 {
 				currentTile.applyFireDamage(bs)
 			}
-		case currentTile.IsAsh:
+		case currentTile.hasAsh:
 			currentTile.processAshDecay()
 		}
 	}

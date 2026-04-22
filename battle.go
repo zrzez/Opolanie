@@ -354,7 +354,7 @@ func updateBurningTilesList(bs *battleState) {
 	var burningTiles []*tile
 
 	for _, currentTile := range bs.BurningTilesList {
-		if currentTile.IsBurning || currentTile.IsAsh {
+		if currentTile.IsBurning || currentTile.hasAsh {
 			burningTiles = append(burningTiles, currentTile)
 		}
 	}
