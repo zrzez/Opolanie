@@ -286,16 +286,16 @@ func (p *projectile) priestFireball(affedtedTile *tile, bs *battleState) {
 
 	var splash2 *tile
 
-	affedtedTile.setOnFire(bigBurn)
+	affedtedTile.setOnFire(bigBurn, bs)
 
 	if splash1X >= 0 && splash1X < int16(boardMaxX) && splash1Y >= 0 && splash1Y < int16(boardMaxY) {
 		splash1 = &bs.Board.Tiles[splash1X][splash1Y]
-		splash1.setOnFire(midBurn)
+		splash1.setOnFire(midBurn, bs)
 	}
 
 	if splash2X >= 0 && splash2X < int16(boardMaxX) && splash2Y >= 0 && splash2Y < int16(boardMaxY) {
 		splash2 = &bs.Board.Tiles[splash2X][splash2Y]
-		splash2.setOnFire(minBurn)
+		splash2.setOnFire(minBurn, bs)
 	}
 
 	// 0. efekt to

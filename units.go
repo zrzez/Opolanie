@@ -1672,7 +1672,7 @@ func createCorpses(u *unit, bs *battleState) {
 		corpse.SkeletonType = 0
 	}
 
-	bs.Corpses = append(bs.Corpses, corpse)
+	bs.CorpsesList = append(bs.CorpsesList, corpse)
 }
 
 func (u *unit) unregisterFromBuilding() {

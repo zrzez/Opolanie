@@ -753,10 +753,11 @@ func newBattleState(ps *programState) *battleState {
 		AIPlayerID: colorNone,
 
 		// Alokacja pamięci dla obiektów dynamicznych
-		Units:       make([]*unit, 0, maxUnitsPerPlayer*2),
-		Buildings:   make([]*building, 0, maxBuildingsPerPlayer*2),
-		Projectiles: make([]*projectile, 0, 100),
-		Corpses:     make([]corpse, 0, 100),
+		Units:            make([]*unit, 0, maxUnitsPerPlayer*2),
+		Buildings:        make([]*building, 0, maxBuildingsPerPlayer*2),
+		Projectiles:      make([]*projectile, 0, 100),
+		CorpsesList:      make([]corpse, 0, 100), // @todo: czy nie powinno być to *corpse? 22.04.2026
+		BurningTilesList: make([]*tile, 0, 100),
 
 		// Inicjalizacja struktur graczy wartościami zerowymi/pustymi
 		// Handler nadpisze PlayerID i Milk właściwymi danymi przed startem

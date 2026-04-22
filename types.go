@@ -376,8 +376,8 @@ type battleState struct {
 	HealingShrines     []point                // Wykaz współrzędnych miejsc leczenia
 	RenderUnitRows     [boardMaxY][]*unit     // Służy do wskazywania jednostek wg współrzędnej y i rysowania na planszy
 	RenderBuildingRows [boardMaxY][]*building // Służy do wskazywania budynków wg współrzędnych na potrzeby rysowania
-	Corpses            []corpse               // Służy do wskazywania zwłok wg współrzędnych na potrzeby rysowania
-	RenderQueue        []renderOp             // Służy do wskazania kolejności rysowania rzeczy na planszy
+	CorpsesList        []corpse               // Służy do wskazywania zwłok wg współrzędnych na potrzeby rysowania
+	BurningTilesList   []*tile                // Służy do wskazania kafelków, które zostały podpalone
 	// === UI I INTERAKCJA ===
 	GameCamera              rl.Camera2D      // Kamera widoku gry
 	CurrentSelection        selectionState   // Bieżące zaznaczenie

@@ -876,7 +876,7 @@ func drawUnits(boardRow uint8, bs *battleState, ps *programState) {
 }
 
 func drawCorpses(y, startX, endX uint8, bs *battleState, ps *programState) {
-	for _, corpse := range bs.Corpses {
+	for _, corpse := range bs.CorpsesList {
 		if corpse.Y == y && corpse.X >= startX && corpse.X < endX {
 			posX := float32(corpse.X) * float32(tileWidth)
 			posY := float32(corpse.Y) * float32(tileHeight)

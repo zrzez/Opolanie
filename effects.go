@@ -140,40 +140,18 @@ func manaRegen(bs *battleState) {
 // @reminder: ogień przygasa w powiązaniu z licznikiem odrastania trawy
 // @todo: W tej chwili nad tym pracuję 16.04.2026
 func burningTileEffect(bs *battleState) {
-	// tymczasowo muszę iterować po całej planszy
+	for _, currentTile := range bs.BurningTilesList {
+		switch {
+		case isTreeStump(currentTile.TextureID):
+			currentTile.processTreeFire()
+		case currentTile.IsBurning:
+			currentTile.processNormalFire()
 
-	for y := range boardMaxY {
-		for x := range boardMaxX {
-			affectedTile := &bs.Board.Tiles[x][y]
-
-			if affectedTile.IsBurning {
-				// Róznego rodzaju kafelki różnie się palą
-				// @todo: przemyśl, czy nie lepiej to złączyć w jedną funkcję
-				if isTreeStump(affectedTile.TextureID) {
-					// @reminder: Z tego miejsca mogę przekazać sąsiedni kafelek aby przetworzyć poprawnie
-					// upadające drzewo.
-					affectedTile.processTreeFire()
-				} else {
-					affectedTile.processNormalFire()
-				}
-
-				if bs.GlobalFrameCounter%8 == 0 {
-					affectedTile.applyFireDamage(bs)
-				}
-			} else {
-				affectedTile.processAshDecay()
+			if bs.GlobalFrameCounter%8 == 0 {
+				currentTile.applyFireDamage(bs)
 			}
-
-			// 0. Kafelek płonie
-			// tile.IsBurning = true
-			// jeśli płonie to jednostka chce zejść z niego - to zapewne musi być gdzieś w units.go
-
-			// 1. Co osiem tików zadaje 3 obrażenia i zmniejsza intensywność o 1
-			// tile.FireCounter = powiązany z GrassGrowthCounter
-			// tile.FireID =
-
-			// 2. Jeśli kafelek miał drzewo, to kończy się palić i podmienia teksturę na spalone drzewo
-			// 2a. spalone drzewo powinno się obalić
+		case currentTile.IsAsh:
+			currentTile.processAshDecay()
 		}
 	}
 }

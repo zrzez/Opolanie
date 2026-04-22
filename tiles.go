@@ -1,6 +1,6 @@
 package main
 
-// tileHelpers.go
+// tiles.go
 
 // Pomagierzy do sprawdzania rodzaju tekstury kafelka.
 
@@ -116,6 +116,17 @@ func isTree(tileTexID uint16) bool {
 
 // Płomienie
 
+func (t *tile) setOnFire(fireSize uint16, bs *battleState) {
+	t.IsBurning = true
+	t.BurnElapsed = fireSize - bigBurn
+
+	if !isTreeStump(t.TextureID) {
+		t.IsAsh = true
+	}
+
+	bs.BurningTilesList = append(bs.BurningTilesList, t)
+}
+
 func (t *tile) processNormalFire() {
 	// Gromadzenie się popiołu
 	t.AshIntensity += ashAccumulationRate
@@ -166,7 +177,7 @@ func (t *tile) processAshDecay() {
 
 	switch t.AshProcessState {
 	case ashDecaying:
-		t.AshIntensity *= (1.0 - ashDecayRate)
+		t.AshIntensity *= 1.0 - ashDecayRate
 
 		if t.AshAge >= totalAshLifetime {
 			t.IsAsh = false
@@ -183,15 +194,6 @@ func (t *tile) processAshDecay() {
 
 	t.CurrentAshAlpha = t.AshIntensity
 	t.AshAge++
-}
-
-func (t *tile) setOnFire(fireSize uint16) {
-	t.IsBurning = true
-	t.BurnElapsed = fireSize - bigBurn
-
-	if !isTreeStump(t.TextureID) {
-		t.IsAsh = true
-	}
 }
 
 func (t *tile) processTreeFire() {
@@ -224,7 +226,7 @@ func (t *tile) processTreeFire() {
 }
 
 func (t *tile) processBurntTree() {
-	// Ustalamy nowe tekstury na spalone drzewa
+	// Ustalamy tekstury odpowiadające spalonym drzewom.
 	if t.TextureID < spriteTreeStump03 {
 		t.TextureID = spriteTreeBurntStump00
 	} else {

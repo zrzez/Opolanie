@@ -266,8 +266,10 @@ func updateGame(bs *battleState) {
 	// === LOGIKA TURA ===
 
 	// 3. Czyszczenie pamięci
+	// @todo: zastanów się, czy nie dodać czyszczenia innych list, jak budynki, zwłoki, czy płonące kafelki.
 	if bs.GlobalFrameCounter%100 == 0 {
 		performPeriodicCleanup(bs)
+		updateBurningTilesList(bs)
 	}
 
 	// 4. Sprawdzanie warunki zakończenia bitwy
@@ -338,22 +340,34 @@ func updateMessageTimer(bs *battleState) {
 	}
 }
 
-// performPeriodicCleanup sprawdza, czy w budynku znajdują się
-// zabite jednostki i zwalnia im miejsce
+// Sprawdza, czy w budynku znajdują się zabite jednostki i zwalnia im miejsce.
 func performPeriodicCleanup(bs *battleState) {
-	for _, building := range bs.Buildings {
-		if building != nil && building.Exists {
-			building.cleanupDeadUnits(bs)
+	for _, bld := range bs.Buildings {
+		if bld != nil && bld.Exists {
+			bld.cleanupDeadUnits(bs)
 		}
 	}
+}
+
+// Sprawdza, czy można usunąć kafelki, które zakończyły cykl płonięcia.
+func updateBurningTilesList(bs *battleState) {
+	var burningTiles []*tile
+
+	for _, currentTile := range bs.BurningTilesList {
+		if currentTile.IsBurning || currentTile.IsAsh {
+			burningTiles = append(burningTiles, currentTile)
+		}
+	}
+
+	bs.BurningTilesList = burningTiles
 }
 
 func updateCorpses(bs *battleState) {
 	// nextFreeIndex wskaźnik do miejsca dla nowych zwłok
 	nextFreeIndex := 0
 
-	for scanIndex := range bs.Corpses {
-		corpseToUpdate := &bs.Corpses[scanIndex]
+	for scanIndex := range bs.CorpsesList {
+		corpseToUpdate := &bs.CorpsesList[scanIndex]
 
 		corpseToUpdate.DecayTimer--
 
@@ -378,14 +392,14 @@ func updateCorpses(bs *battleState) {
 		if corpseToUpdate.DecayTimer > 0 {
 			// Jeśli zwłoki są pod adresem większym niż wolny adres, to przenosimy.
 			if scanIndex != nextFreeIndex {
-				bs.Corpses[nextFreeIndex] = *corpseToUpdate
+				bs.CorpsesList[nextFreeIndex] = *corpseToUpdate
 			}
 
 			nextFreeIndex++
 		}
 	}
 
-	bs.Corpses = bs.Corpses[:nextFreeIndex]
+	bs.CorpsesList = bs.CorpsesList[:nextFreeIndex]
 }
 
 // processAI zarządza sztuczną inteligencją przeciwnika
@@ -518,7 +532,6 @@ func placeDestroyedBuilding(bld *building, bs *battleState) {
 }
 
 func applyGlobalEffects(bs *battleState) {
-	// clearAttack(bs)
 	healingShrine(bs)
 	manaRegen(bs)
 	updateCorpses(bs)
