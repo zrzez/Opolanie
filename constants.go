@@ -195,6 +195,8 @@ const (
 	totalAshLifetime    uint16  = 600
 	ashDecayRate        float32 = 0.005
 	ashAccumulationRate float32 = 0.01
+
+	burnDamage uint16 = 3 // Tyle zadają płomienie co 8 tików
 )
 
 const (

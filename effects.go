@@ -86,13 +86,13 @@ func healingShrine(bs *battleState) {
 		return
 	}
 	// jeżeli kapliczka może leczyć
-	for _, point := range bs.HealingShrines {
+	for _, healingSpot := range bs.HealingShrines {
 		// Wybieramy kapliczkę
-		tile := &bs.Board.Tiles[point.X][point.Y]
+		healingTile := &bs.Board.Tiles[healingSpot.X][healingSpot.Y]
 		// Sprawdzamy, czy w kapliczce ktoś jest
-		if tile.Unit != nil {
+		if healingTile.Unit != nil {
 			// bierzemy znalezioną jednostkę
-			u := tile.Unit
+			u := healingTile.Unit
 			// Sprawdzamy, czy potrzebuje leczenia
 			if u.HP != u.MaxHP {
 				switch u.Type {
@@ -146,27 +146,24 @@ func burningTileEffect(bs *battleState) {
 		for x := range boardMaxX {
 			affectedTile := &bs.Board.Tiles[x][y]
 
-			processAshDecay(affectedTile)
+			if affectedTile.IsBurning {
+				// Róznego rodzaju kafelki różnie się palą
+				// @todo: przemyśl, czy nie lepiej to złączyć w jedną funkcję
+				if isTreeStump(affectedTile.TextureID) {
+					// @reminder: Z tego miejsca mogę przekazać sąsiedni kafelek aby przetworzyć poprawnie
+					// upadające drzewo.
+					affectedTile.processTreeFire()
+				} else {
+					affectedTile.processNormalFire()
+				}
 
-			// Róznego rodzaju kafelki różnie się palą
-			// @todo: przemyśl, czy nie lepiej to złączyć w jedną funkcję
-			if isTreeStump(affectedTile.TextureID) {
-				// @reminder: Z tego miejsca mogę przekazać sąsiedni kafelek aby przetworzyć poprawnie
-				// upadające drzewo.
-				processTreeFire(affectedTile)
+				if bs.GlobalFrameCounter%8 == 0 {
+					affectedTile.applyFireDamage(bs)
+				}
 			} else {
-				processNormalFire(affectedTile)
+				affectedTile.processAshDecay()
 			}
 
-			if bs.GlobalFrameCounter%8 != 0 && affectedTile.IsBurning {
-				if affectedTile.Unit != nil && affectedTile.Unit.Exists {
-					affectedTile.Unit.takeDamage(3, bs)
-				}
-
-				if affectedTile.Building != nil && affectedTile.Building.Exists {
-					affectedTile.Building.takeDamage(3)
-				}
-			}
 			// 0. Kafelek płonie
 			// tile.IsBurning = true
 			// jeśli płonie to jednostka chce zejść z niego - to zapewne musi być gdzieś w units.go
@@ -179,141 +176,4 @@ func burningTileEffect(bs *battleState) {
 			// 2a. spalone drzewo powinno się obalić
 		}
 	}
-}
-
-func processNormalFire(affectedTile *tile) {
-	if !affectedTile.IsBurning {
-		return
-	}
-
-	// Gromadzenie się popiołu
-	affectedTile.AshIntensity += ashAccumulationRate
-
-	if affectedTile.AshIntensity > 1.0 {
-		affectedTile.AshIntensity = 1.0
-	}
-
-	// Właściwe płonięcie
-	affectedTile.BurnElapsed++
-
-	var currentFireSprite uint16
-
-	switch {
-	case affectedTile.BurnElapsed < bigBurn:
-		{
-			currentFireSprite = spriteFire00
-		}
-	case affectedTile.BurnElapsed < midBurn:
-		{
-			currentFireSprite = spriteFire04
-		}
-	case affectedTile.BurnElapsed < minBurn:
-		{
-			currentFireSprite = spriteFire08
-		}
-	default:
-		affectedTile.IsBurning = false
-		affectedTile.AshAge = 0
-		affectedTile.AshProcessState = ashDecaying
-
-		return
-	}
-
-	affectedTile.BurnOverlayID = currentFireSprite
-}
-
-func processAshDecay(affectedTile *tile) {
-	// Płonące kafelki nie tracą popiołu
-	if affectedTile.IsBurning {
-		return
-	}
-
-	// Jeśli nie ma popiołu lub są śladowe ilości to wychodzimy
-	if !affectedTile.IsAsh || affectedTile.AshIntensity < 0.01 {
-		return
-	}
-
-	switch affectedTile.AshProcessState {
-	case ashDecaying:
-		affectedTile.AshIntensity *= (1.0 - ashDecayRate)
-
-		if affectedTile.AshAge >= totalAshLifetime {
-			affectedTile.IsAsh = false
-			affectedTile.AshIntensity = 0.0
-			affectedTile.AshProcessState = ashFinished
-		}
-	case ashFinished:
-		return
-
-	// domyślne niepowinno nigdy wystąpić
-	default:
-		return
-	}
-
-	affectedTile.CurrentAshAlpha = affectedTile.AshIntensity
-	affectedTile.AshAge++
-}
-
-func (t *tile) setOnFire(fireSize uint16) {
-	t.IsBurning = true
-	t.BurnElapsed = fireSize - bigBurn
-
-	if !isTreeStump(t.TextureID) {
-		t.IsAsh = true
-	}
-}
-
-func processTreeFire(affectedTile *tile) {
-	if !affectedTile.IsBurning {
-		return
-	}
-
-	// Właściwe płonięcie
-	affectedTile.BurnElapsed++
-
-	var currentFireSprite uint16
-
-	switch {
-	case affectedTile.BurnElapsed < bigBurn:
-		{
-			currentFireSprite = spriteFire00
-		}
-	case affectedTile.BurnElapsed < midBurn:
-		{
-			currentFireSprite = spriteFire04
-		}
-	case affectedTile.BurnElapsed < minBurn:
-		{
-			currentFireSprite = spriteFire08
-		}
-	default:
-		affectedTile.IsBurning = false
-		processBurntTree(affectedTile)
-
-		return
-	}
-
-	affectedTile.BurnOverlayID = currentFireSprite
-}
-
-func processBurntTree(affectedTile *tile) {
-	// Ustalamy nowe tekstury na spalone drzewa
-	if affectedTile.TextureID < spriteTreeStump03 {
-		affectedTile.TextureID = spriteTreeBurntStump00
-	} else {
-		affectedTile.TextureID = spriteTreeBurntStump01
-	}
-
-	// Obalamy spalone drzewo
-	affectedTile.treeFall()
-}
-
-func (t *tile) treeFall() {
-	// Po chwili czekania dajemy spriteTreeFalling.
-	// Później spriteTreeFallen.
-	// @todo: problem z tym, że nie wiem, czy to pojedyncze duszki
-	// @todo: potrzebuję dodać obrażenia od spadającej korony
-	// @todo: jeśli na lewo od drzewa jest suche drzewo to ono też ma być obalone
-	// @reminder: potrzebuję dostępu do współrzędnych! bez tego nie mam wpływu na sąsiedni kafelek
-	// kafelek staje się przechodni.
 }

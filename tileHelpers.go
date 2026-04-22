@@ -4,7 +4,19 @@ package main
 
 // Pomagierzy do sprawdzania rodzaju tekstury kafelka.
 
-// Sprawcza, czy tekstura jest kapliczką leczącą (świętym miejscem).
+/*
+Każda zmiana w tym pliku wymaga ode mnie odpowiedzenia sobie na pytanie: metoda, czy funkcja?
+Muszę utrzymać ten rozdział, inaczej kod w innych miejscach będzie mniej czytelny.
+
+Funkcja jeśli: sprawdzenie wartości tekstury, nie zmienia niczego w kafelku. Przykład: isDirtRoad()
+Metoda jeśli: zmienia stan wewnętrzeny kafelka lub wchodzimy z nim w interakcję. Przykład:
+*/
+
+// =============
+// ↓↓↓FUNKCJE↓↓↓
+// =============
+
+// Sprawdza, czy tekstura jest kapliczką leczącą (świętym miejscem).
 func isHealingShire(tileTexID uint16) bool {
 	return tileTexID == spriteEffectHeal00 || tileTexID == spriteEffectHeal01
 }
@@ -96,4 +108,155 @@ func isTreeStump(tileTexID uint16) bool {
 func isTree(tileTexID uint16) bool {
 	return tileTexID >= spriteTreeStumpStart && tileTexID <= spriteTreeTopEnd ||
 		tileTexID >= spriteTreeBurntStump00 && tileTexID <= spriteTreeFallingBurnt02
+}
+
+// =============
+/// ↓↓↓METODY↓↓↓
+// =============
+
+// Płomienie
+
+func (t *tile) processNormalFire() {
+	// Gromadzenie się popiołu
+	t.AshIntensity += ashAccumulationRate
+
+	if t.AshIntensity > 1.0 {
+		t.AshIntensity = 1.0
+	}
+
+	// Właściwe płonięcie
+	t.BurnElapsed++
+
+	var currentFireSprite uint16
+
+	switch {
+	case t.BurnElapsed < bigBurn:
+		{
+			currentFireSprite = spriteFire00
+		}
+	case t.BurnElapsed < midBurn:
+		{
+			currentFireSprite = spriteFire04
+		}
+	case t.BurnElapsed < minBurn:
+		{
+			currentFireSprite = spriteFire08
+		}
+	default:
+		t.IsBurning = false
+		t.AshAge = 0
+		t.AshProcessState = ashDecaying
+
+		return
+	}
+
+	t.BurnOverlayID = currentFireSprite
+}
+
+func (t *tile) processAshDecay() {
+	// Płonące kafelki nie tracą popiołu
+	if t.IsBurning {
+		return
+	}
+
+	// Jeśli nie ma popiołu lub są śladowe ilości to wychodzimy
+	if !t.IsAsh || t.AshIntensity < 0.01 {
+		return
+	}
+
+	switch t.AshProcessState {
+	case ashDecaying:
+		t.AshIntensity *= (1.0 - ashDecayRate)
+
+		if t.AshAge >= totalAshLifetime {
+			t.IsAsh = false
+			t.AshIntensity = 0.0
+			t.AshProcessState = ashFinished
+		}
+	case ashFinished:
+		return
+
+	// domyślne niepowinno nigdy wystąpić
+	default:
+		return
+	}
+
+	t.CurrentAshAlpha = t.AshIntensity
+	t.AshAge++
+}
+
+func (t *tile) setOnFire(fireSize uint16) {
+	t.IsBurning = true
+	t.BurnElapsed = fireSize - bigBurn
+
+	if !isTreeStump(t.TextureID) {
+		t.IsAsh = true
+	}
+}
+
+func (t *tile) processTreeFire() {
+	// Właściwe płonięcie
+	t.BurnElapsed++
+
+	var currentFireSprite uint16
+
+	switch {
+	case t.BurnElapsed < bigBurn:
+		{
+			currentFireSprite = spriteFire00
+		}
+	case t.BurnElapsed < midBurn:
+		{
+			currentFireSprite = spriteFire04
+		}
+	case t.BurnElapsed < minBurn:
+		{
+			currentFireSprite = spriteFire08
+		}
+	default:
+		t.IsBurning = false
+		t.processBurntTree()
+
+		return
+	}
+
+	t.BurnOverlayID = currentFireSprite
+}
+
+func (t *tile) processBurntTree() {
+	// Ustalamy nowe tekstury na spalone drzewa
+	if t.TextureID < spriteTreeStump03 {
+		t.TextureID = spriteTreeBurntStump00
+	} else {
+		t.TextureID = spriteTreeBurntStump01
+	}
+
+	// Obalamy spalone drzewo
+	t.treeFall()
+}
+
+func (t *tile) applyFireDamage(bs *battleState) {
+	if !t.IsBurning {
+		return
+	}
+
+	damage := burnDamage
+
+	if t.Unit != nil && t.Unit.Exists {
+		t.Unit.takeDamage(damage, bs)
+	}
+
+	if t.Building != nil && t.Building.Exists {
+		t.Building.takeDamage(damage)
+	}
+}
+
+func (t *tile) treeFall() {
+	// Po chwili czekania dajemy spriteTreeFalling.
+	// Później spriteTreeFallen.
+	// @todo: problem z tym, że nie wiem, czy to pojedyncze duszki
+	// @todo: potrzebuję dodać obrażenia od spadającej korony
+	// @todo: jeśli na lewo od drzewa jest suche drzewo to ono też ma być obalone
+	// @reminder: potrzebuję dostępu do współrzędnych! bez tego nie mam wpływu na sąsiedni kafelek
+	// kafelek staje się przechodni.
 }
