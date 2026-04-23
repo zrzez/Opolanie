@@ -316,6 +316,14 @@ func initTerrainSprites() {
 	// Rany
 	setUI(spriteEffectHit00, 203, 8)
 	setUI(spriteEffectHit01, 219, 8)
+
+	// Spalone drzewa
+	// @reminder: to może się nie zapisywać w przyszłości przez level.go, bo nie jest dodane w idRegistry 22.04.2026
+	// przy rysowaniu działa poprawnie.
+	setUI(spriteTreeBurntStump00, 187, 162)
+	setUI(spriteTreeBurntStump01, 219, 162)
+	setUI(spriteTreeBurntTop00, 171, 162)
+	setUI(spriteTreeBurntTop01, 203, 162)
 }
 
 // Nakładka.
@@ -795,7 +803,6 @@ func initBuildingSprites() {
 		setBuilding(i, uint16((i-237)*16), 154, 16, 14)
 	}
 
-	// @reminder: spróba wdrożenia mostów w grze 19.02.2026
 	setBuilding(int(spriteBridgeConstruction), 304, 84, 16, 14)
 }
 

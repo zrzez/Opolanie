@@ -110,6 +110,11 @@ func isTree(tileTexID uint16) bool {
 		tileTexID >= spriteTreeBurntStump00 && tileTexID <= spriteTreeFallingBurnt02
 }
 
+// Sprawdza, czy tekstura jest spalonym pniem drzewa. Nie mylić z wywróconym spalonym drzewem.
+func isTreeBurntStump(tileTexID uint16) bool {
+	return tileTexID == spriteTreeBurntStump00 || tileTexID == spriteTreeBurntStump01
+}
+
 // =============
 /// ↓↓↓METODY↓↓↓
 // =============

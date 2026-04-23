@@ -769,7 +769,8 @@ func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programStat
 				continue
 			}
 
-			if isSpecialTile(texID) || isTreeStump(texID) {
+			// @reminder: pracuję nad rysowaniem spalonych drzew
+			if isSpecialTile(texID) || isTree(texID) {
 				drawSprite(ps.Assets, spriteGrass00, xPos, yPos, colorNone)
 			}
 
@@ -876,43 +877,62 @@ func drawUnits(boardRow uint8, bs *battleState, ps *programState) {
 }
 
 func drawCorpses(y, startX, endX uint8, bs *battleState, ps *programState) {
-	for _, corpse := range bs.CorpsesList {
-		if corpse.Y == y && corpse.X >= startX && corpse.X < endX {
-			posX := float32(corpse.X) * float32(tileWidth)
-			posY := float32(corpse.Y) * float32(tileHeight)
+	for _, currentCorpse := range bs.CorpsesList {
+		if currentCorpse.Y == y && currentCorpse.X >= startX && currentCorpse.X < endX {
+			posX := float32(currentCorpse.X) * float32(tileWidth)
+			posY := float32(currentCorpse.Y) * float32(tileHeight)
 
-			if corpse.Phase < corpsesPhase2 {
+			if currentCorpse.Phase < corpsesPhase2 {
 				var offsetIndex uint16
 
-				if corpse.Phase == corpsesPhase1 {
+				if currentCorpse.Phase == corpsesPhase1 {
 					offsetIndex = 1
 				}
 
-				baseID := spriteUnitBaseID + (uint16(corpse.UnitType) * spriteUnitStep)
+				baseID := spriteUnitBaseID + (uint16(currentCorpse.UnitType) * spriteUnitStep)
 				finalID := baseID + corpsesFrameIndexOffset + offsetIndex
-				drawSprite(ps.Assets, finalID, posX, posY, corpse.Owner)
+				drawSprite(ps.Assets, finalID, posX, posY, currentCorpse.Owner)
 			} else {
-				cid := spriteeffectskeleton00 + uint16(corpse.SkeletonType)
-				tint := rl.Fade(rl.White, float32(corpse.Alpha)/corpsesMaxAlpha)
+				cid := spriteeffectskeleton00 + uint16(currentCorpse.SkeletonType)
+				tint := rl.Fade(rl.White, float32(currentCorpse.Alpha)/corpsesMaxAlpha)
 				drawSpriteEx(cid, posX, posY, colorNone, tint, ps)
 			}
 		}
 	}
 }
 
-// @todo: tutaj muszę dodać logikę rysowania płonących drzew, spalonych oraz ich obalania
+// @todo: tutaj muszę dodać logikę rysowania płonących drzew, spalonych oraz ich obalania.
 func drawTrees(boardRow, startX, endX uint8, bs *battleState, ps *programState) {
-	for x := startX; x < endX; x++ {
-		texID := bs.Board.Tiles[x][boardRow].TextureID
-		if texID >= spriteTreeStumpStart && texID <= spriteTreeStumpEnd {
-			drawX := float32(x)*float32(tileWidth) - treeOffsetX
-			drawY := float32(boardRow) * float32(tileHeight)
-			drawSprite(ps.Assets, texID, drawX, drawY, colorNone)
+	for boardColumn := startX; boardColumn < endX; boardColumn++ {
+		treeTile := bs.Board.Tiles[boardColumn][boardRow]
 
-			if boardRow > 0 {
-				crownY := float32(boardRow-1) * float32(tileHeight)
-				drawSprite(ps.Assets, texID+treeCrownOffset, drawX, crownY, colorNone)
-			}
+		if isTreeStump(treeTile.TextureID) {
+			drawTreeStump(boardColumn, boardRow, treeTile, treeCrownTextureOffset, true, bs, ps)
+		} else if isTreeBurntStump(treeTile.TextureID) {
+			drawTreeStump(boardColumn, boardRow, treeTile, burntTreeCrownTextureOffset, false, bs, ps)
+		}
+	}
+}
+
+func drawTreeStump(boardColumn, boardRow uint8, treeTile tile,
+	crownTextureOffset uint16, applyOffset bool, bs *battleState, ps *programState,
+) {
+	drawX := float32(boardColumn)*float32(tileWidth) - treeOffsetX
+	drawY := float32(boardRow) * float32(tileHeight)
+
+	if !applyOffset {
+		drawX += treeOffsetX
+	}
+
+	drawSprite(ps.Assets, treeTile.TextureID, drawX, drawY, colorNone)
+
+	if boardRow > 0 {
+		crownY := float32(boardRow-1) * float32(tileHeight)
+		drawSprite(ps.Assets, treeTile.TextureID+crownTextureOffset, drawX, crownY, colorNone)
+
+		if treeTile.IsBurning {
+			frame := (bs.FireAnimationFrame + uint16(boardColumn+boardRow)) % 4
+			drawSprite(ps.Assets, spriteFire00+frame, drawX+treeOffsetX, crownY, colorNone)
 		}
 	}
 }
@@ -1269,6 +1289,7 @@ func permanentEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *ba
 		drawSprite(ps.Assets, spriteFire04+frame, xPos, yPos, colorNone)
 
 	// D. Punkt Zwycięstwa (stare 301)
+	// @reminder: tekstura spriteVictoryPoint się nie rysuje 22.04.202
 	case textureID == spriteVictoryPoint:
 		// Animacja punktu zwycięstwa (zakładamy 4 klatki animacji w atlasie)
 		frame := (bs.FireAnimationFrame) % 4
