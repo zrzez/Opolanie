@@ -145,19 +145,52 @@ const (
 	spriteTreeBurntTop00 uint16 = 382 // Spalone stojące
 	spriteTreeBurntTop01 uint16 = 383 // Spalone stojące
 
-	spriteTreeFallingDry00 uint16 = 384
-	spriteTreeFallingDry01 uint16 = 385
-	spriteTreeFallingDry02 uint16 = 386
+	// @todo: @reminder: sprawdź, czy nie działa ponieważ się nie łądują zasoby LUB rysowanie nie działa
 
-	spriteTreeFallingBurnt00 uint16 = 387
-	spriteTreeFallingBurnt01 uint16 = 388
-	spriteTreeFallingBurnt02 uint16 = 389
+	// Zdaje się, że to w ogóle się nie załadowało! Muszę sprawdzić, czy mogę te tekstury traktować jako
+	// nadwyraz większe i uprościć sobie życie, czy możę trzymać się zwyczajnego 16 na 14.
 
-	spriteTreeFallenDry00 uint16 = 390
-	spriteTreeFallenDry01 uint16 = 391
+	/*
+		nazwa | x | y
+		tree_00.png	235	22 - suche obalone 02, korona (na lewo od pnia!)
+		tree_01.png	251	22 - suche obalone 02, pień
+		tree_02.png	235	36 - suche obalane 01, korona (na lewo od pnia!)
+		tree_03.png	251	36 - suche obalane 01, pień
+		tree_04.png	235	50 - suche obalane 00, korona lewa (na lewo-górę)
+		tree_05.png	251	50 - suche obalane 00, korona prawa (na górę)
+		tree_06.png	251	64 - suche obalane 00, pień
+		tree_07.png	235	78 - j.w. tylko zwęglone
+		tree_08.png	251	78
+		tree_09.png	235	92
+		tree_10.png	251	92
+		tree_11.png	235	106
+		tree_12.png	251	106
+		tree_13.png	251	120
+	*/
 
-	spriteTreeFallenBurnt00 uint16 = 392
-	spriteTreeFallenBurnt01 uint16 = 393
+	// Obalane uche drzewo
+	// Obalone
+	spriteDryTreeFallingStump00_2 uint16 = 384 // suche obalone 02
+	spriteDryTreeFallingCrown00_2 uint16 = 385 // suche obalone 02
+	// Upadające
+	spriteDryTreeFallingStump01_1 uint16 = 386 // suche obalane 01
+	spriteDryTreeFallingCrown01_1 uint16 = 387 // suche obalane 01
+	// Przechylające się
+	spriteDryTreeFallingStump02_0     uint16 = 388 // suche obalane 00
+	spriteDryTreeFallingCrown02_0     uint16 = 389 // suche obalane 00
+	spriteDryTreeFallingCrownLeft02_0 uint16 = 390 // suche obalane 00
+
+	// Obalane zwęglone drzewo
+	// Obalone
+	spriteBurntTreeFallingStump00_2 uint16 = 391 // suche obalone 02
+	spriteBurntTreeFallingCrown00_2 uint16 = 392 // suche obalone 02
+	// Upadające
+	spriteBurntTreeFallingStump01_1 uint16 = 393 // suche obalane 01
+	spriteBurntTreeFallingCrown01_1 uint16 = 394 // suche obalane 01
+	// Przechylające się
+	spriteBurntTreeFallingStump02_0     uint16 = 395 // suche obalane 00
+	spriteBurntTreeFallingCrown02_0     uint16 = 396 // suche obalane 00
+	spriteBurntTreeFallingCrownLeft02_0 uint16 = 397 // suche obalane 00
 
 	// 2. BUDYNKI I KONSTRUKCJE
 

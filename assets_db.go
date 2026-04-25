@@ -81,6 +81,15 @@ var idRegistry = map[string]uint16{
 	"SPRITE_TREE_STUMP_05":    spriteTreeStump05,
 	"SPRITE_TREE_STUMP_06":    spriteDryTreeStump00,
 
+	// Upadające drzewa
+	"SPRITE_DRY_TREE_FALLING_STUMP_00":      spriteDryTreeFallingStump00_2,
+	"SPRITE_DRY_TREE_FALLING_CROWN_00":      spriteDryTreeFallingCrown00_2,
+	"SPRITE_DRY_TREE_FALLING_STUMP_01":      spriteDryTreeFallingStump01_1,
+	"SPRITE_DRY_TREE_FALLING_CROWN_01":      spriteDryTreeFallingCrown01_1,
+	"SPRITE_DRY_TREE_FALLING_CROWN_LEFT_02": spriteDryTreeFallingCrownLeft02_0,
+	"SPRITE_DRY_TREE_FALLING_CROWN_02":      spriteDryTreeFallingCrown02_0,
+	"SPRITE_DRY_TREE_FALLING_STUMP_02":      spriteDryTreeFallingStump02_0,
+
 	// Specjalne
 	"SPRITE_PALISADE_START":      spritePalisadeStart,
 	"SPRITE_EFFECT_HEAL_00":      spriteEffectHeal00,
@@ -185,6 +194,17 @@ func initTerrainSprites() {
 				x:       x, y: y,
 				w: w, h: h,
 				offX: 0, offY: 0,
+			}
+		}
+	}
+
+	setFallingTree := func(id, x, y uint16, offX int8) {
+		if id < maxSpriteID {
+			spriteRegistry[id] = spriteDef{
+				atlasID: atlasUI,
+				x:       x, y: y,
+				w: 16, h: 14,
+				offX: offX, offY: 0,
 			}
 		}
 	}
@@ -324,6 +344,30 @@ func initTerrainSprites() {
 	setUI(spriteTreeBurntStump01, 219, 162)
 	setUI(spriteTreeBurntTop00, 171, 162)
 	setUI(spriteTreeBurntTop01, 203, 162)
+
+	// Upadające suche drzewa
+	// Obalone
+	setFallingTree(spriteDryTreeFallingCrown00_2, 235, 22, -16)
+	setFallingTree(spriteDryTreeFallingStump00_2, 251, 22, 0)
+	// Upadające
+	setFallingTree(spriteDryTreeFallingCrown01_1, 235, 36, -16)
+	setFallingTree(spriteDryTreeFallingStump01_1, 251, 36, 0)
+	// Przechylające się
+	setFallingTree(spriteDryTreeFallingCrownLeft02_0, 235, 50, -16)
+	setFallingTree(spriteDryTreeFallingCrown02_0, 251, 50, 0)
+	setFallingTree(spriteDryTreeFallingStump02_0, 251, 64, 0)
+
+	// Upadające zwęglone drzewa
+	// Obalone
+	setFallingTree(spriteBurntTreeFallingCrown00_2, 235, 78, -16)
+	setFallingTree(spriteBurntTreeFallingStump00_2, 251, 78, 0)
+	// Upadające
+	setFallingTree(spriteBurntTreeFallingCrown01_1, 235, 92, -16)
+	setFallingTree(spriteBurntTreeFallingStump01_1, 251, 92, 0)
+	// Przechylające się
+	setFallingTree(spriteBurntTreeFallingCrownLeft02_0, 235, 106, -16)
+	setFallingTree(spriteBurntTreeFallingCrown02_0, 251, 106, 0)
+	setFallingTree(spriteBurntTreeFallingStump02_0, 251, 120, 0)
 }
 
 // Nakładka.

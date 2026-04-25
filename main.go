@@ -758,6 +758,7 @@ func newBattleState(ps *programState) *battleState {
 		Projectiles:      make([]*projectile, 0, 100),
 		CorpsesList:      make([]corpse, 0, 100), // @todo: czy nie powinno być to *corpse? 22.04.2026
 		BurningTilesList: make([]*tile, 0, 100),
+		FallingTreesList: make([]*tile, 0, 100),
 
 		// Inicjalizacja struktur graczy wartościami zerowymi/pustymi
 		// Handler nadpisze PlayerID i Milk właściwymi danymi przed startem

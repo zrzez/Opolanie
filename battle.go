@@ -267,9 +267,11 @@ func updateGame(bs *battleState) {
 
 	// 3. Czyszczenie pamięci
 	// @todo: zastanów się, czy nie dodać czyszczenia innych list, jak budynki, zwłoki, czy płonące kafelki.
-	if bs.GlobalFrameCounter%100 == 0 {
+	if bs.GlobalFrameCounter%120 == 0 {
 		performPeriodicCleanup(bs)
 		updateBurningTilesList(bs)
+		updateFallingTreesList(bs)
+		// @todo: tutaj wstaw listę z upadającymi drzewami
 	}
 
 	// 4. Sprawdzanie warunki zakończenia bitwy
@@ -330,7 +332,7 @@ func updatePerFrameLogic(bs *battleState) {
 	updateWorldTimers(bs)
 }
 
-// Nie pamiętam po co to w ogóle jest potrzebne
+// Nie pamiętam po co to w ogóle jest potrzebne.
 func updateMessageTimer(bs *battleState) {
 	if bs.CurrentMessage.Duration > 0 {
 		bs.CurrentMessage.Duration--
@@ -360,6 +362,19 @@ func updateBurningTilesList(bs *battleState) {
 	}
 
 	bs.BurningTilesList = burningTiles
+}
+
+// Sprawdza, czy drzewo dopełniło cykl upadku i można je usunąć z listy.
+func updateFallingTreesList(bs *battleState) {
+	var fallingTrees []*tile
+
+	for _, currentTile := range bs.FallingTreesList {
+		if currentTile.treeFallPhase != treeFell {
+			fallingTrees = append(fallingTrees, currentTile)
+		}
+	}
+
+	bs.FallingTreesList = fallingTrees
 }
 
 func updateCorpses(bs *battleState) {
@@ -536,6 +551,7 @@ func applyGlobalEffects(bs *battleState) {
 	manaRegen(bs)
 	updateCorpses(bs)
 	burningTileEffect(bs)
+	fallingTreeEffect(bs)
 }
 
 // handleLevelEvents przemiana w niedźwiedzia, odprowadzenie jednostki do punktu ucieczki
@@ -660,7 +676,7 @@ func placeRuins(bs *battleState, bld *building) {
 }
 
 // Usuwa uśmiercone jednostki z bs.
-// Nie mylić z logiką rozkładu zwłok updateCorpses.
+// Nie mylić z logiką rozkładu zwłok updateCorpses().
 func cleanupDeadUnits(bs *battleState) {
 	if bs.GlobalFrameCounter%6000 != 0 {
 		return
@@ -670,8 +686,6 @@ func cleanupDeadUnits(bs *battleState) {
 		return
 	}
 
-	log.Println("INFO: Rozpoczynam czyszczenie pamięci z jednostek...")
-
 	newUnitsList := make([]*unit, 0, len(bs.Units))
 	for _, u := range bs.Units {
 		if u.Exists {
@@ -679,12 +693,7 @@ func cleanupDeadUnits(bs *battleState) {
 		}
 	}
 
-	removedCount := len(bs.Units) - len(newUnitsList)
 	bs.Units = newUnitsList
-
-	if removedCount > 0 {
-		log.Printf("INFO: Wyczyszczono %d martwych jednostek.", removedCount)
-	}
 }
 
 func cleanupDestroyedBuildings(bs *battleState) {

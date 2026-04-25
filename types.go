@@ -315,10 +315,8 @@ const (
 
 // przechowuje kompletną wiedzę o polu (x,y).
 type tile struct {
-	// --- WARSTWA WIZUALNA I LOGICZNA TERENU ---
+	X, Y      uint8  // współrznędne kafelka
 	TextureID uint16 // ID grafiki np. trawa, droga.
-	// EffectID  uint8 // ID efektu np. wyżarta trawa, ogień, wybuch.
-	// --- Efekty
 	// Trawa
 	IsGrazed        bool
 	GrazedCounter   uint8
@@ -328,6 +326,10 @@ type tile struct {
 	IsBurning     bool
 	BurnElapsed   uint16
 	BurnOverlayID uint16
+
+	// Ścinanie drzew
+	treeCuts      uint8         // Ile uderzeń drwala do ścięcia drzewa.
+	treeFallPhase treeFallState // Stopień upadku drzewa, 0 - stoi, 1 - przechylone, 2 - przewrócone.
 
 	// Popiół
 	hasAsh          bool
@@ -378,6 +380,7 @@ type battleState struct {
 	RenderBuildingRows [boardMaxY][]*building // Służy do wskazywania budynków wg współrzędnych na potrzeby rysowania
 	CorpsesList        []corpse               // Służy do wskazywania zwłok wg współrzędnych na potrzeby rysowania
 	BurningTilesList   []*tile                // Służy do wskazania kafelków, które zostały podpalone
+	FallingTreesList   []*tile                // Służy do wskazania kafelków z upadającymi drzewami
 	// === UI I INTERAKCJA ===
 	GameCamera              rl.Camera2D      // Kamera widoku gry
 	CurrentSelection        selectionState   // Bieżące zaznaczenie

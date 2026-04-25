@@ -119,7 +119,6 @@ func healingShrine(bs *battleState) {
 
 func manaRegen(bs *battleState) {
 	// 15 Hz dla 60 klatek na sekundę, aby zachować zgodność z pierwowzorem
-	// @todo: to się wyłoży jeśli będzie można zmienić szybkość gry
 	if bs.GlobalFrameCounter%4 != 0 {
 		return
 	}
@@ -137,21 +136,83 @@ func manaRegen(bs *battleState) {
 	}
 }
 
-// @reminder: ogień przygasa w powiązaniu z licznikiem odrastania trawy
-// @todo: W tej chwili nad tym pracuję 16.04.2026
+// Odpowiada za zarządzanie logiką płonięcia kafelka.
 func burningTileEffect(bs *battleState) {
-	for _, currentTile := range bs.BurningTilesList {
+	for _, burningTile := range bs.BurningTilesList {
 		switch {
-		case isTreeStump(currentTile.TextureID):
-			currentTile.processTreeFire()
-		case currentTile.IsBurning:
-			currentTile.processNormalFire()
+		// Informację o tym, dany kafelek zawiera drzewo mamy przechowywaną tylko w teksturze!
+		// Drzewo pali się inaczej niż trawa.
+		case isTreeStump(burningTile.TextureID):
+			burningTile.processTreeFire(bs)
 
+		// Zwyczajny przypadek zapalenia się kafelka.
+		case burningTile.IsBurning:
+			burningTile.processNormalFire()
+
+			// Co osiem klatek dodatkowe obrażenia od ognia.
 			if bs.GlobalFrameCounter%8 == 0 {
-				currentTile.applyFireDamage(bs)
+				burningTile.applyFireDamage(bs)
 			}
-		case currentTile.hasAsh:
-			currentTile.processAshDecay()
+
+		// Jeśli kafelek się już nie pali, to można przejść do zarządzania popiołem
+		case burningTile.hasAsh:
+			burningTile.processAshDecay()
 		}
 	}
+}
+
+// Odpowiada za zarządzanie logiką upadania drzewa, które spłonęło lub zostało ścięte.
+func fallingTreeEffect(bs *battleState) {
+	// @todo: jeśli na lewo od drzewa jest suche drzewo to ono też ma być obalone
+	for _, currentTile := range bs.FallingTreesList {
+		// Drzewo zmienia fazę co 10 logicznych tyknięć.
+		if bs.GlobalFrameCounter%10 == 0 {
+			switch currentTile.treeFallPhase {
+			case treeStraight:
+				// czeka i się przechyla bardziej
+				// @todo: ustaw docelowe po sprawdzeniu, czy mechanizm działa
+				currentTile.TextureID = spriteDryTreeFallingStump02_0
+				currentTile.treeFallPhase = treeLeaning
+
+			case treeLeaning:
+				// czeka i się przechyla bardziej
+				// @todo: ustaw docelowe po sprawdzeniu, czy mechanizm działa
+				currentTile.TextureID = spriteDryTreeFallingStump01_1
+				currentTile.treeFallPhase = treeImpact
+
+			case treeImpact:
+				// @todo: ustaw docelowe tekstury po sprawdzeniu, czy mechanizm działa
+				currentTile.TextureID = spriteDryTreeFallingStump00_2
+
+				if currentTile.X-1 > 0 {
+					adjacentTile := &bs.Board.Tiles[currentTile.X-1][currentTile.Y]
+
+					if adjacentTile.TextureID == spriteDryTreeStump00 {
+						adjacentTile.treeFall(bs)
+					} else {
+						adjacentTile.applyFallingTreeDamage(bs)
+					}
+				}
+
+				currentTile.IsWalkable = true
+				currentTile.treeFallPhase = treeFell
+
+			case treeFell:
+				return
+			}
+		}
+	}
+	// „Odczekać chwilkę” powinno trawć jedną pętlę falowania wody.
+
+	// 1.a Odczekać chwilkę
+	// 1.b Ustawiamy teksturę jako pierwszy stopień przechylenia
+
+	// 2.a Odczekać chwilkę
+	// 2.b Ustawiamy teksturę jako drugi stopień przechylenia
+
+	// 3.a Odczekać chwilkę
+	// 3.b Ustawiamy teksturę jako trzeci, ostatni stopień przechylenia
+	// 3.c jednostki/budynki na lewo od kafelka powinni otrzymać obrażenia
+	// @reminder: przy atakowaniu kafleka jednostka przechowuje współrzędne celu.
+	// jeśli przekażę/dam dostęp do battlestate.Board to wtedy mogę dostać się do sąsiada
 }

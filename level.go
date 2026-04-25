@@ -19,33 +19,34 @@ func newLevelLoader(drivePath string) *jsonLevelLoader {
 }
 
 func initBoard(bs *battleState) {
-	for x := uint8(0); x < boardMaxX; x++ {
-		for y := uint8(0); y < boardMaxY; y++ {
-			// Dostęp do kafelka przez wskaźnik (dla wydajności przy edycji)
-			tile := &bs.Board.Tiles[x][y]
+	for boardColumn := uint8(0); boardColumn < boardMaxX; boardColumn++ {
+		for boardRow := uint8(0); boardRow < boardMaxY; boardRow++ {
+			// Dostęp do kafelka przez wskaźnik
+			currentTile := &bs.Board.Tiles[boardColumn][boardRow]
 
 			// Wartości domyślne
-			tile.TextureID = spriteGrassStart
-			// tile.EffectID = 0
-			tile.Unit = nil
-			tile.Building = nil
-			tile.Visibility = visibilityUnexplored // Na start wszystko czarne (gdy wdrożymy mgłę)
+			currentTile.X = boardColumn
+			currentTile.Y = boardRow
+			currentTile.TextureID = spriteGrassStart
+			currentTile.Unit = nil
+			currentTile.Building = nil
+			currentTile.Visibility = visibilityUnexplored // Na start wszystko czarne (gdy wdrożymy mgłę)
 
 			// Ustawianie przejezdności
 			// Granice mapy są nieprzejezdne
-			if x == 0 || x == boardMaxX-1 || y == 0 || y == boardMaxY-1 {
-				tile.IsWalkable = false
+			if boardColumn == 0 || boardColumn == boardMaxX-1 || boardRow == 0 || boardRow == boardMaxY-1 {
+				currentTile.IsWalkable = false
 			} else {
-				tile.IsWalkable = true
+				currentTile.IsWalkable = true
 			}
 
-			tile.MovementCost = 1.0
+			currentTile.MovementCost = 1.0
 		}
 	}
 
 	bs.NextUniqueObjectID = 1
 
-	log.Println("INFO: Zaczyn planszy skończony.")
+	log.Println("INFO: Zaczyn planszy zrobiony.")
 }
 
 // Stosuje dane z JSON do stanu gry.
@@ -387,7 +388,7 @@ func (l *jsonLevelLoader) validateScreenPosition(bs *battleState) {
 		cameraTargetTileX, cameraTargetTileY, bs.GameCamera.Target.X, bs.GameCamera.Target.Y)
 }
 
-// initBattle - metoda LevelLoader która inicjuje bitwę z ProgramState
+// initBattle - metoda LevelLoader która inicjuje bitwę z ProgramState.
 func (l *jsonLevelLoader) initBattle(levelNumber uint8, bs *battleState) error {
 	log.Printf("Inicjalizacja bitwy poziom %d", levelNumber)
 	// @todo: przekaż poziom trudności do „battlestate”!!

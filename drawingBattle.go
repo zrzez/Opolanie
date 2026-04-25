@@ -659,6 +659,22 @@ func drawUnitSelectionFrame(unit *unit) {
 	drawFrameCorners(x, y, float32(tileWidth), float32(tileHeight), cornerLenPalisade)
 }
 
+// Odpowiada za rysowanie nakładek (ramka, pasek życia itd.) jednostkom widocznym na ekranie.
+func drawUnitsInterfaces(startY, endY uint8, bs *battleState) {
+	// @todo: przepisz tę plętlę i pozmieniaj nazwy zmiennych ponieważ nie jest oczywistym, co to startY.
+	// Powinno się od razu wiedzieć, co jest wierszem, kolumną, czy mamy na myśli planszę, kamerę itd.
+	// 24.04.2026
+	for boardRow := startY; boardRow < endY; boardRow++ {
+		unitsInRow := bs.RenderUnitRows[boardRow]
+
+		if len(unitsInRow) > 0 {
+			for _, renderUnit := range unitsInRow {
+				drawUnitInterface(renderUnit)
+			}
+		}
+	}
+}
+
 func drawUnitInterface(unit *unit) {
 	screenX := int32(unit.X) * int32(tileWidth)
 	screenY := int32(unit.Y) * int32(tileHeight)
@@ -770,7 +786,7 @@ func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programStat
 			}
 
 			// @reminder: pracuję nad rysowaniem spalonych drzew
-			if isSpecialTile(texID) || isTree(texID) {
+			if isSpecialTile(texID) || isTree(texID) || isFallingTreeStump(texID) {
 				drawSprite(ps.Assets, spriteGrass00, xPos, yPos, colorNone)
 			}
 
@@ -901,16 +917,46 @@ func drawCorpses(y, startX, endX uint8, bs *battleState, ps *programState) {
 	}
 }
 
-// @todo: tutaj muszę dodać logikę rysowania płonących drzew, spalonych oraz ich obalania.
+// @todo: tutaj muszę dodać logikę rysowania obalanych drzew.
 func drawTrees(boardRow, startX, endX uint8, bs *battleState, ps *programState) {
 	for boardColumn := startX; boardColumn < endX; boardColumn++ {
 		treeTile := bs.Board.Tiles[boardColumn][boardRow]
 
+		// 1. Stojące drzewa
 		if isTreeStump(treeTile.TextureID) {
 			drawTreeStump(boardColumn, boardRow, treeTile, treeCrownTextureOffset, true, bs, ps)
 		} else if isTreeBurntStump(treeTile.TextureID) {
 			drawTreeStump(boardColumn, boardRow, treeTile, burntTreeCrownTextureOffset, false, bs, ps)
 		}
+
+		// 2. Upadające drzewa
+		if isFallingTreeStump(treeTile.TextureID) {
+			// @reminder: tymczasowo nie biorę pod uwagę tekstur spalonych drzew.
+			// @todo: przebuduj tak aby funkcja rysowała też zwęglone drzewa! 24.04.2026
+			drawFallingTree(boardColumn, boardRow, treeTile, ps)
+		}
+	}
+}
+
+func drawFallingTree(boardColumn, boardRow uint8, treeTile tile, ps *programState) {
+	drawX := float32(boardColumn) * float32(tileWidth)
+	drawY := float32(boardRow) * float32(tileHeight)
+
+	// 0. Zakładamy, że drzewo ma ustawioną teksturę „suchą upadającą”.
+	// @todo: dodaj obsługę zwęglonych drzew.
+	switch treeTile.TextureID {
+	case spriteDryTreeFallingStump00_2:
+		drawSprite(ps.Assets, treeTile.TextureID, drawX, drawY, colorNone)
+		drawSprite(ps.Assets, treeTile.TextureID+1, drawX, drawY, colorNone)
+
+	case spriteDryTreeFallingStump01_1:
+		drawSprite(ps.Assets, treeTile.TextureID, drawX, drawY, colorNone)
+		drawSprite(ps.Assets, treeTile.TextureID+1, drawX, drawY, colorNone)
+
+	case spriteDryTreeFallingStump02_0:
+		drawSprite(ps.Assets, treeTile.TextureID, drawX, drawY, colorNone)
+		drawSprite(ps.Assets, treeTile.TextureID+1, drawX, drawY, colorNone)
+		drawSprite(ps.Assets, treeTile.TextureID+2, drawX, drawY, colorNone)
 	}
 }
 
@@ -940,18 +986,23 @@ func drawTreeStump(boardColumn, boardRow uint8, treeTile tile,
 // @todo: porozbijać na podfunkcje! Inaczej nie rozprawię się z tym potworem.
 func drawWorldAndUnits(bs *battleState, ps *programState) {
 	// 1. Aktualizacja podręcznych
+	// @todo: Przydałoby się dokładniej opisać, co jest co, bo ciężko się rozeznać - 24.04.2026
 	bs.updateRenderCache()
 	cam := bs.GameCamera
+
+	// @todo: Sprawdź, czy mam rację: world… to część planszy, którą widzimy
 	worldLeft := cam.Target.X - (cam.Offset.X / cam.Zoom)
 	worldTop := cam.Target.Y - (cam.Offset.Y / cam.Zoom)
 	worldRight := worldLeft + (ps.GameViewWidth / cam.Zoom)
 	worldBottom := worldTop + (ps.VirtualHeight / cam.Zoom)
+
+	// @todo: Sprawdź, czy mam rację: start… to część planszy, którą widzimy przeliczona na kafelki
 	startXInt := int(worldLeft/float32(tileWidth)) - 1
 	startYInt := int(worldTop/float32(tileHeight)) - 1
 	endXInt := int(worldRight/float32(tileWidth)) + 2
 	endYInt := int(worldBottom/float32(tileHeight)) + 2
 
-	// Zabezpieczenie dolne (teraz działa poprawnie, bo int może być ujemny)
+	// Zabezpieczenie przed wyjściem poza początek planszy
 	if startXInt < 0 {
 		startXInt = 0
 	}
@@ -960,7 +1011,7 @@ func drawWorldAndUnits(bs *battleState, ps *programState) {
 		startYInt = 0
 	}
 
-	// Zabezpieczenie górne
+	// Zabezpieczenie przed wyjściem poza koniec planszy
 	if endXInt > int(boardMaxX) {
 		endXInt = int(boardMaxX)
 	}
@@ -982,22 +1033,11 @@ func drawWorldAndUnits(bs *battleState, ps *programState) {
 	// Przebieg 3: zwłoki, jednostki, drzewa
 	drawCorpsesUnitsTrees(startX, startY, endX, endY, bs, ps)
 
-	// Nakładki i efekty.
-	drawBuildingsInterfaces(bs) // @reminder: chyba powinienem to rysować po efektach, bo popiół
-	// pojawia się na pasku życia budynku - 19.04.2026
-	drawEffects(bs, ps)
-	// @reminder: tymczasowy hack
-	// @reminder: 12.02.2026 szkoda, że nie napisałem o co chodziło, bo już nie pamiętam.
-	for boardRow := startY; boardRow < endY; boardRow++ {
-		rowUnits := bs.RenderUnitRows[boardRow]
-		if len(rowUnits) > 0 {
-			for _, unit := range rowUnits {
-				// Rysujemy tylko nakładkę dla jednostek, żeby była ponad drzewami itd.
-				drawUnitInterface(unit)
-			}
-		}
-	}
+	// Przebieg 4: efekty oraz nakładki
+	drawEffectsAndInterfaces(startY, endY, bs, ps)
 
+	// @reminder: wydaje mi się, że pociski powinny być pod nakładkami.
+	// inaczej będą przesłaniać pasek życia.
 	drawProjectiles(bs, ps)
 	drawSelectionBox(bs, ps)
 }
@@ -1235,6 +1275,12 @@ func drawSelectionBox(bs *battleState, ps *programState) {
 
 	// Rysowanie
 	rl.DrawRectangleLinesEx(rect, finalThickness, rl.White) // Zielona ramka, klasyk RTS
+}
+
+func drawEffectsAndInterfaces(startY, endY uint8, bs *battleState, ps *programState) {
+	drawEffects(bs, ps)
+	drawBuildingsInterfaces(bs)
+	drawUnitsInterfaces(startY, endY, bs)
 }
 
 // @reminder: Chodzenie po całej planszy i sprawdzanie dwukrotnie, czy mamy jakiś efekt do narysowania jest bardzo

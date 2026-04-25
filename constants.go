@@ -187,6 +187,7 @@ const (
 	corpsesMaxAlpha         float32 = 255.0
 )
 
+// ↓↓↓Płonięcie kafelków↓↓↓
 const (
 	// rzeczy związane z płomieniami i popiołem.
 	bigBurn uint16 = 80
@@ -205,6 +206,24 @@ const (
 	ashDecaying uint8 = iota
 	ashFinished
 )
+
+// ↓↓↓Upadające drzewo↓↓↓
+// Liczba uderzeń unitAxeman potrzebna do ścięcia suchego drzewa.
+// @todo: @reminder: zmień na docelową liczbę po skończeniu wdrażania mechanizmu ścinania drzew! 23.04.2026
+// @reminder to powinien być odpowiednik 150 obrażeń!
+const strikesToCutTree uint8 = 5
+
+type treeFallState uint8
+
+const (
+	treeStraight treeFallState = iota
+	treeLeaning
+	treeImpact
+	treeFell
+)
+
+// @todo: sprawdź ile to było w oryginale
+const fallingTreeDamage uint16 = 10_000
 
 // @todo: jeszcze nie zrobione w drawingBattle, ale niezbędne!
 var victoryPointColors = []rl.Color{

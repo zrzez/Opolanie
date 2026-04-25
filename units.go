@@ -486,8 +486,8 @@ func (u *unit) addUnitCommand(command uint16, targetX, targetY uint8, targetID u
 		return
 	}
 
-	if !u.validateCommand(command, targetX, targetY, targetID, bs) {
-		log.Printf("INFO: unit.go rozkaz nie przeszedł sprawdzenia %t.", u.validateCommand(command, targetX, targetY, targetID, bs))
+	if !u.validateCommand(command, targetID, bs) {
+		log.Printf("INFO: unit.go rozkaz nie przeszedł sprawdzenia %t.", u.validateCommand(command, targetID, bs))
 
 		return
 	}
@@ -529,7 +529,7 @@ func isInteractionCommand(command uint16) bool {
 	}
 }
 
-func (u *unit) validateCommand(command uint16, targetX, targetY uint8, targetID uint, bs *battleState) bool {
+func (u *unit) validateCommand(command uint16, targetID uint, bs *battleState) bool {
 	switch command {
 	case cmdAttack:
 		return u.canAttack(targetID, bs)
@@ -660,6 +660,15 @@ func (u *unit) move(bs *battleState) {
 			log.Printf("INFO: units.go move cel osiągalny z tego miejsca")
 			u.clearPath()
 			u.State = stateAttacking
+
+			return
+		}
+
+		// 25.04.2026 Dodaję bezpiecznik przerywający ruch jeśli cel przestał istnieć
+		// Bez tego jednostka atakująca drzewo zaczyna się przemieszczać po jego upadku
+		// szukając nowej pozycji do ataku nieistniejącego już celu.
+		if _, err := u.validateTargetExists(bs); err != nil {
+			u.setIdleWithReason("cel ataku przestał istnieć")
 
 			return
 		}
@@ -962,6 +971,12 @@ func (u *unit) setIdleWithReason(reason string) {
 	u.clearPath()
 	u.BlockedCounter = 0
 	u.AllowFriendlyFire = false
+
+	// 25.04.2026 dodaję czyszczenie celu, bo powoduje niespójność w stanie
+	// bez tego jednostka jednocześnie jest bezczynna, jak i ma cel do ataku!
+	u.TargetX, u.TargetY = 0, 0
+	u.TargetID = 0
+	u.interactionTargetX, u.interactionTargetY = 0, 0
 
 	if u.State != stateWaiting {
 		u.IsInQueue = false
@@ -1354,6 +1369,8 @@ func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, bs *battl
 	case target.Building != nil && target.Building.Exists:
 		target.Building.takeDamage(damage)
 		u.gainExperience(nil, target.Building, bs)
+	case bs.Board.Tiles[u.interactionTargetX][u.interactionTargetY].TextureID == spriteDryTreeStump00:
+		bs.Board.Tiles[u.interactionTargetX][u.interactionTargetY].accumulateTreeCuts(bs)
 	default:
 		log.Printf("UWAGA: jednostka %d: cel ataku wręcz już nie istnieje", u.ID)
 	}
@@ -1957,7 +1974,8 @@ func (u *unit) validateTargetExists(bs *battleState) (*combatTarget, error) {
 	}
 
 	if u.TargetID == 0 {
-		if isTreeStump(bs.Board.Tiles[u.interactionTargetX][u.interactionTargetY].TextureID) {
+		treeTile := bs.Board.Tiles[u.interactionTargetX][u.interactionTargetY]
+		if isTreeStump(treeTile.TextureID) && treeTile.treeFallPhase == treeStraight {
 			return &combatTarget{Unit: nil, Building: nil}, nil
 		}
 

@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // tiles.go
 
 // Pomagierzy do sprawdzania rodzaju tekstury kafelka.
@@ -104,15 +106,22 @@ func isTreeStump(tileTexID uint16) bool {
 	return tileTexID >= spriteTreeStumpStart && tileTexID <= spriteTreeStumpEnd
 }
 
-// Sprawdza, czy tekstura jest drzewem. W tym obalonym.
+// Sprawdza, czy tekstura jest drzewem. Drzewa, które nie zostały obalone. Rozróżnienie ważne
+// ze względu na właściwość t.isWalkable.
 func isTree(tileTexID uint16) bool {
-	return tileTexID >= spriteTreeStumpStart && tileTexID <= spriteTreeTopEnd ||
-		tileTexID >= spriteTreeBurntStump00 && tileTexID <= spriteTreeFallingBurnt02
+	return tileTexID >= spriteTreeStumpStart && tileTexID <= spriteTreeTopEnd || // drzewa żywe oraz suche
+		tileTexID >= spriteTreeBurntStump00 && tileTexID <= spriteTreeBurntTop01 // spalone drzewa
 }
 
 // Sprawdza, czy tekstura jest spalonym pniem drzewa. Nie mylić z wywróconym spalonym drzewem.
 func isTreeBurntStump(tileTexID uint16) bool {
 	return tileTexID == spriteTreeBurntStump00 || tileTexID == spriteTreeBurntStump01
+}
+
+// @todo: po skończeniu prac nad teksturami upadających drzew zmień
+// spriteBurntTreeFallingCrownLeft02_0 na ostatnią teksturę pnia przewracającego się drzewa.
+func isFallingTreeStump(tileTexID uint16) bool {
+	return tileTexID >= spriteDryTreeFallingStump00_2 && tileTexID <= spriteBurntTreeFallingCrownLeft02_0
 }
 
 // =============
@@ -201,7 +210,7 @@ func (t *tile) processAshDecay() {
 	t.AshAge++
 }
 
-func (t *tile) processTreeFire() {
+func (t *tile) processTreeFire(bs *battleState) {
 	// Właściwe płonięcie
 	t.BurnElapsed++
 
@@ -222,7 +231,7 @@ func (t *tile) processTreeFire() {
 		}
 	default:
 		t.IsBurning = false
-		t.processBurntTree()
+		t.processBurntTree(bs)
 
 		return
 	}
@@ -230,7 +239,7 @@ func (t *tile) processTreeFire() {
 	t.BurnOverlayID = currentFireSprite
 }
 
-func (t *tile) processBurntTree() {
+func (t *tile) processBurntTree(bs *battleState) {
 	// Ustalamy tekstury odpowiadające spalonym drzewom.
 	if t.TextureID < spriteTreeStump03 {
 		t.TextureID = spriteTreeBurntStump00
@@ -239,9 +248,10 @@ func (t *tile) processBurntTree() {
 	}
 
 	// Obalamy spalone drzewo
-	t.treeFall()
+	t.treeFall(bs)
 }
 
+// Odpowiada za zadanie obrażeń jednostce lub budynkowi, który się znajduje na danym kafelku.
 func (t *tile) applyFireDamage(bs *battleState) {
 	if !t.IsBurning {
 		return
@@ -258,12 +268,39 @@ func (t *tile) applyFireDamage(bs *battleState) {
 	}
 }
 
-func (t *tile) treeFall() {
-	// Po chwili czekania dajemy spriteTreeFalling.
-	// Później spriteTreeFallen.
-	// @todo: problem z tym, że nie wiem, czy to pojedyncze duszki
-	// @todo: potrzebuję dodać obrażenia od spadającej korony
-	// @todo: jeśli na lewo od drzewa jest suche drzewo to ono też ma być obalone
-	// @reminder: potrzebuję dostępu do współrzędnych! bez tego nie mam wpływu na sąsiedni kafelek
-	// kafelek staje się przechodni.
+// Odpowiada za zadanie obrażeń jednostce lub budynkowi, który się znajduje na danym kafelku.
+func (t *tile) applyFallingTreeDamage(bs *battleState) {
+	damage := fallingTreeDamage
+
+	if t.Unit != nil && t.Unit.Exists {
+		t.Unit.takeDamage(damage, bs)
+	}
+
+	if t.Building != nil && t.Building.Exists {
+		t.Building.takeDamage(damage)
+	}
+}
+
+func (t *tile) accumulateTreeCuts(bs *battleState) {
+	fmt.Println("UDERZAM W DRZEWO!!!!!!!!!")
+
+	t.treeCuts++
+
+	fmt.Printf("Drzewo otrzymało łącznie %d uderzeń\n", t.treeCuts)
+
+	if t.treeCuts >= strikesToCutTree {
+		t.treeFall(bs)
+	}
+}
+
+// Odpowiada za rozpoczęcie całego procesu upadania drzewa.
+func (t *tile) treeFall(bs *battleState) {
+	// 1. Ustawiamy stopień upadku drzewa
+	// Za zarządzanie teksturami odpowiada fallingTreeEffect()
+	t.treeFallPhase = treeStraight
+	t.treeCuts = 0
+
+	// 2. Dodajemy kafelkek do listy obsługiwanej centralnie
+	//
+	bs.FallingTreesList = append(bs.FallingTreesList, t)
 }
