@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 // tiles.go
 
 // Pomagierzy do sprawdzania rodzaju tekstury kafelka.
@@ -113,20 +111,33 @@ func isTree(tileTexID uint16) bool {
 		tileTexID >= spriteTreeBurntStump00 && tileTexID <= spriteTreeBurntTop01 // spalone drzewa
 }
 
-// Sprawdza, czy tekstura jest spalonym pniem drzewa. Nie mylić z wywróconym spalonym drzewem.
-func isTreeBurntStump(tileTexID uint16) bool {
-	return tileTexID == spriteTreeBurntStump00 || tileTexID == spriteTreeBurntStump01
-}
-
-// @todo: po skończeniu prac nad teksturami upadających drzew zmień
-// spriteBurntTreeFallingCrownLeft02_0 na ostatnią teksturę pnia przewracającego się drzewa.
-func isFallingTreeStump(tileTexID uint16) bool {
-	return tileTexID >= spriteDryTreeFallingStump00_2 && tileTexID <= spriteBurntTreeFallingCrownLeft02_0
-}
-
 // =============
 /// ↓↓↓METODY↓↓↓
 // =============
+
+// @reminder: dodaję metody do sprawdzenia, czy drzewa. Wydaje się to być potrzebne do
+// rozdzielenia stanu od wyglądu ORAZ tego co używamy w grze od tego co potrzebne przy ładowaniu
+// map w level.go - 27.04.2026
+
+func (t *tile) isTree() bool {
+	return t.treeState != noTree
+}
+
+func (t *tile) isStandingTree() bool {
+	return t.treeState == treeStraight
+}
+
+func (t *tile) isFallingTree() bool {
+	return t.treeState == treeFalling
+}
+
+func (t *tile) isFallenTree() bool {
+	return t.treeState == treeFell
+}
+
+func (t *tile) isBurntTree() bool {
+	return t.IsBurnt && t.isTree()
+}
 
 // Płomienie
 
@@ -230,6 +241,7 @@ func (t *tile) processTreeFire(bs *battleState) {
 			currentFireSprite = spriteFire08
 		}
 	default:
+		// czy mogę tego jeszcze nie zmieniać na FAŁSZ?
 		t.IsBurning = false
 		t.processBurntTree(bs)
 
@@ -248,6 +260,7 @@ func (t *tile) processBurntTree(bs *battleState) {
 	}
 
 	// Obalamy spalone drzewo
+	t.IsBurnt = true
 	t.treeFall(bs)
 }
 
@@ -257,36 +270,28 @@ func (t *tile) applyFireDamage(bs *battleState) {
 		return
 	}
 
-	damage := burnDamage
-
 	if t.Unit != nil && t.Unit.Exists {
-		t.Unit.takeDamage(damage, bs)
+		t.Unit.takeDamage(burnDamage, bs)
 	}
 
 	if t.Building != nil && t.Building.Exists {
-		t.Building.takeDamage(damage)
+		t.Building.takeDamage(burnDamage)
 	}
 }
 
 // Odpowiada za zadanie obrażeń jednostce lub budynkowi, który się znajduje na danym kafelku.
 func (t *tile) applyFallingTreeDamage(bs *battleState) {
-	damage := fallingTreeDamage
-
 	if t.Unit != nil && t.Unit.Exists {
-		t.Unit.takeDamage(damage, bs)
+		t.Unit.takeDamage(fallingTreeDamage, bs)
 	}
 
 	if t.Building != nil && t.Building.Exists {
-		t.Building.takeDamage(damage)
+		t.Building.takeDamage(fallingTreeDamage)
 	}
 }
 
 func (t *tile) accumulateTreeCuts(bs *battleState) {
-	fmt.Println("UDERZAM W DRZEWO!!!!!!!!!")
-
 	t.treeCuts++
-
-	fmt.Printf("Drzewo otrzymało łącznie %d uderzeń\n", t.treeCuts)
 
 	if t.treeCuts >= strikesToCutTree {
 		t.treeFall(bs)
@@ -295,12 +300,23 @@ func (t *tile) accumulateTreeCuts(bs *battleState) {
 
 // Odpowiada za rozpoczęcie całego procesu upadania drzewa.
 func (t *tile) treeFall(bs *battleState) {
+	// Drzewa, które już upadają nie są obsługiwane!
+	if t.treeState != treeStraight {
+		return
+	}
+
+	// Nie pozwalamy na duplikaty!
+	for _, existing := range bs.FallingTreesList {
+		if existing == t {
+			return
+		}
+	}
+
 	// 1. Ustawiamy stopień upadku drzewa
 	// Za zarządzanie teksturami odpowiada fallingTreeEffect()
-	t.treeFallPhase = treeStraight
+	t.treeState = treeStraight
 	t.treeCuts = 0
 
 	// 2. Dodajemy kafelkek do listy obsługiwanej centralnie
-	//
 	bs.FallingTreesList = append(bs.FallingTreesList, t)
 }

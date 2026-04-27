@@ -785,8 +785,8 @@ func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programStat
 				continue
 			}
 
-			// @reminder: pracuję nad rysowaniem spalonych drzew
-			if isSpecialTile(texID) || isTree(texID) || isFallingTreeStump(texID) {
+			// Rysowanie trawy pod kapliczkami, miejscem zwycięstwa oraz drzewami.
+			if isSpecialTile(texID) || currentTile.isTree() || currentTile.isFallingTree() {
 				drawSprite(ps.Assets, spriteGrass00, xPos, yPos, colorNone)
 			}
 
@@ -807,7 +807,7 @@ func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programStat
 				drawSprite(ps.Assets, texID+animationOffset, xPos, yPos, colorNone)
 			}
 
-			if isLandOrOther(texID) && !isTree(texID) {
+			if isLandOrOther(texID) && !currentTile.isTree() {
 				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
 			}
 		}
@@ -917,70 +917,103 @@ func drawCorpses(y, startX, endX uint8, bs *battleState, ps *programState) {
 	}
 }
 
-// @todo: tutaj muszę dodać logikę rysowania obalanych drzew.
 func drawTrees(boardRow, startX, endX uint8, bs *battleState, ps *programState) {
 	for boardColumn := startX; boardColumn < endX; boardColumn++ {
-		treeTile := bs.Board.Tiles[boardColumn][boardRow]
+		currentTile := &bs.Board.Tiles[boardColumn][boardRow]
 
-		// 1. Stojące drzewa
-		if isTreeStump(treeTile.TextureID) {
-			drawTreeStump(boardColumn, boardRow, treeTile, treeCrownTextureOffset, true, bs, ps)
-		} else if isTreeBurntStump(treeTile.TextureID) {
-			drawTreeStump(boardColumn, boardRow, treeTile, burntTreeCrownTextureOffset, false, bs, ps)
+		// jeśli nie jest drzewem to pomijamy
+		if currentTile.treeState == noTree {
+			continue
 		}
 
-		// 2. Upadające drzewa
-		if isFallingTreeStump(treeTile.TextureID) {
-			// @reminder: tymczasowo nie biorę pod uwagę tekstur spalonych drzew.
-			// @todo: przebuduj tak aby funkcja rysowała też zwęglone drzewa! 24.04.2026
-			drawFallingTree(boardColumn, boardRow, treeTile, ps)
+		switch currentTile.treeState {
+		case noTree:
+			continue
+		case treeStraight:
+			drawStandingTree(boardColumn, boardRow, currentTile, bs, ps)
+		case treeLeaning:
+			drawLeaningTree(boardColumn, boardRow, currentTile, ps)
+		case treeFalling, treeImpact, treeFell:
+			drawFallingOrFallenTree(boardColumn, boardRow, currentTile, ps)
 		}
 	}
 }
 
-func drawFallingTree(boardColumn, boardRow uint8, treeTile tile, ps *programState) {
+func drawStandingTree(boardColumn, boardRow uint8, t *tile, bs *battleState, ps *programState) {
 	drawX := float32(boardColumn) * float32(tileWidth)
 	drawY := float32(boardRow) * float32(tileHeight)
 
-	// 0. Zakładamy, że drzewo ma ustawioną teksturę „suchą upadającą”.
-	// @todo: dodaj obsługę zwęglonych drzew.
-	switch treeTile.TextureID {
-	case spriteDryTreeFallingStump00_2:
-		drawSprite(ps.Assets, treeTile.TextureID, drawX, drawY, colorNone)
-		drawSprite(ps.Assets, treeTile.TextureID+1, drawX, drawY, colorNone)
-
-	case spriteDryTreeFallingStump01_1:
-		drawSprite(ps.Assets, treeTile.TextureID, drawX, drawY, colorNone)
-		drawSprite(ps.Assets, treeTile.TextureID+1, drawX, drawY, colorNone)
-
-	case spriteDryTreeFallingStump02_0:
-		drawSprite(ps.Assets, treeTile.TextureID, drawX, drawY, colorNone)
-		drawSprite(ps.Assets, treeTile.TextureID+1, drawX, drawY, colorNone)
-		drawSprite(ps.Assets, treeTile.TextureID+2, drawX, drawY, colorNone)
-	}
-}
-
-func drawTreeStump(boardColumn, boardRow uint8, treeTile tile,
-	crownTextureOffset uint16, applyOffset bool, bs *battleState, ps *programState,
-) {
-	drawX := float32(boardColumn)*float32(tileWidth) - treeOffsetX
-	drawY := float32(boardRow) * float32(tileHeight)
-
-	if !applyOffset {
-		drawX += treeOffsetX
+	if !t.IsBurnt {
+		drawX -= treeOffsetX
 	}
 
-	drawSprite(ps.Assets, treeTile.TextureID, drawX, drawY, colorNone)
+	// 1. Pień
+	drawSprite(ps.Assets, t.TextureID, drawX, drawY, colorNone)
 
+	// 2. Korona
 	if boardRow > 0 {
 		crownY := float32(boardRow-1) * float32(tileHeight)
-		drawSprite(ps.Assets, treeTile.TextureID+crownTextureOffset, drawX, crownY, colorNone)
 
-		if treeTile.IsBurning {
+		var crownID uint16
+
+		if t.IsBurnt {
+			crownID = t.TextureID + burntTreeCrownTextureOffset
+		} else {
+			crownID = t.TextureID + treeCrownTextureOffset
+		}
+
+		drawSprite(ps.Assets, crownID, drawX, crownY, colorNone)
+
+		// 3. Uruchomienie ognia
+		if t.IsBurning {
 			frame := (bs.FireAnimationFrame + uint16(boardColumn+boardRow)) % 4
 			drawSprite(ps.Assets, spriteFire00+frame, drawX+treeOffsetX, crownY, colorNone)
 		}
 	}
+}
+
+func drawLeaningTree(boardColumn, boardRow uint8, t *tile, ps *programState) {
+	drawX := float32(boardColumn) * float32(tileWidth)
+	drawY := float32(boardRow) * float32(tileHeight)
+
+	var baseStump uint16
+
+	if t.IsBurnt {
+		baseStump = spriteBurntLeaningTreeStump
+	} else {
+		baseStump = spriteDryLeaningTreeStump
+	}
+
+	drawSprite(ps.Assets, baseStump, drawX, drawY, colorNone)
+	drawSprite(ps.Assets, baseStump+1, drawX, drawY, colorNone)
+	drawSprite(ps.Assets, baseStump+2, drawX, drawY, colorNone)
+}
+
+func drawFallingOrFallenTree(boardColumn, boardRow uint8, t *tile, ps *programState) {
+	drawX := float32(boardColumn) * float32(tileWidth)
+	drawY := float32(boardRow) * float32(tileHeight)
+
+	var stumpID uint16
+
+	// Tutaj nie wykorzystujemy wszystkich stanów ponieważ interesują nas tylko
+	// i wyłącznie upadające drzewa
+	switch t.treeState {
+	case treeFalling:
+		if t.IsBurnt {
+			stumpID = spriteBurntFallingTreeStump
+		} else {
+			stumpID = spriteDryFallingStump
+		}
+	case treeImpact, treeFell:
+		if t.IsBurnt {
+			stumpID = spriteBurntFallenTreeStump
+		} else {
+			stumpID = spriteDryFallenTreeStump
+		}
+	}
+
+	drawSprite(ps.Assets, stumpID, drawX, drawY, colorNone)
+	drawSprite(ps.Assets, stumpID+1, drawX, drawY, colorNone)
 }
 
 // @todo: porozbijać na podfunkcje! Inaczej nie rozprawię się z tym potworem.

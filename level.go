@@ -145,28 +145,69 @@ func (l *jsonLevelLoader) clearGameState(bs *battleState) {
 	bs.AI.MilkGenerationRate = uint16(bs.DifficultyLevel)
 }
 
-func configureTile(tile *tile, graphicID uint16) {
-	tile.IsWalkable = true
-	tile.MovementCost = 1.0
+func configureTile(currentTile *tile, graphicID uint16) {
+	currentTile.IsWalkable = true
+	currentTile.MovementCost = 1.0
+	// ↓↓↓ Powinienem się zastanowić, co otwarcie deklarować
+	// ↓↓↓ bo niektóre wartości są domyślnie ustawiane prawidłowo
+	// currentTile.treeState = noTree
 
 	if isWaterTileOnly(graphicID) {
-		tile.IsWalkable = false
+		currentTile.IsWalkable = false
 	}
 
 	if isRockNonWalkable(graphicID) {
-		tile.IsWalkable = false
+		currentTile.IsWalkable = false
 	}
 
 	if isDirtRoad(graphicID) {
-		tile.MovementCost = 0.5
+		currentTile.MovementCost = 0.5
 	}
 
 	if isTreeStump(graphicID) || isRuin(graphicID) {
-		tile.IsWalkable = false
+		currentTile.IsWalkable = false
 	}
 
 	if isGadget(graphicID) {
-		tile.IsWalkable = false
+		currentTile.IsWalkable = false
+	}
+
+	if state, isBurnt, isWalkableOverride := classifyTreeFromTexture(graphicID); state != noTree {
+		currentTile.treeState = state
+		currentTile.IsBurnt = isBurnt
+		currentTile.IsWalkable = isWalkableOverride
+	}
+}
+
+// Przekłada tekstury używane w JSON-ie map na stan logiczny kafelka.
+// Zwraca następujące informacje: treeState, isBurnt, isWalkable
+// Dzięki temu wiemy jednoznacznie co powinno się dziać z drzewem.
+func classifyTreeFromTexture(textureID uint16) (treeState, bool, bool) {
+	switch textureID {
+	// stojące żywe i suche
+	case spriteTreeStump00, spriteTreeStump01, spriteTreeStump02, spriteTreeStump03,
+		spriteTreeStump04, spriteTreeStump05, spriteDryTreeStump00:
+		return treeStraight, false, false
+	// stojące spalone
+	case spriteTreeBurntStump00, spriteTreeBurntStump01:
+		return treeStraight, true, false
+	// suche upadające
+	case spriteDryLeaningTreeStump:
+		return treeLeaning, false, false
+	case spriteDryFallingStump:
+		return treeFalling, false, false
+	case spriteDryFallenTreeStump:
+		return treeFell, false, true
+	// spalone upadające
+	case spriteBurntLeaningTreeStump:
+		return treeLeaning, true, false
+	case spriteBurntFallingTreeStump:
+		return treeFalling, true, false
+	case spriteBurntFallenTreeStump:
+		return treeFell, true, true
+	// jeśli coś nie jest drzewem
+	default:
+		return noTree, false, true
 	}
 }
 

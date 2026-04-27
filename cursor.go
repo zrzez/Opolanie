@@ -107,10 +107,8 @@ func cursorForSelection(bs *battleState, tileUnderCursor *tile, targetOwner int,
 	// Drzewa
 	selectedUnit, unitOK := getUnitByID(bs.CurrentSelection.UnitID, bs)
 
-	if unitOK && isTreeStump(tileUnderCursor.TextureID) {
-		if selectedUnit.Type == unitPriest {
-			return spriteCursorCrossRed
-		} else if selectedUnit.Type == unitAxeman && tileUnderCursor.TextureID == spriteDryTreeStump00 {
+	if unitOK && tileUnderCursor.isStandingTree() && !tileUnderCursor.IsBurning {
+		if selectedUnit.canDamageTree(tileUnderCursor.X, tileUnderCursor.Y, bs) {
 			return spriteCursorCrossRed
 		}
 

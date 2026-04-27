@@ -369,7 +369,7 @@ func updateFallingTreesList(bs *battleState) {
 	var fallingTrees []*tile
 
 	for _, currentTile := range bs.FallingTreesList {
-		if currentTile.treeFallPhase != treeFell {
+		if currentTile.treeState != treeFell {
 			fallingTrees = append(fallingTrees, currentTile)
 		}
 	}

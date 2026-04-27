@@ -140,9 +140,8 @@ func manaRegen(bs *battleState) {
 func burningTileEffect(bs *battleState) {
 	for _, burningTile := range bs.BurningTilesList {
 		switch {
-		// Informację o tym, dany kafelek zawiera drzewo mamy przechowywaną tylko w teksturze!
 		// Drzewo pali się inaczej niż trawa.
-		case isTreeStump(burningTile.TextureID):
+		case burningTile.isTree():
 			burningTile.processTreeFire(bs)
 
 		// Zwyczajny przypadek zapalenia się kafelka.
@@ -163,56 +162,62 @@ func burningTileEffect(bs *battleState) {
 
 // Odpowiada za zarządzanie logiką upadania drzewa, które spłonęło lub zostało ścięte.
 func fallingTreeEffect(bs *battleState) {
-	// @todo: jeśli na lewo od drzewa jest suche drzewo to ono też ma być obalone
 	for _, currentTile := range bs.FallingTreesList {
-		// Drzewo zmienia fazę co 10 logicznych tyknięć.
 		if bs.GlobalFrameCounter%10 == 0 {
-			switch currentTile.treeFallPhase {
+			switch currentTile.treeState {
 			case treeStraight:
-				// czeka i się przechyla bardziej
-				// @todo: ustaw docelowe po sprawdzeniu, czy mechanizm działa
-				currentTile.TextureID = spriteDryTreeFallingStump02_0
-				currentTile.treeFallPhase = treeLeaning
+				currentTile.treeState = treeLeaning
 
 			case treeLeaning:
-				// czeka i się przechyla bardziej
-				// @todo: ustaw docelowe po sprawdzeniu, czy mechanizm działa
-				currentTile.TextureID = spriteDryTreeFallingStump01_1
-				currentTile.treeFallPhase = treeImpact
+				// 1. Lekko przechylone, 3 kafelki do narysowania
+				if !currentTile.IsBurnt {
+					currentTile.TextureID = spriteDryFallingStump
+				} else {
+					currentTile.TextureID = spriteBurntFallingTreeStump
+				}
+
+				currentTile.treeState = treeFalling
+
+			case treeFalling:
+				// 2. przechylone 45 stopni, dwa kafelki do narysowania
+				if !currentTile.IsBurnt {
+					currentTile.TextureID = spriteDryFallenTreeStump
+				} else {
+					currentTile.TextureID = spriteBurntFallenTreeStump
+				}
+
+				currentTile.treeState = treeImpact
 
 			case treeImpact:
-				// @todo: ustaw docelowe tekstury po sprawdzeniu, czy mechanizm działa
-				currentTile.TextureID = spriteDryTreeFallingStump00_2
-
+				// 3. Upadło, wywołuje określone efekty na sąsiednich kafelkach jeśli
+				// Drzewo upada w granicach planszy, żeby móc bezpiecznie wywołać efekty
+				// na sąsiednim kafelku
 				if currentTile.X-1 > 0 {
 					adjacentTile := &bs.Board.Tiles[currentTile.X-1][currentTile.Y]
 
+					// Obalamy sąsiednie suche drzewo
 					if adjacentTile.TextureID == spriteDryTreeStump00 {
 						adjacentTile.treeFall(bs)
 					} else {
+						// Lub zadajemy obrażenia
 						adjacentTile.applyFallingTreeDamage(bs)
 					}
 				}
 
 				currentTile.IsWalkable = true
-				currentTile.treeFallPhase = treeFell
+				currentTile.treeState = treeFell
 
 			case treeFell:
+				// 4. Leży i już nic nie robi
 				return
+
+			case noTree:
+				panic("noTree nie może być obsługiwane przez fallingTreeEffect")
+
+			default:
+				// Upadanie drzew nie może obslugiwać noTree ponieważ jest to stan braku drzewa.
+				panic("noTree nie może być obsługiwane przez fallingTreeEffect")
 			}
 		}
 	}
-	// „Odczekać chwilkę” powinno trawć jedną pętlę falowania wody.
-
-	// 1.a Odczekać chwilkę
-	// 1.b Ustawiamy teksturę jako pierwszy stopień przechylenia
-
-	// 2.a Odczekać chwilkę
-	// 2.b Ustawiamy teksturę jako drugi stopień przechylenia
-
-	// 3.a Odczekać chwilkę
-	// 3.b Ustawiamy teksturę jako trzeci, ostatni stopień przechylenia
-	// 3.c jednostki/budynki na lewo od kafelka powinni otrzymać obrażenia
-	// @reminder: przy atakowaniu kafleka jednostka przechowuje współrzędne celu.
-	// jeśli przekażę/dam dostęp do battlestate.Board to wtedy mogę dostać się do sąsiada
 }

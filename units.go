@@ -539,15 +539,30 @@ func (u *unit) validateCommand(command uint16, targetID uint, bs *battleState) b
 }
 
 // caDamageTree sprawdza, czy jednostka może zaatakować dane drzewo.
-// u.Type == unitPriest może zaatakować każde drzewo.
-// u.Type == unitAxeman może zaatakować suche drzewo.
-func (u *unit) canDamageTree(treetX, treeY uint8, bs *battleState) bool {
+func (u *unit) canDamageTree(treeX, treeY uint8, bs *battleState) bool {
+	// Tylko unitAxeman i unitPriest może atakować drzewa
+	if u.Type != unitPriest && u.Type != unitAxeman {
+		return false
+	}
+
+	treeTile := bs.Board.Tiles[treeX][treeY]
+
+	// Tylko stojące drzewa
+	if !treeTile.isStandingTree() {
+		return false
+	}
+
+	// Tylko drzewa, które nie zostały już podpalone
+	if treeTile.IsBurning {
+		return false
+	}
+
 	if u.Type == unitPriest {
 		return true
 	}
 
 	if u.Type == unitAxeman {
-		return bs.Board.Tiles[treetX][treeY].TextureID == spriteDryTreeStump00
+		return treeTile.TextureID == spriteDryTreeStump00
 	}
 
 	return false
@@ -1975,7 +1990,7 @@ func (u *unit) validateTargetExists(bs *battleState) (*combatTarget, error) {
 
 	if u.TargetID == 0 {
 		treeTile := bs.Board.Tiles[u.interactionTargetX][u.interactionTargetY]
-		if isTreeStump(treeTile.TextureID) && treeTile.treeFallPhase == treeStraight {
+		if treeTile.isStandingTree() && !treeTile.IsBurning {
 			return &combatTarget{Unit: nil, Building: nil}, nil
 		}
 

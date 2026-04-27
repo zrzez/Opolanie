@@ -82,13 +82,13 @@ var idRegistry = map[string]uint16{
 	"SPRITE_TREE_STUMP_06":    spriteDryTreeStump00,
 
 	// Upadające drzewa
-	"SPRITE_DRY_TREE_FALLING_STUMP_00":      spriteDryTreeFallingStump00_2,
-	"SPRITE_DRY_TREE_FALLING_CROWN_00":      spriteDryTreeFallingCrown00_2,
-	"SPRITE_DRY_TREE_FALLING_STUMP_01":      spriteDryTreeFallingStump01_1,
-	"SPRITE_DRY_TREE_FALLING_CROWN_01":      spriteDryTreeFallingCrown01_1,
-	"SPRITE_DRY_TREE_FALLING_CROWN_LEFT_02": spriteDryTreeFallingCrownLeft02_0,
-	"SPRITE_DRY_TREE_FALLING_CROWN_02":      spriteDryTreeFallingCrown02_0,
-	"SPRITE_DRY_TREE_FALLING_STUMP_02":      spriteDryTreeFallingStump02_0,
+	"SPRITE_DRY_TREE_FALLEN_STUMP_02":     spriteDryFallenTreeStump,
+	"SPRITE_DRY_TREE_FALLEN_TOP_02":       spriteDryFallenTreeTop,
+	"SPRITE_DRY_TREE_FALLING_STUMP_01":    spriteDryFallingStump,
+	"SPRITE_DRY_TREE_FALLING_TOP_01":      spriteDryFallingTreeTop,
+	"SPRITE_DRY_TREE_LEANING_TOP_LEFT_00": spriteDryLeaningTreeCrownLeft,
+	"SPRITE_DRY_TREE_LEANING_TOP_00":      spriteDryLeaningTreeTop,
+	"SPRITE_DRY_TREE_LEANING_STUMP_00":    spriteDryLeaningTreeStump,
 
 	// Specjalne
 	"SPRITE_PALISADE_START":      spritePalisadeStart,
@@ -198,13 +198,13 @@ func initTerrainSprites() {
 		}
 	}
 
-	setFallingTree := func(id, x, y uint16, offX int8) {
+	setFallingTree := func(id, x, y uint16, offX, offY int8) {
 		if id < maxSpriteID {
 			spriteRegistry[id] = spriteDef{
 				atlasID: atlasUI,
 				x:       x, y: y,
 				w: 16, h: 14,
-				offX: offX, offY: 0,
+				offX: offX, offY: offY,
 			}
 		}
 	}
@@ -347,27 +347,27 @@ func initTerrainSprites() {
 
 	// Upadające suche drzewa
 	// Obalone
-	setFallingTree(spriteDryTreeFallingCrown00_2, 235, 22, -16)
-	setFallingTree(spriteDryTreeFallingStump00_2, 251, 22, 0)
+	setFallingTree(spriteDryFallenTreeTop, 235, 22, -16, 0)
+	setFallingTree(spriteDryFallenTreeStump, 251, 22, 0, 0)
 	// Upadające
-	setFallingTree(spriteDryTreeFallingCrown01_1, 235, 36, -16)
-	setFallingTree(spriteDryTreeFallingStump01_1, 251, 36, 0)
+	setFallingTree(spriteDryFallingTreeTop, 235, 36, -16, 0)
+	setFallingTree(spriteDryFallingStump, 251, 36, 0, 0)
 	// Przechylające się
-	setFallingTree(spriteDryTreeFallingCrownLeft02_0, 235, 50, -16)
-	setFallingTree(spriteDryTreeFallingCrown02_0, 251, 50, 0)
-	setFallingTree(spriteDryTreeFallingStump02_0, 251, 64, 0)
+	setFallingTree(spriteDryLeaningTreeCrownLeft, 235, 50, -16, -14)
+	setFallingTree(spriteDryLeaningTreeTop, 251, 50, 0, -14)
+	setFallingTree(spriteDryLeaningTreeStump, 251, 64, 0, 0)
 
 	// Upadające zwęglone drzewa
 	// Obalone
-	setFallingTree(spriteBurntTreeFallingCrown00_2, 235, 78, -16)
-	setFallingTree(spriteBurntTreeFallingStump00_2, 251, 78, 0)
+	setFallingTree(spriteBurntFallenTreeCrown, 235, 78, -16, 0)
+	setFallingTree(spriteBurntFallenTreeStump, 251, 78, 0, 0)
 	// Upadające
-	setFallingTree(spriteBurntTreeFallingCrown01_1, 235, 92, -16)
-	setFallingTree(spriteBurntTreeFallingStump01_1, 251, 92, 0)
+	setFallingTree(spriteBurntFallingTreeCrown, 235, 92, -16, 0)
+	setFallingTree(spriteBurntFallingTreeStump, 251, 92, 0, 0)
 	// Przechylające się
-	setFallingTree(spriteBurntTreeFallingCrownLeft02_0, 235, 106, -16)
-	setFallingTree(spriteBurntTreeFallingCrown02_0, 251, 106, 0)
-	setFallingTree(spriteBurntTreeFallingStump02_0, 251, 120, 0)
+	setFallingTree(spriteBurntLeaningTreeCrownLeft, 235, 106, -16, -14)
+	setFallingTree(spriteBurntLeaningTreeCrown, 251, 106, 0, -14)
+	setFallingTree(spriteBurntLeaningTreeStump, 251, 120, 0, 0)
 }
 
 // Nakładka.

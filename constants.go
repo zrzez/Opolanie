@@ -202,7 +202,6 @@ const (
 )
 
 const (
-	// ashBuilding
 	ashDecaying uint8 = iota
 	ashFinished
 )
@@ -213,11 +212,13 @@ const (
 // @reminder to powinien być odpowiednik 150 obrażeń!
 const strikesToCutTree uint8 = 5
 
-type treeFallState uint8
+type treeState uint8
 
 const (
-	treeStraight treeFallState = iota
+	noTree treeState = iota
+	treeStraight
 	treeLeaning
+	treeFalling
 	treeImpact
 	treeFell
 )

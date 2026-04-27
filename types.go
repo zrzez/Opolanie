@@ -316,27 +316,45 @@ const (
 // przechowuje kompletną wiedzę o polu (x,y).
 type tile struct {
 	X, Y      uint8  // współrznędne kafelka
-	TextureID uint16 // ID grafiki np. trawa, droga.
+	TextureID uint16 // ID grafiki np. trawa, droga
+
 	// Trawa
 	IsGrazed        bool
 	GrazedCounter   uint8
 	GrazedOverlayID uint8
-	// @todo: jeśli się sprawdzi (04.01.2026) to dodaj to samo dla ognia
+
 	// Płomień
 	IsBurning     bool
 	BurnElapsed   uint16
 	BurnOverlayID uint16
+	IsBurnt       bool
 
 	// Ścinanie drzew
-	treeCuts      uint8         // Ile uderzeń drwala do ścięcia drzewa.
-	treeFallPhase treeFallState // Stopień upadku drzewa, 0 - stoi, 1 - przechylone, 2 - przewrócone.
+	// @reminder: być może będzie trzeba przerobić treeCuts z liczby uderzeń na sumę obrażeń.
+	treeCuts uint8 // Ile uderzeń drwala do ścięcia drzewa.
+
+	/*
+		Śledzimy stan drzewa
+
+		noTree - nie ma drzewa
+
+		treeStraight - stoi normalnie drzewo
+
+		treeLeaning - drzewo zaczyna się przechylać
+
+		treeFalling - drzewo jest przechylone
+
+		treeImpact - drzewo właśnie uderzyło w sąsiedni kafelek, wywołując efekty
+
+		treeFell - drzewo leży i nie zagradza już drogi
+	*/
+	treeState treeState
 
 	// Popiół
 	hasAsh          bool
 	AshIntensity    float32
-	AshAge          uint16 // potrzebne?
+	AshAge          uint16
 	AshProcessState uint8
-	// AshOverlayID    uint16
 	CurrentAshAlpha float32
 
 	// --- WŁAŚCIWOŚCI FIZYCZNE ---
