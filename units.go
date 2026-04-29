@@ -1659,9 +1659,9 @@ func (u *unit) takeDamage(damage uint16, bs *battleState) {
 		// Zabita jednostka nie powinna zliczać się do górnej granicy ludności
 		decreasePopulation(u, bs)
 
-		tile := &bs.Board.Tiles[u.X][u.Y]
-		if tile.Unit == u {
-			tile.Unit = nil
+		occupiedTile := &bs.Board.Tiles[u.X][u.Y]
+		if occupiedTile.Unit == u {
+			occupiedTile.Unit = nil
 		}
 
 		createCorpses(u, bs)

@@ -1,5 +1,7 @@
 package main
 
+import "log"
+
 // effects.go
 
 // Funkcja do łączenia dróg/palisad
@@ -156,6 +158,22 @@ func burningTileEffect(bs *battleState) {
 		// Jeśli kafelek się już nie pali, to można przejść do zarządzania popiołem
 		case burningTile.hasAsh:
 			burningTile.processAshDecay()
+		}
+	}
+}
+
+func ghostEffect(bs *battleState) {
+	for _, ghostTile := range bs.GhostsList {
+		if ghostTile.GhostEffectCounter > 0 {
+
+			ghostTile.GhostEffectCounter--
+			// 2. Zadaję obrażenia
+			if ghostTile.Unit != nil && ghostTile.Unit.Exists {
+				ghostTile.Unit.takeDamage(ghostTile.GhostDamage, bs)
+			}
+		} else {
+			log.Printf("Efekt ducha: %t", ghostTile.GhostEffect)
+			ghostTile.GhostEffect = false
 		}
 	}
 }

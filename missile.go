@@ -35,11 +35,10 @@ type projectile struct {
 	Lifetime uint
 
 	// Obrażenia
-	Damage uint16
+	Damage uint16 // @reminder: to nie jest używane przez pociski unitPriest, uniteMage. Nie wiem, jak kapłanka.
 
 	// Stan
-	Exists   bool
-	IsImpact bool // @todo: durna nazwa, muszę zmienić @reminder: dla ducha maga żeby „opętać” cel i razić go
+	Exists bool
 }
 
 func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, targetY uint16, damage uint16) {
@@ -49,7 +48,7 @@ func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, 
 	p.TargetY = targetY
 	p.Damage = damage
 	p.Exists = true
-	p.IsImpact = false
+	// p.IsImpact = false
 
 	// Przeliczenie kafelków na piksele (środek kafelka)
 	p.X = float32(startX*uint16(tileWidth)) + float32(tileWidth)/2
@@ -89,16 +88,6 @@ func (p *projectile) updateProjectile(bs *battleState) {
 		return
 	}
 
-	// @reminder: duch powinien ruszać się razem z jednostką
-	if p.IsImpact {
-		p.Lifetime--
-		if p.Lifetime <= 0 {
-			p.Exists = false
-		}
-
-		return
-	}
-
 	// Ruch
 	p.X += p.DX
 	p.Y += p.DY
@@ -131,6 +120,9 @@ func (p *projectile) hit(bs *battleState) {
 	}
 
 	// 3. Efekty dla specjalnych przypadków
+	// @todo: sprawdź, czy dobrze rozumiem, że wywołując efekt specjalny po zadaniu obrażeń
+	// uniemożliwiam prawidłowe zadanie obrażeń odpryskami ognia?
+	// @todo: dodaj przekazywanie obrażeń, jako argumentu ponieważ potrzebuję tego do ducha.
 	p.specialProjectiles(targetTile, bs)
 
 	// @reminder: to się gryzie z duchem, który musi przetrwać uderzenie i dusić cel
@@ -139,13 +131,12 @@ func (p *projectile) hit(bs *battleState) {
 
 func (p *projectile) specialProjectiles(targetTile *tile, bs *battleState) {
 	// 1. Jeśli to duch (pocisk maga) to zostań widoczny na jednostce
-	// @todo: nie wypróbowane! Do zajęcia się później, bo to jednostka z rozszerzenia
+	// @todo: teraz się tym zajmuję 28.04.2026
+	// @todo: potrzebuję przekazać tutaj doświadczenie i właściciela maga, żeby poprawnie wyliczyć
+	// dodatek do obrażeń.
 	if p.Kind == missileGhost {
-		// Być może łatwiej byłoby to zamienić na pole w jednostce? Unikam męczącego śledzenia
-		// z drugiej strony budynki też tak muszą mieć
-		p.IsImpact = true
 		p.Sprite = spriteMissileGhostAttack
-		p.Lifetime = 20 // @todo: liczba z czapy
+		p.mageGhost(targetTile, p.Damage, bs)
 
 		return
 	}
@@ -153,7 +144,6 @@ func (p *projectile) specialProjectiles(targetTile *tile, bs *battleState) {
 	// 2. Ogień musi palić się przez jakiś czas
 	// @todo: czy można uwspólnić logikę ognia i ducha?
 	if p.Kind == missileFire {
-		// @todo: napisać kod odpowiedzialny za ogień w miejscu i zadawanie obrażeń
 		p.priestFireball(targetTile, bs)
 	}
 }
@@ -273,10 +263,11 @@ func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
 	return baseSprite + offset
 }
 
+// @todo: sprawdź, czy odpryski rzeczywiście zadają obrażenia, które powinny
 func (p *projectile) priestFireball(affedtedTile *tile, bs *battleState) {
-	// zbyt naiwny warunek ponieważ powinno móc się wzmocnić już płonący kafelek, czyli counter podbijać
 	dx, dy := p.spriteToDirection()
 
+	// @reminder: szkoda, że nie zapisałem dokładnie czemu wyciszyłem tutaj lintera
 	splash1X := int16(p.TargetX) + dx      //nolint:gosec
 	splash1Y := int16(p.TargetY) + dy      //nolint:gosec
 	splash2X := int16(p.TargetX) + dx + dx //nolint:gosec
@@ -306,5 +297,25 @@ func (p *projectile) priestFireball(affedtedTile *tile, bs *battleState) {
 
 	// 1. efekt100 w kafelku, damage
 	// 2. efekt90 w kafelku+1, damage-10
-	// 3. efekt80 w kafelku+2, damagw-20
+	// 3. efekt80 w kafelku+2, damage-20
+}
+
+// @todo: unitMage NIE MOŻE ATAKOWAĆ BUDYNKÓW.
+// @reminder: funkcja da efekt każdemu zaatakowanemu kafelkowi, ale bezpiecznik musi być
+// w wydawaniu rozkazu, a nie tutaj. Tak aby unitMage nie mógł dostać rozkazu atakuj budynek
+// reszta logiki w effects.go będzie działać tylko na jednostkach.
+// @reminder: jeśli się obecny stan utrzyma, to nie ma sensu ta metoda, wystarczy wywołać
+// bezpośrednio metodę t.ghost i oszczędzić sobie dekoracji.
+func (p *projectile) mageGhost(targetTile *tile, damage uint16, bs *battleState) {
+	// @reminder: obrażenia zadajemy przed wejściem do tej funkcji, trzeba to zmienić!
+	// KOSZT 20 many
+	// ==========================
+	// efekt ducha, ale brakuje info o teksturze pocisku, która doleciała do celu!
+	ownerBonus := uint16(0)
+	if p.Owner == bs.AIPlayerID {
+		ownerBonus += 20
+	}
+
+	totalDamage := damage + ownerBonus
+	targetTile.ghost(p.Sprite, totalDamage, bs)
 }

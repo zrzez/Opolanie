@@ -271,7 +271,7 @@ func updateGame(bs *battleState) {
 		performPeriodicCleanup(bs)
 		updateBurningTilesList(bs)
 		updateFallingTreesList(bs)
-		// @todo: tutaj wstaw listę z upadającymi drzewami
+		updateGhostList(bs)
 	}
 
 	// 4. Sprawdzanie warunki zakończenia bitwy
@@ -375,6 +375,18 @@ func updateFallingTreesList(bs *battleState) {
 	}
 
 	bs.FallingTreesList = fallingTrees
+}
+
+func updateGhostList(bs *battleState) {
+	var ghostList []*tile
+
+	for _, ghostTile := range bs.GhostsList {
+		if ghostTile.GhostEffect {
+			ghostList = append(ghostList, ghostTile)
+		}
+	}
+
+	bs.GhostsList = ghostList
 }
 
 func updateCorpses(bs *battleState) {
@@ -552,6 +564,7 @@ func applyGlobalEffects(bs *battleState) {
 	updateCorpses(bs)
 	burningTileEffect(bs)
 	fallingTreeEffect(bs)
+	ghostEffect(bs)
 }
 
 // handleLevelEvents przemiana w niedźwiedzia, odprowadzenie jednostki do punktu ucieczki

@@ -141,6 +141,7 @@ func (t *tile) isBurntTree() bool {
 
 // Płomienie
 
+// @todo: odsiej kafelki, które nie powinny się palić: np. woda
 func (t *tile) setOnFire(fireSize uint16, bs *battleState) {
 	t.IsBurning = true
 	t.BurnElapsed = fireSize - bigBurn
@@ -221,6 +222,9 @@ func (t *tile) processAshDecay() {
 	t.AshAge++
 }
 
+// @todo: z moich obserwacji wynika, że drzewo podpalone odpryskiem szybciej się spala.
+// jest to niewłaściwe zachowanie, powinno albo spalić się w tym samym czasie lub później
+// ze względu na mniejszy początkowy ogień!
 func (t *tile) processTreeFire(bs *battleState) {
 	// Właściwe płonięcie
 	t.BurnElapsed++
@@ -319,4 +323,16 @@ func (t *tile) treeFall(bs *battleState) {
 
 	// 2. Dodajemy kafelkek do listy obsługiwanej centralnie
 	bs.FallingTreesList = append(bs.FallingTreesList, t)
+}
+
+func (t *tile) ghost(ghostSprite uint16, ghostDamage uint16, bs *battleState) {
+	// 1. Ustawiamy wszystkie parametry dla kafelka z duchem
+	t.GhostEffect = true
+	t.GhostEffectCounter = 40
+	t.GhostOverlayID = ghostSprite
+	t.GhostDamage = ghostDamage
+
+	// 2. Dodajemy ducha do listy
+	// w effects.go będzie osobna funkcja z logiką efektu ducha
+	bs.GhostsList = append(bs.GhostsList, t)
 }

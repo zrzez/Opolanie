@@ -357,6 +357,13 @@ type tile struct {
 	AshProcessState uint8
 	CurrentAshAlpha float32
 
+	// duszenie przez pocisk unitMage
+	GhostEffect        bool  // do rysowania efektu ducha po trafieniu
+	GhostEffectCounter uint8 // do odliczania czasu od pojawienia się efektu`
+	GhostBonusDamage   uint8 // dodatek do obrażeń. Zależny od doświadczenia. Komputer ma dodatkowe +20
+	GhostOverlayID     uint16
+	GhostDamage        uint16
+
 	// --- WŁAŚCIWOŚCI FIZYCZNE ---
 	IsWalkable   bool    // przechodniość kafelka
 	MovementCost float64 // drożność kafelka. Dla A*.
@@ -399,6 +406,7 @@ type battleState struct {
 	CorpsesList        []corpse               // Służy do wskazywania zwłok wg współrzędnych na potrzeby rysowania
 	BurningTilesList   []*tile                // Służy do wskazania kafelków, które zostały podpalone
 	FallingTreesList   []*tile                // Służy do wskazania kafelków z upadającymi drzewami
+	GhostsList         []*tile                // Służy do wskazywania jednostek z efektem ducha
 	// === UI I INTERAKCJA ===
 	GameCamera              rl.Camera2D      // Kamera widoku gry
 	CurrentSelection        selectionState   // Bieżące zaznaczenie
