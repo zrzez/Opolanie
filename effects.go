@@ -1,7 +1,5 @@
 package main
 
-import "log"
-
 // effects.go
 
 // Funkcja do łączenia dróg/palisad
@@ -172,7 +170,6 @@ func ghostEffect(bs *battleState) {
 				ghostTile.Unit.takeDamage(ghostTile.GhostDamage, bs)
 			}
 		} else {
-			log.Printf("Efekt ducha: %t", ghostTile.GhostEffect)
 			ghostTile.GhostEffect = false
 		}
 	}
