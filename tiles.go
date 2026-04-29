@@ -329,7 +329,6 @@ func (t *tile) ghost(ghostSprite uint16, ghostDamage uint16, bs *battleState) {
 	// 1. Ustawiamy wszystkie parametry dla kafelka z duchem
 	t.GhostEffect = true
 	t.GhostEffectCounter = 40
-	t.GhostOverlayID = ghostSprite
 	t.GhostDamage = ghostDamage
 
 	// 2. Dodajemy ducha do listy

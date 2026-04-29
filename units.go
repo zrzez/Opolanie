@@ -597,6 +597,11 @@ func (u *unit) canAttack(targetID uint, bs *battleState) bool {
 			return false
 		}
 
+		// magowie nie mogą atakować budynków
+		if u.Type == unitMage {
+			return false
+		}
+
 		if targetBuilding.Type == buildingPalisade && !canDamagePalisades(u) {
 			log.Printf("INFO: Jednostka %d nie może atakować palisad", u.ID)
 
@@ -1280,9 +1285,7 @@ func (u *unit) faceTarget(target *combatTarget) {
 	}
 }
 
-func (u *unit) validateAttackTarget(
-	bs *battleState,
-) (*combatTarget, error) {
+func (u *unit) validateAttackTarget(bs *battleState) (*combatTarget, error) {
 	target, err := u.validateTargetExists(bs)
 	if err != nil {
 		return nil, fmt.Errorf("cel zniknął")

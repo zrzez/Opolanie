@@ -360,8 +360,6 @@ type tile struct {
 	// duszenie przez pocisk unitMage
 	GhostEffect        bool  // do rysowania efektu ducha po trafieniu
 	GhostEffectCounter uint8 // do odliczania czasu od pojawienia się efektu`
-	GhostBonusDamage   uint8 // dodatek do obrażeń. Zależny od doświadczenia. Komputer ma dodatkowe +20
-	GhostOverlayID     uint16
 	GhostDamage        uint16
 
 	// --- WŁAŚCIWOŚCI FIZYCZNE ---

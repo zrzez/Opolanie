@@ -138,13 +138,19 @@ func cursorForNoSelection(targetOwner int, playerID uint8) uint16 {
 	return spriteCursorDefaultBig
 }
 
+// @todo: do przebudowy, bo sprawdzanie legalności w kursorach jest oderwane od legalności rozkazów.
 func cursorForEnemy(bs *battleState, tileUnderCursor *tile) uint16 {
 	targetBuilding := tileUnderCursor.Building
 
 	if targetBuilding != nil && targetBuilding.Exists {
-		if targetBuilding.Type == buildingPalisade {
-			selectedUnit, ok := getUnitByID(bs.CurrentSelection.UnitID, bs)
+		// Mag nie może atakować żadnych budynków
+		selectedUnit, ok := getUnitByID(bs.CurrentSelection.UnitID, bs)
 
+		if selectedUnit.Type == unitMage {
+			return spriteCursorStop
+		}
+
+		if targetBuilding.Type == buildingPalisade {
 			if ok && !canDamagePalisades(selectedUnit) {
 				return spriteCursorStop
 			}

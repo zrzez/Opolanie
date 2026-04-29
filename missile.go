@@ -300,17 +300,12 @@ func (p *projectile) priestFireball(affedtedTile *tile, bs *battleState) {
 	// 3. efekt80 w kafelku+2, damage-20
 }
 
-// @todo: unitMage NIE MOŻE ATAKOWAĆ BUDYNKÓW.
 // @reminder: funkcja da efekt każdemu zaatakowanemu kafelkowi, ale bezpiecznik musi być
 // w wydawaniu rozkazu, a nie tutaj. Tak aby unitMage nie mógł dostać rozkazu atakuj budynek
 // reszta logiki w effects.go będzie działać tylko na jednostkach.
-// @reminder: jeśli się obecny stan utrzyma, to nie ma sensu ta metoda, wystarczy wywołać
-// bezpośrednio metodę t.ghost i oszczędzić sobie dekoracji.
 func (p *projectile) mageGhost(targetTile *tile, damage uint16, bs *battleState) {
 	// @reminder: obrażenia zadajemy przed wejściem do tej funkcji, trzeba to zmienić!
 	// KOSZT 20 many
-	// ==========================
-	// efekt ducha, ale brakuje info o teksturze pocisku, która doleciała do celu!
 	ownerBonus := uint16(0)
 	if p.Owner == bs.AIPlayerID {
 		ownerBonus += 20

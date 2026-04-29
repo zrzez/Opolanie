@@ -1321,6 +1321,7 @@ func drawEffectsAndInterfaces(startY, endY uint8, bs *battleState, ps *programSt
 // na tymczasowe. Coś, jak ze zwłokami, poręczne szybkie i w ogóle.
 // @todo: zmień tak, żeby nie sprawdzać każdego kafelka. Efekty nie są niewiadomą.
 func drawEffects(bs *battleState, ps *programState) {
+	// Czemu y jest zewnętrzną pętlą?!
 	for y := range boardMaxY {
 		for x := range boardMaxX {
 			affectedTile := &bs.Board.Tiles[x][y]
@@ -1377,6 +1378,7 @@ func permanentEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *ba
 }
 
 func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *battleState, ps *programState) {
+	// 1. Popiół
 	if affectedTile.hasAsh && affectedTile.AshIntensity > 0.01 {
 		alphaFactor := affectedTile.AshIntensity
 		tint := rl.Fade(rl.White, alphaFactor)
@@ -1384,10 +1386,44 @@ func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *ba
 		drawSpriteEx(spriteAsh00, xPos, yPos, colorNone, tint, ps)
 	}
 
+	// 2. Płonące kafelki
 	if affectedTile.IsBurning {
 		frame := (bs.FireAnimationFrame + uint16(x+y)) % 4
 		drawSprite(ps.Assets, affectedTile.BurnOverlayID+frame, xPos, yPos, colorNone)
 	}
+
+	// 3. Duch
+	if affectedTile.GhostEffect {
+		drawGhost(xPos, yPos, bs, ps)
+	}
+}
+
+func drawGhost(xPos, yPos float32, bs *battleState, ps *programState) {
+	// Wyliczenia pod wodotryski.
+	// @reminder: Te gołe liczby, to składowe do efektu, który jest wykorzystywany tylko
+	// w tym miejscu. Nie jest to błąd i nie ma sensu robić z tego stałych.
+	pulse := float32(0.8 + 0.4*(0.5+0.5*math.Sin(float64(bs.GlobalFrameCounter)*0.3)))            //nolint:mnd
+	wobbleX := float32(2.0 * math.Sin(float64(bs.GlobalFrameCounter)*0.5))                        //nolint:mnd
+	wobbleY := float32(2.0 * math.Cos(float64(bs.GlobalFrameCounter)*0.7))                        //nolint:mnd
+	ghostTint := rl.Fade(rl.White, 0.7+0.3*float32(math.Sin(float64(bs.GlobalFrameCounter)*0.4))) //nolint:mnd
+
+	// Bierzemy odpowiedni atlas
+	def := spriteRegistry[spriteMissileGhostAttack]
+	tex := ps.Assets.getAtlas(def.atlasID, colorNone)
+
+	// Wspołrzędne do duszka w atlasie
+	srcW := float32(def.w)
+	srcRect := rl.NewRectangle(float32(def.x), float32(def.y), srcW, float32(def.h))
+
+	// Przygotowanie końcowego prostokąta
+	finalX := xPos + float32(def.offX) + wobbleX
+	finalY := yPos + float32(def.offY) + wobbleY
+	destRect := rl.NewRectangle(finalX, finalY, float32(def.w)*pulse, float32(def.h)*pulse)
+
+	// Nie potrzebujemy dodatkowego przesunięcia, dlatego 0,0
+	origin := rl.NewVector2(0, 0)
+
+	rl.DrawTexturePro(tex, srcRect, destRect, origin, 0, ghostTint)
 }
 
 // === UI, MINIMAPA, KURSOR ===

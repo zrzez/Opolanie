@@ -851,78 +851,80 @@ func initBuildingSprites() {
 }
 
 func initProjectileSprites() {
-	setProjectile := func(id int, x, y uint16, flip bool) {
+	setProjectile := func(id int, x, y uint16, offX, offY int8, flip bool) {
 		if id < maxSpriteID {
 			spriteRegistry[id] = spriteDef{
 				atlasID: atlasUnits2,
 				x:       x, y: y,
 				w: 16, h: 14,
-				offX: -8, offY: -7,
+				offX: offX, offY: offY,
 				flipX: flip,
 			}
 		}
 	}
 
+	offX := int8(-8)
+	offY := int8(-7)
 	// === STRZAŁA ===
-	setProjectile(spriteMissileArrowUp, 256, 0, false)
-	setProjectile(spriteMissileArrowUpLeft, 240, 0, false)
-	setProjectile(spriteMissileArrowLeft, 240, 14, false)
-	setProjectile(spriteMissileArrowDownLeft, 240, 28, false)
-	setProjectile(spriteMissileArrowDown, 256, 28, false)
-	setProjectile(spriteMissileArrowUpRight, 240, 0, true)
-	setProjectile(spriteMissileArrowRight, 240, 14, true)
-	setProjectile(spriteMissileArrowDownRight, 240, 28, true)
+	setProjectile(spriteMissileArrowUp, 256, 0, offX, offY, false)
+	setProjectile(spriteMissileArrowUpLeft, 240, 0, offX, offY, false)
+	setProjectile(spriteMissileArrowLeft, 240, 14, offX, offY, false)
+	setProjectile(spriteMissileArrowDownLeft, 240, 28, offX, offY, false)
+	setProjectile(spriteMissileArrowDown, 256, 28, offX, offY, false)
+	setProjectile(spriteMissileArrowUpRight, 240, 0, offX, offY, true)
+	setProjectile(spriteMissileArrowRight, 240, 14, offX, offY, true)
+	setProjectile(spriteMissileArrowDownRight, 240, 28, offX, offY, true)
 
 	// === PIORUN ===
-	setProjectile(spriteMissileLightningUp, 258, 42, false)
-	setProjectile(spriteMissileLightningUpLeft, 242, 40, false)
-	setProjectile(spriteMissileLightningLeft, 242, 54, false)
-	setProjectile(spriteMissileLightningDownLeft, 242, 68, false)
-	setProjectile(spriteMissileLightningDown, 258, 69, false)
-	setProjectile(spriteMissileLightningUpRight, 242, 40, true)
-	setProjectile(spriteMissileLightningRight, 242, 54, true)
-	setProjectile(spriteMissileLightningDownRight, 242, 68, true)
+	setProjectile(spriteMissileLightningUp, 258, 42, offX, offY, false)
+	setProjectile(spriteMissileLightningUpLeft, 242, 40, offX, offY, false)
+	setProjectile(spriteMissileLightningLeft, 242, 54, offX, offY, false)
+	setProjectile(spriteMissileLightningDownLeft, 242, 68, offX, offY, false)
+	setProjectile(spriteMissileLightningDown, 258, 69, offX, offY, false)
+	setProjectile(spriteMissileLightningUpRight, 242, 40, offX, offY, true)
+	setProjectile(spriteMissileLightningRight, 242, 54, offX, offY, true)
+	setProjectile(spriteMissileLightningDownRight, 242, 68, offX, offY, true)
 
 	// === OGIEŃ ===
-	setProjectile(spriteMissileFireUp, 255, 84, false)
-	setProjectile(spriteMissileFireUpLeft, 241, 83, false)
-	setProjectile(spriteMissileFireLeft, 241, 97, false)
-	setProjectile(spriteMissileFireDownLeft, 241, 110, false)
-	setProjectile(spriteMissileFireDown, 255, 111, false)
-	setProjectile(spriteMissileFireUpRight, 241, 83, true)
-	setProjectile(spriteMissileFireRight, 241, 97, true)
-	setProjectile(spriteMissileFireDownRight, 241, 110, true)
+	setProjectile(spriteMissileFireUp, 255, 84, offX, offY, false)
+	setProjectile(spriteMissileFireUpLeft, 241, 83, offX, offY, false)
+	setProjectile(spriteMissileFireLeft, 241, 97, offX, offY, false)
+	setProjectile(spriteMissileFireDownLeft, 241, 110, offX, offY, false)
+	setProjectile(spriteMissileFireDown, 255, 111, offX, offY, false)
+	setProjectile(spriteMissileFireUpRight, 241, 83, offX, offY, true)
+	setProjectile(spriteMissileFireRight, 241, 97, offX, offY, true)
+	setProjectile(spriteMissileFireDownRight, 241, 110, offX, offY, true)
 
 	// === WŁÓCZNIA ===
-	setProjectile(spriteMissileSpearUp, 255, 126, false)
-	setProjectile(spriteMissileSpearUpLeft, 239, 125, false)
-	setProjectile(spriteMissileSpearLeft, 239, 139, false)
-	setProjectile(spriteMissileSpearDownLeft, 239, 154, false)
-	setProjectile(spriteMissileSpearDown, 255, 154, false)
-	setProjectile(spriteMissileSpearUpRight, 239, 125, true)
-	setProjectile(spriteMissileSpearRight, 239, 139, true)
-	setProjectile(spriteMissileSpearDownRight, 239, 154, true)
+	setProjectile(spriteMissileSpearUp, 255, 126, offX, offY, false)
+	setProjectile(spriteMissileSpearUpLeft, 239, 125, offX, offY, false)
+	setProjectile(spriteMissileSpearLeft, 239, 139, offX, offY, false)
+	setProjectile(spriteMissileSpearDownLeft, 239, 154, offX, offY, false)
+	setProjectile(spriteMissileSpearDown, 255, 154, offX, offY, false)
+	setProjectile(spriteMissileSpearUpRight, 239, 125, offX, offY, true)
+	setProjectile(spriteMissileSpearRight, 239, 139, offX, offY, true)
+	setProjectile(spriteMissileSpearDownRight, 239, 154, offX, offY, true)
 
 	// === DUCH ===
-	setProjectile(spriteMissileGhostUp, 288, 0, false)
-	setProjectile(spriteMissileGhostUpLeft, 272, 0, false)
-	setProjectile(spriteMissileGhostLeft, 272, 14, false)
-	setProjectile(spriteMissileGhostDownLeft, 272, 28, false)
-	setProjectile(spriteMissileGhostDown, 288, 28, false)
-	setProjectile(spriteMissileGhostUpRight, 272, 0, true)
-	setProjectile(spriteMissileGhostRight, 272, 14, true)
-	setProjectile(spriteMissileGhostDownRight, 272, 28, true)
-	setProjectile(spriteMissileGhostAttack, 288, 14, false)
+	setProjectile(spriteMissileGhostUp, 288, 0, offX, offY, false)
+	setProjectile(spriteMissileGhostUpLeft, 272, 0, offX, offY, false)
+	setProjectile(spriteMissileGhostLeft, 272, 14, offX, offY, false)
+	setProjectile(spriteMissileGhostDownLeft, 272, 28, offX, offY, false)
+	setProjectile(spriteMissileGhostDown, 288, 28, offX, offY, false)
+	setProjectile(spriteMissileGhostUpRight, 272, 0, offX, offY, true)
+	setProjectile(spriteMissileGhostRight, 272, 14, offX, offY, true)
+	setProjectile(spriteMissileGhostDownRight, 272, 28, offX, offY, true)
+	setProjectile(spriteMissileGhostAttack, 288, 14, 0, 0, false)
 
 	// === BEŁT ===
-	setProjectile(spriteMissileBoltUp, 288, 42, false)
-	setProjectile(spriteMissileBoltUpLeft, 272, 42, false)
-	setProjectile(spriteMissileBoltLeft, 272, 56, false)
-	setProjectile(spriteMissileBoltDownLeft, 272, 70, false)
-	setProjectile(spriteMissileBoltDown, 288, 70, false)
-	setProjectile(spriteMissileBoltUpRight, 272, 42, true)
-	setProjectile(spriteMissileBoltRight, 272, 56, true)
-	setProjectile(spriteMissileBoltDownRight, 272, 70, true)
+	setProjectile(spriteMissileBoltUp, 288, 42, offX, offY, false)
+	setProjectile(spriteMissileBoltUpLeft, 272, 42, offX, offY, false)
+	setProjectile(spriteMissileBoltLeft, 272, 56, offX, offY, false)
+	setProjectile(spriteMissileBoltDownLeft, 272, 70, offX, offY, false)
+	setProjectile(spriteMissileBoltDown, 288, 70, offX, offY, false)
+	setProjectile(spriteMissileBoltUpRight, 272, 42, offX, offY, true)
+	setProjectile(spriteMissileBoltRight, 272, 56, offX, offY, true)
+	setProjectile(spriteMissileBoltDownRight, 272, 70, offX, offY, true)
 }
 
 // Mapowanie battleAtlasID → rawAssetDef {TopChunk, BotChunk, PaletteID}.
