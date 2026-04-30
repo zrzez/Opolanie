@@ -476,30 +476,30 @@ func drawBuildingHealthBar(bld *building, bounds bounds) {
 }
 
 func drawBuildingInterface(bld *building, bs *battleState) {
-	bounds := bld.bounds()
+	buildingBounds := bld.bounds()
 	isBuildingSelected := bs.CurrentSelection.BuildingID == bld.ID
 
 	if isBuildingSelected {
-		drawBuildingSelectionFrame(bld, bounds)
+		drawBuildingSelectionFrame(bld, buildingBounds)
 
 		if bld.Owner == bs.PlayerID && !bld.IsUnderConstruction {
-			drawBuildingCapacity(bld, bounds)
+			drawBuildingCapacity(bld, buildingBounds)
 		}
 	}
 
 	// Rysowanie paska życia
 	if (bld.HP < bld.MaxHP || isBuildingSelected) && bld.HP != 0 {
-		drawBuildingHealthBar(bld, bounds)
+		drawBuildingHealthBar(bld, buildingBounds)
 	}
 }
 
 func drawBuildingsInterfaces(bs *battleState) {
-	for _, building := range bs.Buildings {
-		if !building.Exists || len(building.OccupiedTiles) == 0 {
+	for _, currentBuilding := range bs.Buildings {
+		if !currentBuilding.Exists || len(currentBuilding.OccupiedTiles) == 0 {
 			continue
 		}
 
-		drawBuildingInterface(building, bs)
+		drawBuildingInterface(currentBuilding, bs)
 	}
 }
 
@@ -603,13 +603,69 @@ func getRenderDirection(u *unit, bs *battleState) (int, int) {
 func drawProjectiles(bs *battleState, ps *programState) {
 	for _, p := range bs.Projectiles {
 		if p.Exists {
-			drawSingleProjectile(p, ps)
+			drawSingleProjectile(p, bs.GlobalFrameCounter, ps)
 		}
 	}
 }
 
-func drawSingleProjectile(p *projectile, ps *programState) {
-	drawSpriteEx(p.Sprite, p.X, p.Y, colorRed, rl.White, ps)
+func drawGhostlySprite(spriteID uint16, x, y float32, phase1, phase2 float64, frameCounter uint16, ps *programState) {
+	// 1. Pobranie definicji duszka z atlasu
+	if spriteID >= maxSpriteID {
+		return
+	}
+
+	def := spriteRegistry[spriteID]
+
+	if def.w == 0 {
+		return
+	}
+
+	texture := ps.Assets.getAtlas(def.atlasID, colorNone)
+
+	if texture.ID == 0 {
+		return
+	}
+
+	// 2. Wodotryski
+	t := float64(frameCounter)
+	wave := math.Sin(t*0.25+phase1) + 0.5*math.Sin(t*0.33+phase2)
+	pulse := float32(0.6 + 0.4*(0.5+0.5*wave))
+	wobbleX := float32(2.0 * math.Sin(t*0.4+phase1*1.1))
+	wobbleY := float32(2.0 * math.Cos(t*0.4+phase1*1.1))
+	alpha := 0.6 + 0.4*float32(math.Sin(t*0.35+(phase1+phase2)*0.5))
+	tint := rl.Fade(rl.White, alpha)
+
+	// 3. Zwierciadlane odbicie jeśli potrzeba
+	srcW := float32(def.w)
+	if def.flipX {
+		srcW = -srcW
+	}
+
+	// 4. Wycięcie duszka z atlasu
+	srcRect := rl.NewRectangle(float32(def.x), float32(def.y), srcW, float32(def.h))
+
+	// 5. Pozycjonowanie
+	centerX := x + float32(def.offX) + wobbleX + float32(def.w)
+	centerY := y + float32(def.offY) + wobbleY + float32(def.h)
+
+	// 6, Umiejscowienie
+	destW := float32(def.w) * pulse
+	destH := float32(def.h) * pulse
+
+	destRect := rl.NewRectangle(centerX-destW*0.5, centerY-destH*0.5, destW, destH)
+
+	origin := rl.NewVector2(destW*0.5, destH*0.5)
+
+	// 7. Rysujemy
+	rl.DrawTexturePro(texture, srcRect, destRect, origin, 0, tint)
+}
+
+func drawSingleProjectile(p *projectile, frameCounter uint16, ps *programState) {
+	if p.Kind != missileGhost {
+		drawSpriteEx(p.Sprite, p.X, p.Y, colorRed, rl.White, ps)
+	} else {
+		drawGhostlySprite(p.Sprite, p.X, p.Y, p.Phase1, p.Phase2, frameCounter, ps)
+	}
 }
 
 // @todo: być może warto połączyć logikę rysowania paska HP budynków i jednostek?
@@ -661,34 +717,33 @@ func drawUnitSelectionFrame(unit *unit) {
 
 // Odpowiada za rysowanie nakładek (ramka, pasek życia itd.) jednostkom widocznym na ekranie.
 func drawUnitsInterfaces(startY, endY uint8, bs *battleState) {
-	// @todo: przepisz tę plętlę i pozmieniaj nazwy zmiennych ponieważ nie jest oczywistym, co to startY.
-	// Powinno się od razu wiedzieć, co jest wierszem, kolumną, czy mamy na myśli planszę, kamerę itd.
-	// 24.04.2026
 	for boardRow := startY; boardRow < endY; boardRow++ {
 		unitsInRow := bs.RenderUnitRows[boardRow]
 
 		if len(unitsInRow) > 0 {
 			for _, renderUnit := range unitsInRow {
-				drawUnitInterface(renderUnit)
+				drawUnitInterface(renderUnit, bs)
 			}
 		}
 	}
 }
 
-func drawUnitInterface(unit *unit) {
-	screenX := int32(unit.X) * int32(tileWidth)
-	screenY := int32(unit.Y) * int32(tileHeight)
+func drawUnitInterface(renderUnit *unit, bs *battleState) {
+	screenX := int32(renderUnit.X) * int32(tileWidth)
+	screenY := int32(renderUnit.Y) * int32(tileHeight)
 
-	if unit.IsSelected {
-		drawUnitSelectionFrame(unit)
-		drawUnitHealthBar(screenX, screenY, unit)
+	isUnitSected := bs.CurrentSelection.IsUnit && bs.CurrentSelection.UnitID == renderUnit.ID
 
-		if unit.MaxMana > 0 {
-			drawManaBar(screenX, screenY, unit)
+	if isUnitSected {
+		drawUnitSelectionFrame(renderUnit)
+		drawUnitHealthBar(screenX, screenY, renderUnit)
+
+		if renderUnit.MaxMana > 0 {
+			drawManaBar(screenX, screenY, renderUnit)
 		}
 
-		if unit.Type == unitCow {
-			drawMilkBar(screenX, screenY, unit)
+		if renderUnit.Type == unitCow {
+			drawMilkBar(screenX, screenY, renderUnit)
 		}
 	}
 }
@@ -1394,7 +1449,10 @@ func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *ba
 
 	// 3. Duch
 	if affectedTile.GhostEffect {
-		drawGhost(xPos, yPos, bs, ps)
+		phase1 := float64(x)*31 + float64(y)*17
+		phase2 := float64(x)*43 + float64(y)*59
+
+		drawGhostlySprite(spriteMissileGhostAttack, xPos, yPos, phase1, phase2, bs.GlobalFrameCounter, ps)
 	}
 }
 
@@ -1402,10 +1460,10 @@ func drawGhost(xPos, yPos float32, bs *battleState, ps *programState) {
 	// Wyliczenia pod wodotryski.
 	// @reminder: Te gołe liczby, to składowe do efektu, który jest wykorzystywany tylko
 	// w tym miejscu. Nie jest to błąd i nie ma sensu robić z tego stałych.
-	pulse := float32(0.8 + 0.4*(0.5+0.5*math.Sin(float64(bs.GlobalFrameCounter)*0.3)))            //nolint:mnd
-	wobbleX := float32(2.0 * math.Sin(float64(bs.GlobalFrameCounter)*0.5))                        //nolint:mnd
-	wobbleY := float32(2.0 * math.Cos(float64(bs.GlobalFrameCounter)*0.7))                        //nolint:mnd
-	ghostTint := rl.Fade(rl.White, 0.7+0.3*float32(math.Sin(float64(bs.GlobalFrameCounter)*0.4))) //nolint:mnd
+	pulse := float32(0.9 + 0.4*(0.5+0.5*math.Sin(float64(bs.GlobalFrameCounter)*0.3)))            //nolint:mnd
+	wobbleX := float32(1.5 * math.Sin(float64(bs.GlobalFrameCounter)*0.3))                        //nolint:mnd
+	wobbleY := float32(1.5 * math.Cos(float64(bs.GlobalFrameCounter)*0.3))                        //nolint:mnd
+	ghostTint := rl.Fade(rl.White, 0.9+0.1*float32(math.Sin(float64(bs.GlobalFrameCounter)*0.2))) //nolint:mnd
 
 	// Bierzemy odpowiedni atlas
 	def := spriteRegistry[spriteMissileGhostAttack]
@@ -1421,7 +1479,7 @@ func drawGhost(xPos, yPos float32, bs *battleState, ps *programState) {
 	destRect := rl.NewRectangle(finalX, finalY, float32(def.w)*pulse, float32(def.h)*pulse)
 
 	// Nie potrzebujemy dodatkowego przesunięcia, dlatego 0,0
-	origin := rl.NewVector2(0, 0)
+	origin := rl.NewVector2(float32(def.w)*0.5, float32(def.h)*0.5)
 
 	rl.DrawTexturePro(tex, srcRect, destRect, origin, 0, ghostTint)
 }

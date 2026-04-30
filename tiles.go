@@ -325,7 +325,7 @@ func (t *tile) treeFall(bs *battleState) {
 	bs.FallingTreesList = append(bs.FallingTreesList, t)
 }
 
-func (t *tile) ghost(ghostSprite uint16, ghostDamage uint16, bs *battleState) {
+func (t *tile) ghost(ghostDamage uint16, bs *battleState) {
 	// 1. Ustawiamy wszystkie parametry dla kafelka z duchem
 	t.GhostEffect = true
 	t.GhostEffectCounter = 40

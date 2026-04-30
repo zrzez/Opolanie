@@ -1,7 +1,9 @@
 package main
 
+// @todo: czy importuję różne wersje math dla liczb losowych w swoim projekcie?!
 import (
 	"math"
+	"math/rand/v2"
 )
 
 // missile.go
@@ -39,6 +41,9 @@ type projectile struct {
 
 	// Stan
 	Exists bool
+
+	// Faza uruchomienia (animacji) pocisku ducha
+	Phase1, Phase2 float64
 }
 
 func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, targetY uint16, damage uint16) {
@@ -48,7 +53,6 @@ func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, 
 	p.TargetY = targetY
 	p.Damage = damage
 	p.Exists = true
-	// p.IsImpact = false
 
 	// Przeliczenie kafelków na piksele (środek kafelka)
 	p.X = float32(startX*uint16(tileWidth)) + float32(tileWidth)/2
@@ -68,12 +72,18 @@ func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, 
 		speed = 8.0
 	}
 
+	// Duchy będą się bardzo dziwnie zachowywać w locie
+	if kind == missileGhost {
+		p.Phase1 = rand.Float64() * 2 * math.Pi
+		p.Phase2 = rand.Float64() * 2 * math.Pi
+	}
+
 	distance := float32(math.Sqrt(float64(diffX*diffX + diffY*diffY)))
 
 	if distance > 0 {
 		p.DX = (diffX / distance) * speed
 		p.DY = (diffY / distance) * speed
-		// Lifetime to czas potrzebny na dolot
+		// Czas trwania to czas potrzebny na dolot
 		p.Lifetime = uint(int(distance / speed))
 	} else {
 		p.Exists = false // Cel tożsamy ze startem
@@ -312,5 +322,5 @@ func (p *projectile) mageGhost(targetTile *tile, damage uint16, bs *battleState)
 	}
 
 	totalDamage := damage + ownerBonus
-	targetTile.ghost(p.Sprite, totalDamage, bs)
+	targetTile.ghost(totalDamage, bs)
 }
