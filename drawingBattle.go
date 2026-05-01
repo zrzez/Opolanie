@@ -393,7 +393,7 @@ func drawSpriteEx(id uint16, destX, destY float32, ownerColor uint8, tint rl.Col
 	rl.DrawTexturePro(tex, srcRect, destRect, rl.NewVector2(0, 0), 0, tint)
 }
 
-func drawFrameCorners(x, y, width, height, cLen float32) {
+func drawFrameCorners(x, y, width, height, cLen float32, frameColor rl.Color) {
 	// lewy góry narożnik
 	rl.DrawLineEx(rl.NewVector2(x, y), rl.NewVector2(x+cLen, y), cornerThickness, frameColor)
 	rl.DrawLineEx(rl.NewVector2(x, y), rl.NewVector2(x, cLen+y), cornerThickness, frameColor)
@@ -434,7 +434,7 @@ func (bld *building) occupiedTilesBounds() (minX, minY, maxX, maxY uint8) {
 	return minX, minY, maxX, maxY
 }
 
-func drawBuildingSelectionFrame(bld *building, bounds bounds) {
+func drawBuildingSelectionFrame(bld *building, bounds bounds, bs *battleState) {
 	var cLen float32
 
 	if bld.Type != buildingPalisade {
@@ -443,7 +443,11 @@ func drawBuildingSelectionFrame(bld *building, bounds bounds) {
 		cLen = cornerLenPalisade
 	}
 
-	drawFrameCorners(float32(bounds.X), float32(bounds.Y), bounds.WidthPx, bounds.HeightPx, cLen)
+	if bld.Owner == bs.PlayerID {
+		drawFrameCorners(float32(bounds.X), float32(bounds.Y), bounds.WidthPx, bounds.HeightPx, cLen, friendlyFrameColor)
+	} else {
+		drawFrameCorners(float32(bounds.X), float32(bounds.Y), bounds.WidthPx, bounds.HeightPx, cLen, enemyFrameColor)
+	}
 }
 
 func drawBuildingCapacity(bld *building, bounds bounds) {
@@ -480,7 +484,7 @@ func drawBuildingInterface(bld *building, bs *battleState) {
 	isBuildingSelected := bs.CurrentSelection.BuildingID == bld.ID
 
 	if isBuildingSelected {
-		drawBuildingSelectionFrame(bld, buildingBounds)
+		drawBuildingSelectionFrame(bld, buildingBounds, bs)
 
 		if bld.Owner == bs.PlayerID && !bld.IsUnderConstruction {
 			drawBuildingCapacity(bld, buildingBounds)
@@ -708,11 +712,15 @@ func drawMilkBar(screenX, screenY int32, unit *unit) {
 	rl.DrawRectangle(barX, newY, barW, fillH, rl.White)
 }
 
-func drawUnitSelectionFrame(unit *unit) {
-	x := float32(unit.X) * float32(tileWidth)
-	y := float32(unit.Y) * float32(tileHeight)
+func drawUnitSelectionFrame(selectedUnit *unit, bs *battleState) {
+	x := float32(selectedUnit.X) * float32(tileWidth)
+	y := float32(selectedUnit.Y) * float32(tileHeight)
 
-	drawFrameCorners(x, y, float32(tileWidth), float32(tileHeight), cornerLenPalisade)
+	if selectedUnit.Owner == bs.PlayerID {
+		drawFrameCorners(x, y, float32(tileWidth), float32(tileHeight), cornerLenPalisade, friendlyFrameColor)
+	} else {
+		drawFrameCorners(x, y, float32(tileWidth), float32(tileHeight), cornerLenPalisade, enemyFrameColor)
+	}
 }
 
 // Odpowiada za rysowanie nakładek (ramka, pasek życia itd.) jednostkom widocznym na ekranie.
@@ -735,7 +743,7 @@ func drawUnitInterface(renderUnit *unit, bs *battleState) {
 	isUnitSected := bs.CurrentSelection.IsUnit && bs.CurrentSelection.UnitID == renderUnit.ID
 
 	if isUnitSected {
-		drawUnitSelectionFrame(renderUnit)
+		drawUnitSelectionFrame(renderUnit, bs)
 		drawUnitHealthBar(screenX, screenY, renderUnit)
 
 		if renderUnit.MaxMana > 0 {

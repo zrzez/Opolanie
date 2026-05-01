@@ -414,8 +414,11 @@ const (
 	capacityMarginY int32 = 2
 )
 
-// Nie wiem, czy tutaj pasuje, ale niech będzie.
-var frameColor = rl.NewColor(138, 132, 129, 255)
+// @reminder: to nie mogą być stałe
+var (
+	friendlyFrameColor = rl.NewColor(138, 132, 129, 255)
+	enemyFrameColor    = rl.NewColor(112, 0, 0, 255)
+)
 
 // @todo: Do zrobienia:
 // Co z mostami?! cena 80, maxhp: niezniszczalne
