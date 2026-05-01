@@ -91,17 +91,20 @@ func (u *unit) increaseManaUnit(amount uint16) {
 	}
 }
 
-// dla każdej istniejącej jednostki zmniejsza manę o amount. Pilnuje, aby u.Mana >= 0.
-func (u *unit) decreaseManaUnit(amount uint16) {
+// Jeśli to możliwe to dla każdej istniejącej jednostki zmniejsza manę o amount oraz zwraca prawda.
+// Jeśli u.Mana < amount, to zwraca fałsz.
+func (u *unit) tryToDecreaseMana(amount uint16) bool {
 	if !u.Exists {
-		return
+		return false
 	}
 
-	u.Mana -= amount
+	if u.Mana >= amount {
+		u.Mana -= amount
 
-	if u.Mana < 0 {
-		u.Mana = 0
+		return true
 	}
+
+	return false
 }
 
 // increaseHPUnit dla każdej istniejącej jednostki zwiększa PŻ o amount
@@ -1350,6 +1353,11 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bs *batt
 		log.Printf("UWAGA: jednostka %d: nie udało się określić koordynatów celu dla pocisku", u.ID)
 	}
 
+	// Mechanizm odejmowania many za rzucenie magicznego pocisku
+	if u.Type.isCaster() && !u.tryToDecreaseMana(u.getProjectileManaCost()) {
+		return
+	}
+
 	proj := &projectile{}
 	proj.initProjectile(
 		unitTypeToMissileType(u.Type),
@@ -1362,6 +1370,22 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bs *batt
 	bs.Projectiles = append(bs.Projectiles, proj)
 
 	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, targetX, targetY, damage)
+}
+
+func (u *unit) getProjectileManaCost() uint16 {
+	// @reminder: inne typy jednostek nie rzucają magicznych pocisków.
+	// Dlatego mam default zwracający zawsze prawdę i nie rozpisałem
+	// wszystkich typów.
+	switch u.Type { //nolint:exhaustive
+	case unitPriestess:
+		return magicThunderManaCost
+	case unitPriest:
+		return magicFireManaCost
+	case unitMage:
+		return magicGhostManaCost
+	default:
+		return 0
+	}
 }
 
 func (u *unit) getRangedTargetCoords(target *combatTarget) (uint8, uint8, bool) {

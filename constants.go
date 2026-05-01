@@ -640,6 +640,7 @@ const (
 // Jest to lewy górny róg tekstury, 135 prawy dolny.
 // Dodatkowo każdy budynek ma swoją indywidualną „w budowie”
 // Wygląda fajnie, ale to raczej TODO: na jutro (30.12.2025 kiedy było to „jutro”?)
+// @reminder: chyba mogę to przepisać korzystając ze stałych w assets_*.go 1.05.2026
 // TEMPLE 207
 var constructionTemplatePhase01 = [][]uint16{
 	{127, 128, 129},
@@ -941,3 +942,10 @@ var buildingRecipes = map[buildingType][]buildingAction{
 }
 
 const maxGrassGrowthCounter uint16 = 300
+
+// Koszty magicznych pocisków
+const (
+	magicThunderManaCost uint16 = 10
+	magicFireManaCost    uint16 = 20
+	magicGhostManaCost   uint16 = 20
+)
