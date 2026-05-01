@@ -886,11 +886,11 @@ func clearSelection(bs *battleState) {
 }
 
 func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
-	tile := &bs.Board.Tiles[tileX][tileY]
-	unit := tile.Unit
-	bld := tile.Building
+	currentTile := &bs.Board.Tiles[tileX][tileY]
+	currentUnit := currentTile.Unit
+	bld := currentTile.Building
 
-	if unit == nil && bld == nil {
+	if currentUnit == nil && bld == nil {
 		found := false
 		originalTileX, originalTileY := tileX, tileY
 		log.Printf("DBG_SELECTOBJECT: Na (%d,%d) nie ma bezpośredniego obiektu. Szukam w sąsiedztwie...", tileX, tileY)
@@ -900,7 +900,7 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 				if i < boardMaxX && j < boardMaxY {
 					nt := &bs.Board.Tiles[i][j]
 					if nt.Unit != nil || nt.Building != nil {
-						unit = nt.Unit
+						currentUnit = nt.Unit
 						bld = nt.Building
 						found = true
 
@@ -924,32 +924,34 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 
 	isShiftDown := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift)
 
-	if unit != nil && unit.Exists {
-		log.Printf("DBG_SELECTOBJECT: Znaleziono jednostkę ID %d.", unit.ID)
+	if currentUnit != nil && currentUnit.Exists {
+		log.Printf("DBG_SELECTOBJECT: Znaleziono jednostkę ID %d.", currentUnit.ID)
 
-		if unit.Owner != bs.PlayerID {
+		if currentUnit.Owner != bs.PlayerID {
 			clearSelection(bs)
 			bs.CurrentSelection = selectionState{
-				OwnerID:    unit.Owner,
+				OwnerID:    currentUnit.Owner,
 				IsUnit:     true,
-				UnitID:     unit.ID,
+				UnitID:     currentUnit.ID,
 				BuildingID: 0,
 			}
-			bs.CurrentMessage.Text = fmt.Sprintf("Wroga jednostka: %v", unit.Type)
+			bs.CurrentMessage.Text = fmt.Sprintf("Wroga jednostka: %v", currentUnit.Type)
 			bs.CurrentMessage.Duration = 20
 			bs.MouseCommandMode = 1
+
 			return
 		}
 
 		if isShiftDown {
-			unit.IsSelected = !unit.IsSelected
-			if !unit.IsSelected && bs.CurrentSelection.UnitID == unit.ID {
+			currentUnit.IsSelected = !currentUnit.IsSelected
+			if !currentUnit.IsSelected && bs.CurrentSelection.UnitID == currentUnit.ID {
 				foundNewPrimary := false
 
 				for _, u := range bs.Units {
 					if u.Exists && u.IsSelected && u.Owner == bs.PlayerID {
 						bs.CurrentSelection = selectionState{OwnerID: u.Owner, IsUnit: true, UnitID: u.ID}
 						foundNewPrimary = true
+
 						break
 					}
 				}
@@ -957,23 +959,23 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 				if !foundNewPrimary {
 					bs.CurrentSelection = selectionState{}
 				}
-			} else if unit.IsSelected && !bs.CurrentSelection.IsUnit {
-				bs.CurrentSelection = selectionState{OwnerID: unit.Owner, IsUnit: true, UnitID: unit.ID}
+			} else if currentUnit.IsSelected && !bs.CurrentSelection.IsUnit {
+				bs.CurrentSelection = selectionState{OwnerID: currentUnit.Owner, IsUnit: true, UnitID: currentUnit.ID}
 			}
 
 		} else {
 			clearSelection(bs)
-			unit.IsSelected = true
+			currentUnit.IsSelected = true
 			bs.CurrentSelection = selectionState{
-				OwnerID:    unit.Owner,
+				OwnerID:    currentUnit.Owner,
 				IsUnit:     true,
-				UnitID:     unit.ID,
+				UnitID:     currentUnit.ID,
 				BuildingID: 0,
 			}
 		}
 
-		if unit.IsSelected && unit.Owner == bs.PlayerID {
-			switch unit.Type {
+		if currentUnit.IsSelected && currentUnit.Owner == bs.PlayerID {
+			switch currentUnit.Type {
 			case unitCow:
 				bs.CurrentMessage.Text = "Muuu ?"
 			case unitAxeman:

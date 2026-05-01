@@ -94,6 +94,7 @@ func healingShrine(bs *battleState) {
 			// bierzemy znalezioną jednostkę
 			u := healingTile.Unit
 			// Sprawdzamy, czy potrzebuje leczenia
+			// takie sprawdzenie, to raczej powinno być w tryToHeal, czy cos
 			if u.HP != u.MaxHP {
 				switch u.Type {
 				case unitCow:
