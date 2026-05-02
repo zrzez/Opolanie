@@ -8,14 +8,14 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-func setupMainMenuButtons(ps *programState, bs *battleState) {
+func setupMainMenuButtons(ps *programState, bState *battleState) {
 	ps.ActiveMenuButtons = []button{
 		{
 			Rectangle:  rl.NewRectangle(215, 60, 222, 36),
 			DebugLabel: "Nowa gra",
 			OnClick: func() {
 				ps.CurrentState = newCampaignMenuScreen
-				setupCampaignMenuButtons(ps, bs)
+				setupCampaignMenuButtons(ps, bState)
 				startNewCampaign(ps) // @todo: pytanie, czy musimy to tak trzymać, bo wydaje się, że to zbędne
 				// można od razy wywołać drawSelectCampaignMenuLegacy
 			},
@@ -55,7 +55,7 @@ func handleMenuInput(ps *programState) {
 	}
 }
 
-func setupCampaignMenuButtons(ps *programState, bs *battleState) {
+func setupCampaignMenuButtons(ps *programState, bState *battleState) {
 	// Pomagier do szybkiego ustawiania przycisków w tym menu
 	addCampaignButton := func(y float32, label string, campaignFunc func()) button {
 		return button{
@@ -75,7 +75,7 @@ func setupCampaignMenuButtons(ps *programState, bs *battleState) {
 
 	ps.ActiveMenuButtons = []button{
 		addCampaignButton(22, "Powrót Mirka", func() {
-			startFirstCampaign(ps, bs)
+			startFirstCampaign(ps, bState)
 		}),
 		addCampaignButton(82, "Przyjaciele", func() { log.Println("Kampania 2, @todo") }),
 		addCampaignButton(142, "Porwanie", func() { log.Println("Kampania 3, @todo") }),
@@ -91,14 +91,14 @@ func setupCampaignMenuButtons(ps *programState, bs *battleState) {
 			DebugLabel: "Menu",
 			OnClick: func() {
 				ps.CurrentState = mainMenuScreen
-				setupMainMenuButtons(ps, bs)
+				setupMainMenuButtons(ps, bState)
 			},
 		},
 	}
 }
 
 // Działanie przycisków w menu
-func startFirstCampaign(ps *programState, bs *battleState) {
+func startFirstCampaign(ps *programState, bState *battleState) {
 	log.Println("Naciśnięto pierwszą kampanię. Rozpoczynam sekwencję startową.")
 
 	// KROK 1: Ustalenie parametrów (Sztywno dla 1. kampanii)
@@ -108,29 +108,29 @@ func startFirstCampaign(ps *programState, bs *battleState) {
 	log.Printf("START KAMPANII: Poziom %d. Przeciwnik: %d", startLevel, enemyColor)
 
 	// KROK 2: Reset Stanu Bitwy
-	bs.IsSinglePlayerGame = true
-	bs.DifficultyLevel = ps.SelectedDifficulty
+	bState.IsSinglePlayerGame = true
+	bState.DifficultyLevel = ps.SelectedDifficulty
 
-	bs.HumanPlayerState.init(colorRed, 0)
-	bs.AIEnemyState.init(enemyColor, 0)
+	bState.HumanPlayerState.init(colorRed, 0)
+	bState.AIEnemyState.init(enemyColor, 0)
 
-	bs.PlayerID = colorRed
-	bs.AIPlayerID = enemyColor
+	bState.PlayerID = colorRed
+	bState.AIPlayerID = enemyColor
 
 	// Zerowanie liczników
-	bs.CheatsEnabled = false
-	bs.CheatSequenceProgress = 0
-	bs.GrassGrowthCycle = 0
-	bs.WaterAnimationFrame = 0
-	bs.FireAnimationFrame = 0
-	bs.GlobalFrameCounter = 0
-	bs.NextUniqueObjectID = 1
+	bState.CheatsEnabled = false
+	bState.CheatSequenceProgress = 0
+	bState.GrassGrowthCycle = 0
+	bState.WaterAnimationFrame = 0
+	bState.FireAnimationFrame = 0
+	bState.GlobalFrameCounter = 0
+	bState.NextUniqueObjectID = 1
 
 	// Nowe, czyste wycinki
-	bs.Units = make([]*unit, 0)
-	bs.Buildings = make([]*building, 0)
-	bs.Projectiles = make([]*projectile, 0)
-	bs.Board = &boardData{}
+	bState.Units = make([]*unit, 0)
+	bState.Buildings = make([]*building, 0)
+	bState.Projectiles = make([]*projectile, 0)
+	bState.Board = &boardData{}
 
 	// KROK 3: Grafika (Assets)
 	ps.Assets.unloadBattleAssets()
@@ -141,7 +141,7 @@ func startFirstCampaign(ps *programState, bs *battleState) {
 		log.Printf("KRYTYCZNY BŁĄD GRAFIKI: %v", err)
 
 		ps.CurrentState = mainMenuScreen
-		setupMainMenuButtons(ps, bs)
+		setupMainMenuButtons(ps, bState)
 
 		return
 	}
@@ -149,12 +149,12 @@ func startFirstCampaign(ps *programState, bs *battleState) {
 	// KROK 4: Ładowanie Poziomu (JSON)
 	loader := newLevelLoader("./")
 
-	err = loader.initBattle(startLevel, bs)
+	err = loader.initBattle(startLevel, bState)
 	if err != nil {
 		log.Printf("KRYTYCZNY BŁĄD BITWY: Nie udało się załadować poziomu %d: %v", startLevel, err)
 
 		ps.CurrentState = mainMenuScreen
-		setupMainMenuButtons(ps, bs)
+		setupMainMenuButtons(ps, bState)
 
 		return
 	}
@@ -165,5 +165,5 @@ func startFirstCampaign(ps *programState, bs *battleState) {
 
 	// KROK 6: Start
 	log.Println("Stan programu zmieniony na GameScreen. Rozpoczyna się bitwa.")
-	ps.changeState(gameScreen, bs)
+	ps.changeState(gameScreen, bState)
 }

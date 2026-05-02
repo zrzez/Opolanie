@@ -444,7 +444,7 @@ func screenToVirtualCoords(ps *programState, screenPos rl.Vector2) rl.Vector2 {
 }
 
 // Na podstawie ps.currentState decyduje, który ekran rysować.
-func (ps *programState) changeState(newState screenState, bs *battleState) {
+func (ps *programState) changeState(newState screenState, bState *battleState) {
 	ps.CurrentState = newState
 
 	switch newState {
@@ -452,7 +452,7 @@ func (ps *programState) changeState(newState screenState, bs *battleState) {
 		// Logika wejścia do gry
 		log.Println("SYSTEM: Transition to GAME_SCREEN → Recalculating View.")
 		ps.recalculateVirtualResolution() // Naprawia UI i skalowanie
-		setupGameCamera(bs, ps)           // Centruje kamerę na nowym wymiarze
+		setupGameCamera(bState, ps)       // Centruje kamerę na nowym wymiarze
 
 	case mainMenuScreen, newCampaignMenuScreen:
 		// Logika wejścia do menu
@@ -462,7 +462,7 @@ func (ps *programState) changeState(newState screenState, bs *battleState) {
 }
 
 // Odpowiada za rysowanie urojonego płótna, które później ma być skalowane do docelowej wielkości
-func drawSceneToVirtualScreen(bs *battleState, ps *programState) {
+func drawSceneToVirtualScreen(bState *battleState, ps *programState) {
 	rl.BeginTextureMode(ps.ScreenTarget)
 	rl.ClearBackground(rl.Black)
 
@@ -473,24 +473,24 @@ func drawSceneToVirtualScreen(bs *battleState, ps *programState) {
 		// Nożyczki ucinają wszystko, co wchodzi na teren panelu UI
 		if ps.GameViewWidth > 0 {
 			rl.BeginScissorMode(0, 0, int32(ps.GameViewWidth), int32(ps.VirtualHeight))
-			rl.BeginMode2D(bs.GameCamera)
-			drawWorldAndUnits(bs, ps)
-			drawConstructionValidationBox(bs, ps)
+			rl.BeginMode2D(bState.GameCamera)
+			drawWorldAndUnits(bState, ps)
+			drawConstructionValidationBox(bState, ps)
 			rl.EndMode2D()
 			rl.EndScissorMode()
 		}
 
-		drawGameUI(bs, ps)
+		drawGameUI(bState, ps)
 
 	default:
 		// Rysuj menu, intro, itp.
-		renderCurrentScene(bs, ps)
+		renderCurrentScene(bState, ps)
 	}
 
 	rl.EndTextureMode()
 }
 
-func drawSceneToActualScreen(bs *battleState, ps *programState) {
+func drawSceneToActualScreen(bState *battleState, ps *programState) {
 	rl.ClearBackground(rl.Black) // Czarne tło (pasy)
 
 	// 1. USTAWIENIE ŹRÓDŁA (Source)
@@ -541,12 +541,12 @@ func drawSceneToActualScreen(bs *battleState, ps *programState) {
 		rl.White,
 	)
 
-	drawGameCursorOnRealScreen(bs, ps, scale)
+	drawGameCursorOnRealScreen(bState, ps, scale)
 }
 
 // Odpowiada za dopasowanie rozmiaru okna w ProgramState do rzeczywistego
 // Pozwala prawidłowo dopasować tekstury do okna
-func updateWindowSize(bs *battleState, ps *programState) {
+func updateWindowSize(bState *battleState, ps *programState) {
 	newWidth := int32(rl.GetScreenWidth())
 	newHeight := int32(rl.GetScreenHeight())
 
@@ -562,10 +562,10 @@ func updateWindowSize(bs *battleState, ps *programState) {
 		setupMenuCamera(ps)
 
 		// 3. Aktualizujemy kamerę GRY (Offset musi być nowym środkiem ekranu!)
-		if bs != nil {
+		if bState != nil {
 			// Offset to punkt na ekranie, gdzie rysowany jest cel (Target) kamery.
 			// Musi być na środku dynamicznego widoku gry.
-			bs.GameCamera.Offset = rl.NewVector2(
+			bState.GameCamera.Offset = rl.NewVector2(
 				ps.GameViewWidth/2.0,
 				ps.VirtualHeight/2.0,
 			)
@@ -574,7 +574,7 @@ func updateWindowSize(bs *battleState, ps *programState) {
 			// (wywołujemy clamping na obecnej pozycji)
 			fullMapWidth := float32(uint16(boardMaxX) * uint16(tileWidth))
 			fullMapHeight := float32(uint16(boardMaxY) * uint16(tileHeight))
-			clampCameraTarget(&bs.GameCamera, fullMapWidth, fullMapHeight, ps.GameViewWidth, ps.VirtualHeight)
+			clampCameraTarget(&bState.GameCamera, fullMapWidth, fullMapHeight, ps.GameViewWidth, ps.VirtualHeight)
 		}
 	}
 }
@@ -643,14 +643,14 @@ func drawEyes(ps *programState) {
 
 // Odpowiada za wybór funkcji do rysowania właściwego widoku
 // menu głównego, wybór wyprawy itd
-func renderCurrentScene(bs *battleState, ps *programState) {
+func renderCurrentScene(bState *battleState, ps *programState) {
 	switch ps.CurrentState {
 	case mainMenuScreen:
 		drawMainMenu(ps)
 	case newCampaignMenuScreen:
 		drawSelectCampaignMenuLegacy(ps)
 	case gameScreen:
-		drawBattleScene(bs)
+		drawBattleScene(bState)
 	default:
 		log.Printf("OSTRZEŻENIE: Nieznany CurrentState (%d) do narysowania. Rysuję menu główne.", ps.CurrentState)
 		// @todo: ogarnij, czy dobrze jest wrócić do głównego jeżeli nie jesteśmy pewni, co narysować
@@ -660,7 +660,7 @@ func renderCurrentScene(bs *battleState, ps *programState) {
 }
 
 // Dobiera logikę obsługi wejścia na postawie programState.CurrentState
-func handleCurrentScreenInput(bs *battleState, ps *programState) {
+func handleCurrentScreenInput(bState *battleState, ps *programState) {
 	// logVirtualMouseCoordinates(ps) // @todo: zakomentuj później, bo zapycha konsolę niepotrzebnie
 	switch ps.CurrentState {
 	case mainMenuScreen:
@@ -668,22 +668,22 @@ func handleCurrentScreenInput(bs *battleState, ps *programState) {
 	case newCampaignMenuScreen:
 		handleMenuInput(ps)
 	case gameScreen:
-		handleGameInput(bs, ps)
+		handleGameInput(bState, ps)
 	default:
 		log.Printf("OSTRZEŻENIE: Nieznany stan (%d) dla obsługi wejścia", ps.CurrentState)
 	}
 }
 
 // Odpowiada za wywołanie odświeżania obrazu
-func updateCurrentScreen(bs *battleState, ps *programState) {
+func updateCurrentScreen(bState *battleState, ps *programState) {
 	switch ps.CurrentState {
 	case mainMenuScreen:
 		// można zostawić puste, bo nie powinno być logiki zmiany ekranu co klatkę
 	case newCampaignMenuScreen:
 		// można zostawić puste, bo nie powinno być logiki zmiany ekranu co klatkę
 	case gameScreen:
-		updateGame(bs)
-		updateActionButtons(bs)
+		updateGame(bState)
+		updateActionButtons(bState)
 	}
 }
 
@@ -746,7 +746,7 @@ func (ps *programState) loadSingleTexture(path string) (rl.Texture2D, error) {
 // zmień to zakodowane na sztywno na dynamiczne, w zależności od prowincji
 // te dane przechowujemy nawet w „prowintionInit”
 // w ogóle powinno się przenieść określenie battleState w miejsce, gdzie odpalamy bitwy
-func newBattleState(ps *programState) *battleState {
+func newBattleState(pState *programState) *battleState {
 	return &battleState{
 		// Ustawiamy na NONE (0) - stan jest "nieuzbrojony"
 		PlayerID:   colorNone,
@@ -788,7 +788,7 @@ func newBattleState(ps *programState) *battleState {
 		Map:                false,
 
 		CurrentLevel:          0,
-		DifficultyLevel:       ps.SelectedDifficulty,
+		DifficultyLevel:       pState.SelectedDifficulty,
 		GameSpeed:             1,
 		IsSinglePlayerGame:    true, // To zazwyczaj prawda, ale Handler może zmienić
 		CheatsEnabled:         false,
@@ -817,11 +817,11 @@ func newBattleState(ps *programState) *battleState {
 }
 
 // @todo: przenieś to do innego pliku, bo tutaj nie pasuje chyba level.go będzie lepsze, bo tam są różne „apply”.
-func makeGrassVariations(bs *battleState) {
+func makeGrassVariations(bState *battleState) {
 	for y := range boardMaxY {
 		y5 := y * 5
 		for x := range boardMaxX {
-			tile := &bs.Board.Tiles[x][y]
+			tile := &bState.Board.Tiles[x][y]
 			id := tile.TextureID
 
 			if id >= spriteGrassStart && id <= spriteGrassEnd {

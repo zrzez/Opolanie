@@ -7,19 +7,19 @@ import rl "github.com/gen2brain/raylib-go/raylib"
 // getCursorIDFromContext - otulina
 // Sprawdza stan gry. Jeśli gameScreen → deleguje do determineCursorState.
 // Jeśli inny stan → zwraca domyślny kursor.
-func getCursorIDFromContext(bs *battleState, ps *programState, realMousePos rl.Vector2, scale float32) uint16 {
+func getCursorIDFromContext(bState *battleState, ps *programState, realMousePos rl.Vector2, scale float32) uint16 {
 	if ps.CurrentState == gameScreen {
 		virtualMouseX := realMousePos.X / scale
 		virtualMouseY := realMousePos.Y / scale
 		virtualMousePos := rl.NewVector2(virtualMouseX, virtualMouseY)
 
-		return determineCursorState(bs, virtualMousePos, ps.GameViewWidth, ps.VirtualWidth, ps.VirtualHeight)
+		return determineCursorState(bState, virtualMousePos, ps.GameViewWidth, ps.VirtualWidth, ps.VirtualHeight)
 	}
 
 	return spriteCursorPointer
 }
 
-func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, viewH float32) uint16 {
+func determineCursorState(bState *battleState, mousePos rl.Vector2, viewW, totalW, viewH float32) uint16 {
 	// 1. Czy poza planszą
 	if screenCursor := checkScreenCursor(mousePos, viewW, totalW, viewH); screenCursor != 0 {
 		return screenCursor
@@ -27,7 +27,7 @@ func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, v
 
 	// 2. Na planszy
 	// Musimy przeliczyć pozycję myszy na świat gry używając kamery
-	worldMousePos := rl.GetScreenToWorld2D(mousePos, bs.GameCamera)
+	worldMousePos := rl.GetScreenToWorld2D(mousePos, bState.GameCamera)
 	tileX := uint8(worldMousePos.X / float32(tileWidth))
 	tileY := uint8(worldMousePos.Y / float32(tileHeight))
 
@@ -35,7 +35,7 @@ func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, v
 		return spriteCursorStop
 	}
 
-	tileUnderCursor := &bs.Board.Tiles[tileX][tileY]
+	tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
 	targetOwner := -1
 
 	var targetBuilding *building // Potrzebujemy wiedzieć, czy to budynek
@@ -47,13 +47,13 @@ func determineCursorState(bs *battleState, mousePos rl.Vector2, viewW, totalW, v
 		targetBuilding = tileUnderCursor.Building
 	}
 
-	hasSelection := bs.CurrentSelection.IsUnit && bs.CurrentSelection.OwnerID == bs.PlayerID
+	hasSelection := bState.CurrentSelection.IsUnit && bState.CurrentSelection.OwnerID == bState.PlayerID
 
 	if hasSelection {
-		return cursorForSelection(bs, tileUnderCursor, targetOwner, targetBuilding)
+		return cursorForSelection(bState, tileUnderCursor, targetOwner, targetBuilding)
 	}
 
-	return cursorForNoSelection(targetOwner, bs.PlayerID)
+	return cursorForNoSelection(targetOwner, bState.PlayerID)
 }
 
 // Zwraca zero dla kursora na planszy lub odpowiedni duszek w pozostałych przypadkach.
@@ -84,10 +84,10 @@ func checkScreenCursor(mousePos rl.Vector2, viewW, totalW, viewH float32) uint16
 	return 0
 }
 
-func cursorForSelection(bs *battleState, tileUnderCursor *tile, targetOwner int, targetBuilding *building) uint16 {
+func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner int, targetBuilding *building) uint16 {
 	// Naprawa
-	if bs.MouseCommandMode == cmdRepairStructure {
-		if canRepair(targetBuilding, bs.PlayerID) {
+	if bState.MouseCommandMode == cmdRepairStructure {
+		if canRepair(targetBuilding, bState.PlayerID) {
 			return spriteBtnRepair
 		}
 
@@ -95,20 +95,20 @@ func cursorForSelection(bs *battleState, tileUnderCursor *tile, targetOwner int,
 	}
 
 	// Wróg
-	if targetOwner != -1 && targetOwner != int(bs.PlayerID) {
-		return cursorForEnemy(bs, tileUnderCursor)
+	if targetOwner != -1 && targetOwner != int(bState.PlayerID) {
+		return cursorForEnemy(bState, tileUnderCursor)
 	}
 
 	// Swój
-	if targetOwner == int(bs.PlayerID) {
+	if targetOwner == int(bState.PlayerID) {
 		return spriteCursorFrameWhite
 	}
 
 	// Drzewa
-	selectedUnit, unitOK := getUnitByID(bs.CurrentSelection.UnitID, bs)
+	selectedUnit, unitOK := getUnitByID(bState.CurrentSelection.UnitID, bState)
 
 	if unitOK && tileUnderCursor.isStandingTree() && !tileUnderCursor.IsBurning {
-		if selectedUnit.canDamageTree(tileUnderCursor.X, tileUnderCursor.Y, bs) {
+		if selectedUnit.canDamageTree(tileUnderCursor.X, tileUnderCursor.Y, bState) {
 			return spriteCursorCrossRed
 		}
 
@@ -139,12 +139,12 @@ func cursorForNoSelection(targetOwner int, playerID uint8) uint16 {
 }
 
 // @todo: do przebudowy, bo sprawdzanie legalności w kursorach jest oderwane od legalności rozkazów.
-func cursorForEnemy(bs *battleState, tileUnderCursor *tile) uint16 {
+func cursorForEnemy(bState *battleState, tileUnderCursor *tile) uint16 {
 	targetBuilding := tileUnderCursor.Building
 
 	if targetBuilding != nil && targetBuilding.Exists {
 		// Mag nie może atakować żadnych budynków
-		selectedUnit, ok := getUnitByID(bs.CurrentSelection.UnitID, bs)
+		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
 
 		if selectedUnit.Type == unitMage {
 			return spriteCursorStop

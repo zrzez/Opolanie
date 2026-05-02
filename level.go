@@ -18,11 +18,11 @@ func newLevelLoader(drivePath string) *jsonLevelLoader {
 	return &jsonLevelLoader{drivePath: drivePath}
 }
 
-func initBoard(bs *battleState) {
+func initBoard(bState *battleState) {
 	for boardColumn := uint8(0); boardColumn < boardMaxX; boardColumn++ {
 		for boardRow := uint8(0); boardRow < boardMaxY; boardRow++ {
 			// Dostęp do kafelka przez wskaźnik
-			currentTile := &bs.Board.Tiles[boardColumn][boardRow]
+			currentTile := &bState.Board.Tiles[boardColumn][boardRow]
 
 			// Wartości domyślne
 			currentTile.X = boardColumn
@@ -44,105 +44,105 @@ func initBoard(bs *battleState) {
 		}
 	}
 
-	bs.NextUniqueObjectID = 1
+	bState.NextUniqueObjectID = 1
 
 	log.Println("INFO: Zaczyn planszy zrobiony.")
 }
 
 // Stosuje dane z JSON do stanu gry.
-func (l *jsonLevelLoader) applyJSONLevel(jsonLevel *jsonLevel, bs *battleState) {
-	l.clearGameState(bs)
+func (l *jsonLevelLoader) applyJSONLevel(jsonLevel *jsonLevel, bState *battleState) {
+	l.clearGameState(bState)
 
 	// Metadane poziomu
 	// @todo: Nigdy nie dodałem CampaignData do battleState, być może trzeba to zmienić!
-	bs.CampaignData.DecisionType = jsonLevel.Metadata.DecisionType
-	bs.CampaignData.EndCondition = jsonLevel.Metadata.EndType
-	bs.CampaignData.TargetType = jsonLevel.Metadata.TargetType
-	bs.CampaignData.LevelsMilkLimit = jsonLevel.Metadata.MaxMilk
-	bs.CampaignData.GeneratorActive = jsonLevel.Metadata.Generator
-	bs.CampaignData.NextLevel = jsonLevel.Metadata.NextLevel
-	bs.CampaignData.Name = jsonLevel.Metadata.Name
+	bState.CampaignData.DecisionType = jsonLevel.Metadata.DecisionType
+	bState.CampaignData.EndCondition = jsonLevel.Metadata.EndType
+	bState.CampaignData.TargetType = jsonLevel.Metadata.TargetType
+	bState.CampaignData.LevelsMilkLimit = jsonLevel.Metadata.MaxMilk
+	bState.CampaignData.GeneratorActive = jsonLevel.Metadata.Generator
+	bState.CampaignData.NextLevel = jsonLevel.Metadata.NextLevel
+	bState.CampaignData.Name = jsonLevel.Metadata.Name
 
 	// Ustawienie początkowej pozycji kamery
-	bs.GameCamera.Target.X = float32(jsonLevel.Metadata.StartPos.X * tileWidth)
-	bs.GameCamera.Target.Y = float32(jsonLevel.Metadata.StartPos.Y * tileHeight)
+	bState.GameCamera.Target.X = float32(jsonLevel.Metadata.StartPos.X * tileWidth)
+	bState.GameCamera.Target.Y = float32(jsonLevel.Metadata.StartPos.Y * tileHeight)
 	log.Printf("INFO: Początkowa pozycja kamery ustawiona na (%f, %f) w kafelkach.",
-		bs.GameCamera.Target.X, bs.GameCamera.Target.Y)
+		bState.GameCamera.Target.X, bState.GameCamera.Target.Y)
 
 	// Ustawienia SI
-	bs.AI.GatherPointX = jsonLevel.AISettings.GatherPoint.X
-	bs.AI.GatherPointY = jsonLevel.AISettings.GatherPoint.Y
-	bs.AI.PastureX = jsonLevel.AISettings.Pasture.X
-	bs.AI.PastureY = jsonLevel.AISettings.Pasture.Y
+	bState.AI.GatherPointX = jsonLevel.AISettings.GatherPoint.X
+	bState.AI.GatherPointY = jsonLevel.AISettings.GatherPoint.Y
+	bState.AI.PastureX = jsonLevel.AISettings.Pasture.X
+	bState.AI.PastureY = jsonLevel.AISettings.Pasture.Y
 
 	// Specjalne lokacje
 	if jsonLevel.SpecialLocations.TransformationPoint != nil {
-		bs.CampaignData.TransformationSiteX = jsonLevel.SpecialLocations.TransformationPoint.X
-		bs.CampaignData.TransformationSiteY = jsonLevel.SpecialLocations.TransformationPoint.Y
+		bState.CampaignData.TransformationSiteX = jsonLevel.SpecialLocations.TransformationPoint.X
+		bState.CampaignData.TransformationSiteY = jsonLevel.SpecialLocations.TransformationPoint.Y
 	}
 	if jsonLevel.SpecialLocations.VictoryPoint != nil {
-		bs.CampaignData.VictoryPointX = jsonLevel.SpecialLocations.VictoryPoint.X
-		bs.CampaignData.VictoryPointY = jsonLevel.SpecialLocations.VictoryPoint.Y
+		bState.CampaignData.VictoryPointX = jsonLevel.SpecialLocations.VictoryPoint.X
+		bState.CampaignData.VictoryPointY = jsonLevel.SpecialLocations.VictoryPoint.Y
 	}
 	if jsonLevel.SpecialLocations.RescueTarget != nil {
-		bs.CampaignData.RescueTargetX = jsonLevel.SpecialLocations.RescueTarget.X
-		bs.CampaignData.RescueTargetY = jsonLevel.SpecialLocations.RescueTarget.Y
+		bState.CampaignData.RescueTargetX = jsonLevel.SpecialLocations.RescueTarget.X
+		bState.CampaignData.RescueTargetY = jsonLevel.SpecialLocations.RescueTarget.Y
 	}
 
 	// Zastosuj surowy teren
-	l.applyTerrain(&jsonLevel.Terrain, bs)
+	l.applyTerrain(&jsonLevel.Terrain, bState)
 
 	// Zastosuj budynki
-	l.applyBuildings(jsonLevel.Buildings, bs)
+	l.applyBuildings(jsonLevel.Buildings, bState)
 
 	// Zastosuj jednostki
-	l.applyUnits(jsonLevel.Units, bs)
+	l.applyUnits(jsonLevel.Units, bState)
 
 	// Zasoby graczy
-	bs.HumanPlayerState.MaxMilk = jsonLevel.Metadata.MaxMilk
-	bs.HumanPlayerState.Milk = jsonLevel.Metadata.MaxMilk
-	bs.AIEnemyState.MaxMilk = 1800
-	bs.AIEnemyState.Milk = 1800
+	bState.HumanPlayerState.MaxMilk = jsonLevel.Metadata.MaxMilk
+	bState.HumanPlayerState.Milk = jsonLevel.Metadata.MaxMilk
+	bState.AIEnemyState.MaxMilk = 1800
+	bState.AIEnemyState.Milk = 1800
 
 	log.Printf("Zastosowano poziom: %s (%dx%d)",
 		jsonLevel.Metadata.Name, jsonLevel.Terrain.Width, jsonLevel.Terrain.Height)
 }
 
 // Wyczyść stan gry
-func (l *jsonLevelLoader) clearGameState(bs *battleState) {
-	initBoard(bs)
+func (l *jsonLevelLoader) clearGameState(bState *battleState) {
+	initBoard(bState)
 
 	// POPRAWKA: Resetujemy długość do 0, ale zachowujemy pojemność (Capacity).
 	// Zapobiega to utracie "rezerwacji" 40 miejsc i zbędnym alokacjom.
-	bs.Units = bs.Units[:0]
-	bs.Buildings = bs.Buildings[:0]
+	bState.Units = bState.Units[:0]
+	bState.Buildings = bState.Buildings[:0]
 	// Jeśli projectiles są zainicjowane, też je czyścimy
-	if bs.Projectiles != nil {
-		bs.Projectiles = bs.Projectiles[:0]
+	if bState.Projectiles != nil {
+		bState.Projectiles = bState.Projectiles[:0]
 	}
 
 	// Zerujemy graczy
-	bs.HumanPlayerState.init(bs.PlayerID, 0)
-	bs.AIEnemyState.init(bs.AIPlayerID, 0)
+	bState.HumanPlayerState.init(bState.PlayerID, 0)
+	bState.AIEnemyState.init(bState.AIPlayerID, 0)
 
 	// ZEROWANIE LICZNIKÓW POPULACJI I BUDYNKÓW
-	bs.HumanPlayerState.CurrentPopulation = 0
-	bs.AIEnemyState.CurrentPopulation = 0
-	bs.HumanPlayerState.CurrentBuildings = 0
-	bs.AIEnemyState.CurrentBuildings = 0
+	bState.HumanPlayerState.CurrentPopulation = 0
+	bState.AIEnemyState.CurrentPopulation = 0
+	bState.HumanPlayerState.CurrentBuildings = 0
+	bState.AIEnemyState.CurrentBuildings = 0
 
-	bs.CurrentSelection = selectionState{}
-	bs.MouseCommandMode = 1
-	bs.IsSelectingBox = false
+	bState.CurrentSelection = selectionState{}
+	bState.MouseCommandMode = 1
+	bState.IsSelectingBox = false
 
 	// Zerowanie liczników animacji
-	bs.GrassGrowthCycle = 0
-	bs.WaterAnimationFrame = 0
-	bs.FireAnimationFrame = 0
-	bs.GlobalFrameCounter = 0
+	bState.GrassGrowthCycle = 0
+	bState.WaterAnimationFrame = 0
+	bState.FireAnimationFrame = 0
+	bState.GlobalFrameCounter = 0
 
-	bs.AI = aiState{}
-	bs.AI.MilkGenerationRate = uint16(bs.DifficultyLevel)
+	bState.AI = aiState{}
+	bState.AI.MilkGenerationRate = uint16(bState.DifficultyLevel)
 }
 
 func configureTile(currentTile *tile, graphicID uint16) {
@@ -211,16 +211,16 @@ func classifyTreeFromTexture(textureID uint16) (treeState, bool, bool) {
 	}
 }
 
-func (l *jsonLevelLoader) spawnPalisade(x, y uint8, graphicID uint16, bs *battleState) {
+func (l *jsonLevelLoader) spawnPalisade(x, y uint8, graphicID uint16, bState *battleState) {
 	if graphicID == spritePalisadeNE {
 		newPalisade := &building{}
-		newPalisade.initConstruction(x, y, buildingPalisade, colorNone, bs)
+		newPalisade.initConstruction(x, y, buildingPalisade, colorNone, bState)
 
-		bs.Buildings = append(bs.Buildings, newPalisade)
+		bState.Buildings = append(bState.Buildings, newPalisade)
 	}
 }
 
-func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bs *battleState) {
+func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bState *battleState) {
 	log.Println("INFO: Nakładanie terenu...")
 
 	// Bezpieczne granice pętli (zamiast rzutowania uint w każdym obiegu)
@@ -236,21 +236,21 @@ func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bs *battleState
 
 			// 2. Pobranie wskaźnika na kafelek
 			tX, tY := uint8(xAxis), uint8(yAxis)
-			tile := &bs.Board.Tiles[tX][tY]
+			tile := &bState.Board.Tiles[tX][tY]
 
 			// 3. Przypisanie grafiki
 			tile.TextureID = graphicID
 
 			// 4. Przetworzenie
 			configureTile(tile, graphicID)
-			l.spawnPalisade(tX, tY, graphicID, bs)
+			l.spawnPalisade(tX, tY, graphicID, bState)
 		}
 	}
 
 	log.Println("INFO: Teren nałożony pomyślnie.")
 }
 
-func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bs *battleState) {
+func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bState *battleState) {
 	log.Printf("INFO: Ładowanie %d budynków do battleState...", len(buildingsData))
 
 	for _, data := range buildingsData {
@@ -258,22 +258,22 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bs *b
 
 		switch data.Owner {
 		case "ENEMY":
-			ownerID = bs.AIPlayerID
+			ownerID = bState.AIPlayerID
 		case "PLAYER":
-			ownerID = bs.PlayerID
+			ownerID = bState.PlayerID
 		default:
 			ownerID = colorNone
 		}
 
-		buildingType, exists := buildingTypeMap[data.Type]
+		bldType, exists := buildingTypeMap[data.Type]
 		if !exists {
 			continue
 		}
 
 		// Pobieramy definicję, aby znać wymiary (Width/Height)
-		stats, ok := buildingDefs[buildingType]
+		stats, ok := buildingDefs[bldType]
 		if !ok {
-			log.Printf("BŁĄD: Brak definicji statystyk dla budynku typu %d", buildingType)
+			log.Printf("BŁĄD: Brak definicji statystyk dla budynku typu %d", bldType)
 
 			continue
 		}
@@ -287,20 +287,20 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bs *b
 		newBuilding := &building{}
 
 		// Wywołujemy init z przeliczonymi współrzędnymi Top-Left
-		newBuilding.initConstruction(topLeftX, topLeftY, buildingType, ownerID, bs)
+		newBuilding.initConstruction(topLeftX, topLeftY, bldType, ownerID, bState)
 
-		bs.Buildings = append(bs.Buildings, newBuilding)
+		bState.Buildings = append(bState.Buildings, newBuilding)
 
 		// Liczniki
 		switch newBuilding.Owner {
-		case bs.HumanPlayerState.PlayerID:
-			bs.HumanPlayerState.CurrentBuildings++
-		case bs.AIEnemyState.PlayerID:
-			bs.AIEnemyState.CurrentBuildings++
+		case bState.HumanPlayerState.PlayerID:
+			bState.HumanPlayerState.CurrentBuildings++
+		case bState.AIEnemyState.PlayerID:
+			bState.AIEnemyState.CurrentBuildings++
 		}
 
 		// Nakładanie grafiki przy użyciu wyliczonego Top-Left
-		template, templateExists := buildingTemplates[buildingType]
+		template, templateExists := buildingTemplates[bldType]
 		if templateExists {
 			for dy, row := range template {
 				for dx, graphicID := range row {
@@ -308,7 +308,7 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bs *b
 					tileY := topLeftY + uint8(dy)
 
 					if tileX < boardMaxX && tileY < boardMaxY {
-						bs.Board.Tiles[tileX][tileY].TextureID = uint16(graphicID)
+						bState.Board.Tiles[tileX][tileY].TextureID = uint16(graphicID)
 					}
 				}
 			}
@@ -317,18 +317,18 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bs *b
 }
 
 // levelLoader.go - applyUnits
-func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bs *battleState) {
+func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) {
 	log.Printf("INFO: Ładowanie %d jednostek do battleState...", len(units))
 
 	for _, unitData := range units {
 		var ownerID uint8
 		if unitData.Owner == "ENEMY" {
-			ownerID = bs.AIPlayerID
+			ownerID = bState.AIPlayerID
 		} else {
-			ownerID = bs.PlayerID
+			ownerID = bState.PlayerID
 		}
 
-		unitType, exists := unitTypeMap[unitData.Type]
+		uType, exists := unitTypeMap[unitData.Type]
 		if !exists {
 			log.Printf("OSTRZEŻENIE: Pomięto nieznany typ jednostki: %s", unitData.Type)
 			continue
@@ -336,36 +336,36 @@ func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bs *battleState) {
 
 		newUnit := &unit{}
 		// Inicjalizacja nowej jednostki
-		newUnit.initUnit(unitType, unitData.Position.X, unitData.Position.Y, cmdIdle, bs)
+		newUnit.initUnit(uType, unitData.Position.X, unitData.Position.Y, cmdIdle, bState)
 		newUnit.Owner = ownerID
 
 		// Wstawienie na mapę
-		newUnit.show(bs)
+		newUnit.show(bState)
 
 		// Dodanie do głównej listy
-		bs.Units = append(bs.Units, newUnit)
+		bState.Units = append(bState.Units, newUnit)
 
 		// Zliczamy jednostki startowe, aby limit 40 działał poprawnie od początku gry.
 		switch newUnit.Owner {
-		case bs.HumanPlayerState.PlayerID:
-			bs.HumanPlayerState.CurrentPopulation++
-		case bs.AIEnemyState.PlayerID:
-			bs.AIEnemyState.CurrentPopulation++
+		case bState.HumanPlayerState.PlayerID:
+			bState.HumanPlayerState.CurrentPopulation++
+		case bState.AIEnemyState.PlayerID:
+			bState.AIEnemyState.CurrentPopulation++
 		}
 	}
 	log.Printf("INFO: Załadowano %d jednostek. Populacja Gracza: %d, AI: %d.",
-		len(bs.Units), bs.HumanPlayerState.CurrentPopulation, bs.AIEnemyState.CurrentPopulation)
+		len(bState.Units), bState.HumanPlayerState.CurrentPopulation, bState.AIEnemyState.CurrentPopulation)
 }
 
 // Załaduj poziom
-func (l *jsonLevelLoader) loadLevel(levelNum uint8, bs *battleState) error {
-	if err := l.loadJSONLevel(levelNum, bs); err == nil {
+func (l *jsonLevelLoader) loadLevel(levelNum uint8, bState *battleState) error {
+	if err := l.loadJSONLevel(levelNum, bState); err == nil {
 		return nil
 	}
 	return fmt.Errorf("nie znaleziono poziomu JSON %d", levelNum)
 }
 
-func (l *jsonLevelLoader) loadJSONLevel(levelNum uint8, bs *battleState) error {
+func (l *jsonLevelLoader) loadJSONLevel(levelNum uint8, bState *battleState) error {
 	log.Printf("Ładowanie poziomu %d z JSON...", levelNum)
 
 	filename := filepath.Join(l.drivePath, "levels_json", fmt.Sprintf("level_%02d.json", levelNum))
@@ -381,20 +381,20 @@ func (l *jsonLevelLoader) loadJSONLevel(levelNum uint8, bs *battleState) error {
 	}
 
 	log.Printf("Załadowano poziom: %s", jsonLevel.Metadata.Name)
-	l.applyJSONLevel(&jsonLevel, bs)
+	l.applyJSONLevel(&jsonLevel, bState)
 
 	return nil
 }
 
 // Waliduj pozycję kamery
-func (l *jsonLevelLoader) validateScreenPosition(bs *battleState) {
+func (l *jsonLevelLoader) validateScreenPosition(bState *battleState) {
 	// Ile kafelków mieści się na ekranie (wirtualnym)
 	tilesVisibleX := virtualScreenWidth / uint16(tileWidth)   // 640/16 = 40
 	tilesVisibleY := virtualScreenHeight / uint16(tileHeight) // 400/14 = 28
 
 	// Konwersja celu kamery z pikseli na kafelki
-	cameraTargetTileX := uint8(bs.GameCamera.Target.X / float32(tileWidth))
-	cameraTargetTileY := uint8(bs.GameCamera.Target.Y / float32(tileHeight))
+	cameraTargetTileX := uint8(bState.GameCamera.Target.X / float32(tileWidth))
+	cameraTargetTileY := uint8(bState.GameCamera.Target.Y / float32(tileHeight))
 
 	// Minimalne i maksymalne pozycje celu kamery (w kafelkach), tak żeby kamera nie wyszła poza mapę
 	// Cel kamery to środek ekranu. Offset kamery to środek ekranu wirtualnego (320, 200).
@@ -422,27 +422,27 @@ func (l *jsonLevelLoader) validateScreenPosition(bs *battleState) {
 	}
 
 	// Zaktualizuj cel kamery w pikselach
-	bs.GameCamera.Target.X = float32(cameraTargetTileX * tileWidth)
-	bs.GameCamera.Target.Y = float32(cameraTargetTileY * tileHeight)
+	bState.GameCamera.Target.X = float32(cameraTargetTileX * tileWidth)
+	bState.GameCamera.Target.Y = float32(cameraTargetTileY * tileHeight)
 
 	log.Printf("DEBUG: Ostateczna pozycja celu kamery (skorygowana): (%d, %d) kafelków = (%.1f, %.1f) pikseli",
-		cameraTargetTileX, cameraTargetTileY, bs.GameCamera.Target.X, bs.GameCamera.Target.Y)
+		cameraTargetTileX, cameraTargetTileY, bState.GameCamera.Target.X, bState.GameCamera.Target.Y)
 }
 
 // initBattle - metoda LevelLoader która inicjuje bitwę z ProgramState.
-func (l *jsonLevelLoader) initBattle(levelNumber uint8, bs *battleState) error {
+func (l *jsonLevelLoader) initBattle(levelNumber uint8, bState *battleState) error {
 	log.Printf("Inicjalizacja bitwy poziom %d", levelNumber)
 	// @todo: przekaż poziom trudności do „battlestate”!!
 
-	initBoard(bs)
+	initBoard(bState)
 
-	if err := l.loadLevel(levelNumber, bs); err != nil {
+	if err := l.loadLevel(levelNumber, bState); err != nil {
 		return fmt.Errorf("nie można załadować poziomu %d: %w", levelNumber, err)
 	}
 
-	processMapTiles(bs)
+	processMapTiles(bState)
 
-	l.validateScreenPosition(bs)
+	l.validateScreenPosition(bState)
 
 	log.Println("INFO: Bitwa rozpoczęta pomyślnie.")
 

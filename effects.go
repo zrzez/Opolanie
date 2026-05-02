@@ -3,7 +3,7 @@ package main
 // effects.go
 
 // Funkcja do łączenia dróg/palisad
-func joinRoadsPalisade(x, y uint8, bld *building, bs *battleState) {
+func joinRoadsPalisade(x, y uint8, bld *building, bState *battleState) {
 	if x >= boardMaxX || y >= boardMaxY {
 		return
 	}
@@ -16,8 +16,8 @@ func joinRoadsPalisade(x, y uint8, bld *building, bs *battleState) {
 	// 		tile.TextureID = spriteRoadStart + 4
 	// 	}
 	case buildingPalisade:
-		applyPalisadeProcessing(x, y, bs.Board)
-		updateAdjacentPalisades(x, y, bs.Board)
+		applyPalisadeProcessing(x, y, bState.Board)
+		updateAdjacentPalisades(x, y, bState.Board)
 	default:
 		return
 	}
@@ -53,20 +53,20 @@ func updateAdjacentPalisades(x, y uint8, board *boardData) {
 	}
 }
 
-func updateAnimationCounters(bs *battleState) {
-	bs.WaterAnimationFrame = (bs.WaterAnimationFrame + 1) % 3
-	bs.FireAnimationFrame = (bs.FireAnimationFrame + 1) % 14
-	bs.GrassGrowthCycle++
+func updateAnimationCounters(bState *battleState) {
+	bState.WaterAnimationFrame = (bState.WaterAnimationFrame + 1) % 3
+	bState.FireAnimationFrame = (bState.FireAnimationFrame + 1) % 14
+	bState.GrassGrowthCycle++
 }
 
 // obsługuje efekty na mapie, które zmieniają się w czasie.
-func updateWorldTimers(bs *battleState) {
-	if bs.GrassGrowthCycle > maxGrassGrowthCounter {
-		bs.GrassGrowthCycle = 0
+func updateWorldTimers(bState *battleState) {
+	if bState.GrassGrowthCycle > maxGrassGrowthCounter {
+		bState.GrassGrowthCycle = 0
 
 		for y := uint8(1); y < boardMaxY-1; y++ {
 			for x := uint8(1); x < boardMaxX-1; x++ {
-				currentTile := &bs.Board.Tiles[x][y]
+				currentTile := &bState.Board.Tiles[x][y]
 
 				switch currentTile.GrazedOverlayID {
 				case uint8(spriteGrassStubbed):
@@ -81,14 +81,14 @@ func updateWorldTimers(bs *battleState) {
 
 // healingShrine powinno leczyć i przywracać manę.
 // @todo: Należy powiązać czynność leczenia z animacją
-func healingShrine(bs *battleState) {
-	if bs.GlobalFrameCounter%4 != 0 {
+func healingShrine(bState *battleState) {
+	if bState.GlobalFrameCounter%4 != 0 {
 		return
 	}
 	// jeżeli kapliczka może leczyć
-	for _, healingSpot := range bs.HealingShrines {
+	for _, healingSpot := range bState.HealingShrines {
 		// Wybieramy kapliczkę
-		healingTile := &bs.Board.Tiles[healingSpot.X][healingSpot.Y]
+		healingTile := &bState.Board.Tiles[healingSpot.X][healingSpot.Y]
 		// Sprawdzamy, czy w kapliczce ktoś jest
 		if healingTile.Unit != nil {
 			// bierzemy znalezioną jednostkę
@@ -118,40 +118,40 @@ func healingShrine(bs *battleState) {
 	}
 }
 
-func manaRegen(bs *battleState) {
+func manaRegen(bState *battleState) {
 	// 15 Hz dla 60 klatek na sekundę, aby zachować zgodność z pierwowzorem
-	if bs.GlobalFrameCounter%4 != 0 {
+	if bState.GlobalFrameCounter%4 != 0 {
 		return
 	}
 
 	// Każda żywa jednostka powinna odnowić część many
-	for _, unit := range bs.Units {
-		if unit.Type.hasMana() {
-			unit.increaseManaUnit(1)
+	for _, currentUnit := range bState.Units {
+		if currentUnit.Type.hasMana() {
+			currentUnit.increaseManaUnit(1)
 
 			// Dodatek dla maga
-			if unit.Type == unitMage {
-				unit.increaseManaUnit(1)
+			if currentUnit.Type == unitMage {
+				currentUnit.increaseManaUnit(1)
 			}
 		}
 	}
 }
 
 // Odpowiada za zarządzanie logiką płonięcia kafelka.
-func burningTileEffect(bs *battleState) {
-	for _, burningTile := range bs.BurningTilesList {
+func burningTileEffect(bState *battleState) {
+	for _, burningTile := range bState.BurningTilesList {
 		switch {
 		// Drzewo pali się inaczej niż trawa.
 		case burningTile.isTree():
-			burningTile.processTreeFire(bs)
+			burningTile.processTreeFire(bState)
 
 		// Zwyczajny przypadek zapalenia się kafelka.
 		case burningTile.IsBurning:
 			burningTile.processNormalFire()
 
 			// Co osiem klatek dodatkowe obrażenia od ognia.
-			if bs.GlobalFrameCounter%8 == 0 {
-				burningTile.applyFireDamage(bs)
+			if bState.GlobalFrameCounter%8 == 0 {
+				burningTile.applyFireDamage(bState)
 			}
 
 		// Jeśli kafelek się już nie pali, to można przejść do zarządzania popiołem
@@ -161,14 +161,14 @@ func burningTileEffect(bs *battleState) {
 	}
 }
 
-func ghostEffect(bs *battleState) {
-	for _, ghostTile := range bs.GhostsList {
+func ghostEffect(bState *battleState) {
+	for _, ghostTile := range bState.GhostsList {
 		if ghostTile.GhostEffectCounter > 0 {
 
 			ghostTile.GhostEffectCounter--
 			// 2. Zadaję obrażenia
 			if ghostTile.Unit != nil && ghostTile.Unit.Exists {
-				ghostTile.Unit.takeDamage(ghostTile.GhostDamage, bs)
+				ghostTile.Unit.takeDamage(ghostTile.GhostDamage, bState)
 			}
 		} else {
 			ghostTile.GhostEffect = false
@@ -177,9 +177,9 @@ func ghostEffect(bs *battleState) {
 }
 
 // Odpowiada za zarządzanie logiką upadania drzewa, które spłonęło lub zostało ścięte.
-func fallingTreeEffect(bs *battleState) {
-	for _, currentTile := range bs.FallingTreesList {
-		if bs.GlobalFrameCounter%10 == 0 {
+func fallingTreeEffect(bState *battleState) {
+	for _, currentTile := range bState.FallingTreesList {
+		if bState.GlobalFrameCounter%10 == 0 {
 			switch currentTile.treeState {
 			case treeStraight:
 				currentTile.treeState = treeLeaning
@@ -209,14 +209,14 @@ func fallingTreeEffect(bs *battleState) {
 				// Drzewo upada w granicach planszy, żeby móc bezpiecznie wywołać efekty
 				// na sąsiednim kafelku
 				if currentTile.X-1 > 0 {
-					adjacentTile := &bs.Board.Tiles[currentTile.X-1][currentTile.Y]
+					adjacentTile := &bState.Board.Tiles[currentTile.X-1][currentTile.Y]
 
 					// Obalamy sąsiednie suche drzewo
 					if adjacentTile.TextureID == spriteDryTreeStump00 {
-						adjacentTile.treeFall(bs)
+						adjacentTile.treeFall(bState)
 					} else {
 						// Lub zadajemy obrażenia
-						adjacentTile.applyFallingTreeDamage(bs)
+						adjacentTile.applyFallingTreeDamage(bState)
 					}
 				}
 

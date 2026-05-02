@@ -11,7 +11,7 @@ import (
 
 // initConstruction odpowiada tylko za techniczne utworzenie obiektu w pamięci i na planszy.
 // Nie mylić z tryBuildStructure.
-func (bld *building) initConstruction(x, y uint8, buildingType buildingType, owner uint8, bs *battleState) {
+func (bld *building) initConstruction(x, y uint8, buildingType buildingType, owner uint8, bState *battleState) {
 	// 1. Sprawdzamy, czy dany rodzaj budynku był określony wcześniej
 	stats, ok := buildingDefs[buildingType]
 	if !ok {
@@ -21,8 +21,8 @@ func (bld *building) initConstruction(x, y uint8, buildingType buildingType, own
 	}
 
 	// 2. Podstawowe właściwości
-	bld.ID = bs.NextUniqueObjectID
-	bs.NextUniqueObjectID++
+	bld.ID = bState.NextUniqueObjectID
+	bState.NextUniqueObjectID++
 	bld.Type = buildingType
 	bld.Owner = owner
 	bld.Exists = true
@@ -46,7 +46,7 @@ func (bld *building) initConstruction(x, y uint8, buildingType buildingType, own
 			if px < boardMaxX && py < boardMaxY {
 				bld.OccupiedTiles = append(bld.OccupiedTiles, point{X: px, Y: py})
 
-				tile := &bs.Board.Tiles[px][py]
+				tile := &bState.Board.Tiles[px][py]
 				tile.Building = bld
 				tile.IsWalkable = false
 			}
@@ -54,7 +54,7 @@ func (bld *building) initConstruction(x, y uint8, buildingType buildingType, own
 	}
 }
 
-func (bld *building) startConstruction(bs *battleState) {
+func (bld *building) startConstruction(bState *battleState) {
 	// Pobieramy informacje o budynku
 	stats, ok := buildingDefs[bld.Type]
 
@@ -73,29 +73,29 @@ func (bld *building) startConstruction(bs *battleState) {
 		// if tilePoint.X >= boardMaxX || tilePoint.Y >= boardMaxY {
 		// 	continue
 		// }
-		tile := &bs.Board.Tiles[tilePoint.X][tilePoint.Y]
+		currentTile := &bState.Board.Tiles[tilePoint.X][tilePoint.Y]
 
 		row := index / int(normalBuildingSize)
 		column := index % int(normalBuildingSize)
 
 		switch {
 		case bld.Type != buildingPalisade && bld.Type != buildingBridge:
-			tile.TextureID = constructionTemplatePhase01[column][row]
+			currentTile.TextureID = constructionTemplatePhase01[column][row]
 			// bs.Board.Tiles[tilePoint.X][tilePoint.Y].IsWalkable = false
 		case bld.Type == buildingBridge:
-			tile.TextureID = spriteBridgeConstruction
+			currentTile.TextureID = spriteBridgeConstruction
 			// bs.Board.Tiles[tilePoint.X][tilePoint.Y].IsWalkable = false
 		default:
-			tile.TextureID = spritePalisadeDestroyed
+			currentTile.TextureID = spritePalisadeDestroyed
 			// bs.Board.Tiles[tilePoint.X][tilePoint.Y].IsWalkable = true
 		}
 
-		tile.Building = bld
-		tile.IsWalkable = tile.TextureID == spritePalisadeDestroyed
+		currentTile.Building = bld
+		currentTile.IsWalkable = currentTile.TextureID == spritePalisadeDestroyed
 	}
 }
 
-func (bld *building) applyWork(amount uint16, bs *battleState) bool {
+func (bld *building) applyWork(amount uint16, bState *battleState) bool {
 	if !bld.Exists {
 		return false
 	}
@@ -106,11 +106,11 @@ func (bld *building) applyWork(amount uint16, bs *battleState) bool {
 
 		// Zaawansowana budowa wymaga innej tekstury
 		if bld.HP >= bld.MaxHP/2 {
-			bld.applyPhase2Graphics(bs)
+			bld.applyPhase2Graphics(bState)
 		}
 
 		if bld.HP >= bld.MaxHP {
-			bld.completeConstruction(bs)
+			bld.completeConstruction(bState)
 		}
 
 		return true
@@ -127,21 +127,21 @@ func (bld *building) applyWork(amount uint16, bs *battleState) bool {
 }
 
 // completeConstruction domyka budowę, zmienia flagi grafikę
-func (bld *building) completeConstruction(bs *battleState) {
+func (bld *building) completeConstruction(bState *battleState) {
 	bld.IsUnderConstruction = false
 	bld.HP = bld.MaxHP
 
-	bld.applyFinishedGraphics(bs)
+	bld.applyFinishedGraphics(bState)
 
-	if bld.Owner == bs.PlayerID {
-		bs.CurrentMessage.Text = "Budowa %s zakończona!"
-		bs.CurrentMessage.Duration = 60
+	if bld.Owner == bState.PlayerID {
+		bState.CurrentMessage.Text = "Budowa %s zakończona!"
+		bState.CurrentMessage.Duration = 60
 	}
 
 	if bld.Type == buildingBridge {
 		// wywalamy most z listy budynków?
 		// wtedy będzie tak samo jak załadowane z mapy mosty
-		bld.convertToTerrain(bs)
+		bld.convertToTerrain(bState)
 
 		return
 	}
@@ -149,19 +149,19 @@ func (bld *building) completeConstruction(bs *battleState) {
 	log.Printf("INFO: Budynek ID %d (Typ %d) został ukończony.", bld.ID, bld.Type)
 }
 
-func (bld *building) applyFinishedGraphics(bs *battleState) {
+func (bld *building) applyFinishedGraphics(bState *battleState) {
 	switch bld.Type {
 	case buildingPalisade:
 		if bld.Type == buildingPalisade && len(bld.OccupiedTiles) > 0 {
 			pt := bld.OccupiedTiles[0]
-			joinRoadsPalisade(pt.X, pt.Y, bld, bs)
+			joinRoadsPalisade(pt.X, pt.Y, bld, bState)
 		}
 
 		return
 
 	case buildingBridge:
-		bs.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].IsWalkable = true
-		bs.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteBridge01
+		bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].IsWalkable = true
+		bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteBridge01
 
 		return
 
@@ -177,14 +177,14 @@ func (bld *building) applyFinishedGraphics(bs *battleState) {
 			for dx, texID := range row {
 				tx, ty := minX+uint8(dx), minY+uint8(dy)
 				if tx < boardMaxX && ty < boardMaxY {
-					bs.Board.Tiles[tx][ty].TextureID = uint16(texID)
+					bState.Board.Tiles[tx][ty].TextureID = uint16(texID)
 				}
 			}
 		}
 	}
 }
 
-func (bld *building) applyPhase2Graphics(bs *battleState) {
+func (bld *building) applyPhase2Graphics(bState *battleState) {
 	if bld.Type == buildingPalisade {
 		return
 	}
@@ -200,7 +200,7 @@ func (bld *building) applyPhase2Graphics(bs *battleState) {
 		for dx, texID := range row {
 			tx, ty := uint16(minX)+uint16(dx), uint16(minY)+uint16(dy)
 			if tx < uint16(boardMaxX) && ty < uint16(boardMaxY) {
-				bs.Board.Tiles[tx][ty].TextureID = texID
+				bState.Board.Tiles[tx][ty].TextureID = texID
 			}
 		}
 	}
@@ -208,31 +208,31 @@ func (bld *building) applyPhase2Graphics(bs *battleState) {
 
 // sprawdza, czy w danym miejscu (tileX, tileY)
 // można postawić budynek, którego rodzaj mamy zapisany w pamięci (bs.PendingBuildingType).
-func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
-	stats, ok := buildingDefs[bs.PendingBuildingType]
+func tryBuildStructure(bState *battleState, tileX, tileY uint8) {
+	stats, ok := buildingDefs[bState.PendingBuildingType]
 
 	if !ok {
 		return
 	}
 
-	pendingType := bs.PendingBuildingType
+	pendingType := bState.PendingBuildingType
 
 	// @reminder: mosty, palisady oraz drogi nie powinny być ograniczane przez górną granicę budowli
 	regularBuilding := pendingType != buildingPalisade && pendingType != buildingBridge && pendingType != buildingRoad
 
 	if regularBuilding {
 		// @reminder: nie sprawdza, czy SI może postawić budynek!
-		if bs.HumanPlayerState.CurrentBuildings >= maxBuildingsPerPlayer {
-			bs.CurrentMessage.Text = "Limit budynków!"
-			bs.CurrentMessage.Duration = 60
+		if bState.HumanPlayerState.CurrentBuildings >= maxBuildingsPerPlayer {
+			bState.CurrentMessage.Text = "Limit budynków!"
+			bState.CurrentMessage.Duration = 60
 
 			return
 		}
 	}
 
-	if bs.HumanPlayerState.Milk < stats.Cost {
-		bs.CurrentMessage.Text = fmt.Sprintf("Brak mleka! (%d)", stats.Cost)
-		bs.CurrentMessage.Duration = 60
+	if bState.HumanPlayerState.Milk < stats.Cost {
+		bState.CurrentMessage.Text = fmt.Sprintf("Brak mleka! (%d)", stats.Cost)
+		bState.CurrentMessage.Duration = 60
 
 		return
 	}
@@ -241,23 +241,23 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 	// @reminder: dodaj tutaj drogę
 	case buildingRoad:
 		// nie możemy stawiać drogi na drodze i moście, musi sąsiadować z inną drogą
-		if isPath(bs.Board.Tiles[tileX][tileY].TextureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bs) {
+		if isPath(bState.Board.Tiles[tileX][tileY].TextureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) {
 			return
 		}
 	case buildingBridge:
-		if !isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bs) {
+		if !isWaterTileOnly(bState.Board.Tiles[tileX][tileY].TextureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) {
 			return
 		}
 
 	default:
 		// Walidacja terenu (Teraz tileX, tileY to lewy górny róg)
-		if !isValidConstructionSite(tileX, tileY, stats.Width, stats.Height, bs) {
+		if !isValidConstructionSite(tileX, tileY, stats.Width, stats.Height, bState) {
 			return
 		}
 	}
 
 	// === DECYZJA POZYTYWNA ===
-	bs.HumanPlayerState.Milk -= stats.Cost
+	bState.HumanPlayerState.Milk -= stats.Cost
 
 	if regularBuilding {
 		for dx := range stats.Width {
@@ -269,7 +269,7 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 					continue
 				}
 
-				tile := &bs.Board.Tiles[cx][cy]
+				tile := &bState.Board.Tiles[cx][cy]
 
 				if tile.Building != nil &&
 					tile.Building.Type == buildingPalisade &&
@@ -287,7 +287,7 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 	bldOwner := colorNone
 
 	if regularBuilding {
-		bs.HumanPlayerState.CurrentBuildings++
+		bState.HumanPlayerState.CurrentBuildings++
 		bldOwner = colorRed
 	}
 
@@ -295,36 +295,36 @@ func tryBuildStructure(bs *battleState, tileX, tileY uint8) {
 		newBld := &building{}
 
 		// init teraz przyjmie tileX, tileY jako lewy górny róg
-		newBld.initConstruction(tileX, tileY, pendingType, bldOwner, bs)
+		newBld.initConstruction(tileX, tileY, pendingType, bldOwner, bState)
 
-		bs.Buildings = append(bs.Buildings, newBld)
-		newBld.startConstruction(bs)
+		bState.Buildings = append(bState.Buildings, newBld)
+		newBld.startConstruction(bState)
 
-		bs.CurrentMessage.Text = fmt.Sprintf("Wznoszenie: %s", stats.Name)
-		bs.CurrentMessage.Duration = 60
+		bState.CurrentMessage.Text = fmt.Sprintf("Wznoszenie: %s", stats.Name)
+		bState.CurrentMessage.Duration = 60
 
 		log.Printf("BUDOWA: Rozpoczęto %s (ID: %d) na (%d,%d).", stats.Name, newBld.ID, tileX, tileY)
 	} else {
-		bs.Board.Tiles[tileX][tileY].TextureID = spriteRoadStart
+		bState.Board.Tiles[tileX][tileY].TextureID = spriteRoadStart
 		cx := int(tileX)
 		cy := int(tileY)
 
-		refreshRoadTile(cx, cy, bs.Board)
+		refreshRoadTile(cx, cy, bState.Board)
 
-		refreshRoadTile(cx+1, cy, bs.Board) // prawo
-		refreshRoadTile(cx-1, cy, bs.Board) // lewo
-		refreshRoadTile(cx, cy+1, bs.Board) // góra
-		refreshRoadTile(cx, cy-1, bs.Board) // dół
+		refreshRoadTile(cx+1, cy, bState.Board) // prawo
+		refreshRoadTile(cx-1, cy, bState.Board) // lewo
+		refreshRoadTile(cx, cy+1, bState.Board) // góra
+		refreshRoadTile(cx, cy-1, bState.Board) // dół
 
 		log.Printf("BUDOWA: Postawiono drogę na (%d,%d).", tileX, tileY)
 	}
 }
 
-func isWithinBoard(constructionX, constructionY uint8, bs *battleState) bool {
+func isWithinBoard(constructionX, constructionY uint8, bState *battleState) bool {
 	// @reminder: usunąłem sprawdzenie constructionX i constructionY < 0
 	if constructionX >= boardMaxX || constructionY >= boardMaxY {
-		bs.CurrentMessage.Text = "Poza mapą!"
-		bs.CurrentMessage.Duration = 40
+		bState.CurrentMessage.Text = "Poza mapą!"
+		bState.CurrentMessage.Duration = 40
 
 		return false
 	}
@@ -332,20 +332,20 @@ func isWithinBoard(constructionX, constructionY uint8, bs *battleState) bool {
 	return true
 }
 
-func isFreeForConstruction(constructionX, constructionY uint8, bs *battleState) bool {
-	tile := &bs.Board.Tiles[constructionX][constructionY]
+func isFreeForConstruction(constructionX, constructionY uint8, bState *battleState) bool {
+	currentTile := &bState.Board.Tiles[constructionX][constructionY]
 
 	// Czy coś tu stoi?
-	if tile.Unit != nil {
-		bs.CurrentMessage.Text = "Miejsce zajęte przez jednostkę!"
-		bs.CurrentMessage.Duration = 40
+	if currentTile.Unit != nil {
+		bState.CurrentMessage.Text = "Miejsce zajęte przez jednostkę!"
+		bState.CurrentMessage.Duration = 40
 
 		return false
 	}
 
-	if tile.Building != nil {
-		existingIsUnfinishedPalisade := tile.Building.Type == buildingPalisade && tile.Building.IsUnderConstruction
-		buildingNonPalisade := bs.PendingBuildingType != buildingPalisade
+	if currentTile.Building != nil {
+		existingIsUnfinishedPalisade := currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction
+		buildingNonPalisade := bState.PendingBuildingType != buildingPalisade
 
 		// Zezwalamy na budowę TYLKO w jednym przypadku:
 		// istniejąca nieukończona palisada + budujemy coś innego niż palisadę
@@ -353,17 +353,17 @@ func isFreeForConstruction(constructionX, constructionY uint8, bs *battleState) 
 			// OK – nie blokujemy, spadamy do sprawdzenia terenu
 		} else {
 			// We wszystkich innych przypadkach budynek blokuje miejsce
-			bs.CurrentMessage.Text = "Miejsce zajęte przez budynek!"
-			bs.CurrentMessage.Duration = 40
+			bState.CurrentMessage.Text = "Miejsce zajęte przez budynek!"
+			bState.CurrentMessage.Duration = 40
 
 			return false
 		}
 	}
 
 	// Czy teren nadaje się pod budowę?
-	if isObstacle(tile.TextureID) {
-		bs.CurrentMessage.Text = "Nie można na tym!"
-		bs.CurrentMessage.Duration = 40
+	if isObstacle(currentTile.TextureID) {
+		bState.CurrentMessage.Text = "Nie można na tym!"
+		bState.CurrentMessage.Duration = 40
 
 		return false
 	}
@@ -372,29 +372,29 @@ func isFreeForConstruction(constructionX, constructionY uint8, bs *battleState) 
 }
 
 // isValidConstructionSite sprawdza wszelkie warunki, które należy spełnić, aby można było zasadzić budowlę.
-func isValidConstructionSite(tileX, tileY, width, height uint8, bs *battleState) bool {
-	if !canFitBuilding(tileX, tileY, width, height, bs) {
+func isValidConstructionSite(tileX, tileY, width, height uint8, bState *battleState) bool {
+	if !canFitBuilding(tileX, tileY, width, height, bState) {
 		return false
 	}
 
-	if !hasRoadAccess(tileX, tileY, width, bs) && bs.PendingBuildingType != buildingPalisade {
+	if !hasRoadAccess(tileX, tileY, width, bState) && bState.PendingBuildingType != buildingPalisade {
 		return false
 	}
 
 	return true
 }
 
-func canFitBuilding(tileX, tileY, width, height uint8, bs *battleState) bool {
+func canFitBuilding(tileX, tileY, width, height uint8, bState *battleState) bool {
 	for dx := range width {
 		for dy := range height {
 			// Dodajemy przesunięcie do kursora.
 			constructionX, constructionY := tileX+dx, tileY+dy
 
-			if !isWithinBoard(constructionX, constructionY, bs) {
+			if !isWithinBoard(constructionX, constructionY, bState) {
 				return false
 			}
 
-			if !isFreeForConstruction(constructionX, constructionY, bs) {
+			if !isFreeForConstruction(constructionX, constructionY, bState) {
 				return false
 			}
 		}
@@ -424,7 +424,7 @@ func isObstacle(texID uint16) bool {
 	return false
 }
 
-func hasRoadAccess(x, y, size uint8, bs *battleState) bool {
+func hasRoadAccess(x, y, size uint8, bState *battleState) bool {
 	// 1. Sprawdzamy boki LEWY i PRAWY (iterujemy po wysokości budynku)
 	for i := uint8(0); i < size; i++ {
 		currentY := y + i
@@ -438,14 +438,14 @@ func hasRoadAccess(x, y, size uint8, bs *battleState) bool {
 		// Sprawdzamy tylko, jeśli nie jesteśmy przytuleni do lewej ściany mapy (x=0)
 		// To zapobiega błędowi "uint8 overflow" (0 - 1 = 255)
 		if x > 0 {
-			if isPath(bs.Board.Tiles[x-1][currentY].TextureID) {
+			if isPath(bState.Board.Tiles[x-1][currentY].TextureID) {
 				return true
 			}
 		}
 
 		// --- PRAWA KRAWĘDŹ (x+size) ---
 		if x+size < boardMaxX {
-			if isPath(bs.Board.Tiles[x+size][currentY].TextureID) {
+			if isPath(bState.Board.Tiles[x+size][currentY].TextureID) {
 				return true
 			}
 		}
@@ -462,14 +462,14 @@ func hasRoadAccess(x, y, size uint8, bs *battleState) bool {
 		// --- GÓRNA KRAWĘDŹ (y-1) ---
 		// Sprawdzamy tylko, jeśli nie jesteśmy na samej górze mapy (y=0)
 		if y > 0 {
-			if isPath(bs.Board.Tiles[currentX][y-1].TextureID) {
+			if isPath(bState.Board.Tiles[currentX][y-1].TextureID) {
 				return true
 			}
 		}
 
 		// --- DOLNA KRAWĘDŹ (y+size) ---
 		if y+size < boardMaxY {
-			if isPath(bs.Board.Tiles[currentX][y+size].TextureID) {
+			if isPath(bState.Board.Tiles[currentX][y+size].TextureID) {
 				return true
 			}
 		}
@@ -508,25 +508,25 @@ func (bld *building) hasSpace() bool {
 	return uint8(len(bld.AssignedUnits)) < bld.MaxFood
 }
 
-func (bld *building) getAssignedUnits(bs *battleState) []*unit {
+func (bld *building) getAssignedUnits(bState *battleState) []*unit {
 	var units []*unit
 
 	for _, unitID := range bld.AssignedUnits {
-		unit, ok := getUnitByID(unitID, bs)
-		if ok && unit.Exists {
-			units = append(units, unit)
+		currentUnit, ok := getUnitByID(unitID, bState)
+		if ok && currentUnit.Exists {
+			units = append(units, currentUnit)
 		}
 	}
 
 	return units
 }
 
-func (bld *building) cleanupDeadUnits(bs *battleState) {
+func (bld *building) cleanupDeadUnits(bState *battleState) {
 	var validUnits []uint
 
 	for _, unitID := range bld.AssignedUnits {
-		unit, ok := getUnitByID(unitID, bs)
-		if ok && unit.Exists {
+		currentUnit, ok := getUnitByID(unitID, bState)
+		if ok && currentUnit.Exists {
 			validUnits = append(validUnits, unitID)
 		}
 	}
@@ -638,31 +638,31 @@ func (bld *building) getBounds() (int, int, int, int) {
 }
 
 // Sprawdza, czy na danym polu można postawić jednostkę
-func (bld *building) isValidSpawnTile(x, y int, bs *battleState) bool {
+func (bld *building) isValidSpawnTile(x, y int, bState *battleState) bool {
 	// 1. Czy mieści się na mapie?
 	if x < 0 || x >= int(boardMaxX) || y < 0 || y >= int(boardMaxY) {
 		return false
 	}
 
-	tile := &bs.Board.Tiles[x][y]
+	currentTile := &bState.Board.Tiles[x][y]
 
 	// 2. Czy teren jest przechodni?
-	if !tile.IsWalkable {
+	if !currentTile.IsWalkable {
 		return false
 	}
 
 	// 2. Czy pole jest zajęte przez jednostkę? (zawsze blokuje)
-	if tile.Unit != nil {
+	if currentTile.Unit != nil {
 		return false
 	}
 
 	// 3. Czy pole jest zajęte przez budynek?
-	if tile.Building != nil {
-		if tile.Building.Type == buildingBridge && !tile.Building.IsUnderConstruction {
+	if currentTile.Building != nil {
+		if currentTile.Building.Type == buildingBridge && !currentTile.Building.IsUnderConstruction {
 			return true
 		}
 
-		if tile.Building.Type == buildingPalisade && tile.Building.IsUnderConstruction {
+		if currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction {
 			return true
 		}
 
@@ -672,7 +672,7 @@ func (bld *building) isValidSpawnTile(x, y int, bs *battleState) bool {
 	return true
 }
 
-func (bld *building) getClosestWalkableTile(bs *battleState) (uint8, uint8, bool) {
+func (bld *building) getClosestWalkableTile(bState *battleState) (uint8, uint8, bool) {
 	if len(bld.OccupiedTiles) == 0 {
 		return 0, 0, false
 	}
@@ -690,7 +690,7 @@ func (bld *building) getClosestWalkableTile(bs *battleState) (uint8, uint8, bool
 			}
 
 			// Sprawdzamy, czy to dobre miejsce
-			if bld.isValidSpawnTile(x, y, bs) {
+			if bld.isValidSpawnTile(x, y, bState) {
 				return uint8(x), uint8(y), true
 			}
 		}
@@ -699,7 +699,7 @@ func (bld *building) getClosestWalkableTile(bs *battleState) (uint8, uint8, bool
 	return 0, 0, false
 }
 
-func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8, bs *battleState) (uint8, uint8, bool) {
+func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8, bState *battleState) (uint8, uint8, bool) {
 	centerX, centerY, ok := bld.getCenter()
 	if !ok {
 		return 0, 0, false
@@ -729,7 +729,7 @@ func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8,
 	minDistance := math.MaxFloat64
 
 	for _, candidate := range candidates {
-		if !bld.isValidWalkableTile(candidate.X, candidate.Y, bs) {
+		if !bld.isValidWalkableTile(candidate.X, candidate.Y, bState) {
 			continue
 		}
 
@@ -746,16 +746,15 @@ func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8,
 	return bestX, bestY, true
 }
 
-func (bld *building) isValidWalkableTile(x, y uint8, bs *battleState) bool {
+func (bld *building) isValidWalkableTile(x, y uint8, bState *battleState) bool {
 	if x < 0 || x >= boardMaxX || y < 0 || y >= boardMaxY {
 		return false
 	}
 
-	// ZMIANA: Użycie nowej struktury Tiles zamiast Plc/IsWalkable(old)
-	tile := &bs.Board.Tiles[x][y]
+	currentTile := &bState.Board.Tiles[x][y]
 
 	// Jest przejezdne I nie ma tam nikogo
-	return tile.IsWalkable && tile.Unit == nil && tile.Building == nil
+	return currentTile.IsWalkable && currentTile.Unit == nil && currentTile.Building == nil
 }
 
 func (bld *building) takeDamage(damage uint16) {
@@ -768,7 +767,7 @@ func (bld *building) takeDamage(damage uint16) {
 }
 
 // @todo: trzeba to wpiąć w logikę odblokowywania przycisków dla SI oraz rysowania dla ludzi.
-func (bld *building) allowedUnitTypes(unitType unitType, bs *battleState) bool {
+func (bld *building) allowedUnitTypes(unitType unitType, bState *battleState) bool {
 	switch bld.Type {
 	case buildingBarn:
 		if unitType == unitCow {
@@ -776,15 +775,15 @@ func (bld *building) allowedUnitTypes(unitType unitType, bs *battleState) bool {
 		}
 
 		if unitType == unitShepherd {
-			return shepherdLevel >= bs.CurrentLevel
+			return shepherdLevel >= bState.CurrentLevel
 		}
 	case buildingTemple:
 		if unitType == unitMage {
-			return bs.CurrentLevel >= mageLevel
+			return bState.CurrentLevel >= mageLevel
 		}
 	case buildingAcademy:
 		if unitType == unitCrossbowman {
-			return bs.CurrentLevel >= crossbowmanLevel
+			return bState.CurrentLevel >= crossbowmanLevel
 		}
 	default:
 		return true
@@ -793,19 +792,19 @@ func (bld *building) allowedUnitTypes(unitType unitType, bs *battleState) bool {
 	return true
 }
 
-func (bs *battleState) getPlayerState(ownerID uint8) *playerState {
-	if ownerID == bs.HumanPlayerState.PlayerID {
-		return bs.HumanPlayerState
+func (bState *battleState) getPlayerState(ownerID uint8) *playerState {
+	if ownerID == bState.HumanPlayerState.PlayerID {
+		return bState.HumanPlayerState
 	}
 
-	return bs.AIEnemyState
+	return bState.AIEnemyState
 }
 
-func (bld *building) canProduceUnit(unitType unitType, bs *battleState) bool {
+func (bld *building) canProduceUnit(unitType unitType, bState *battleState) bool {
 	reject := func(reason string) bool {
-		if bld.Owner == bs.PlayerID {
-			bs.CurrentMessage.Text = reason
-			bs.CurrentMessage.Duration = 60
+		if bld.Owner == bState.PlayerID {
+			bState.CurrentMessage.Text = reason
+			bState.CurrentMessage.Duration = 60
 		}
 
 		return false
@@ -817,7 +816,7 @@ func (bld *building) canProduceUnit(unitType unitType, bs *battleState) bool {
 	}
 	fmt.Println("jest miejsce w budynku")
 	// Ustalamy kto chce wykonać działanie
-	ownerState := bs.getPlayerState(bld.Owner)
+	ownerState := bState.getPlayerState(bld.Owner)
 
 	// 2. Czy nie przekraczamy odgórnego ograniczenia?
 	if ownerState.CurrentPopulation >= maxUnitsPerPlayer {
@@ -843,7 +842,7 @@ func (bld *building) canProduceUnit(unitType unitType, bs *battleState) bool {
 
 	fmt.Println("jest dość mleka na zrobienie")
 	// 4. Czy jednostka może wyjść z budynku?
-	if _, _, ok := bld.getClosestWalkableTile(bs); !ok {
+	if _, _, ok := bld.getClosestWalkableTile(bState); !ok {
 		fmt.Println("getClosestWalkableTile FALSE")
 
 		return reject("Wyjście z budynku zastawione!")
@@ -856,37 +855,37 @@ func (bld *building) canProduceUnit(unitType unitType, bs *battleState) bool {
 	return true
 }
 
-func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bs *battleState) {
+func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *battleState) {
 	newUnit := &unit{}
-	newUnit.initUnit(unitType, spawnX, spawnY, cmdIdle, bs)
+	newUnit.initUnit(unitType, spawnX, spawnY, cmdIdle, bState)
 	newUnit.Owner = bld.Owner
 	newUnit.BelongsTo = bld
 
-	newUnit.show(bs)
+	newUnit.show(bState)
 
-	bs.Units = append(bs.Units, newUnit)
+	bState.Units = append(bState.Units, newUnit)
 	bld.registerUnit(newUnit.ID)
 
-	if bld.Owner == bs.HumanPlayerState.PlayerID {
-		bs.HumanPlayerState.CurrentPopulation++
+	if bld.Owner == bState.HumanPlayerState.PlayerID {
+		bState.HumanPlayerState.CurrentPopulation++
 	} else {
-		bs.AIEnemyState.CurrentPopulation++
+		bState.AIEnemyState.CurrentPopulation++
 	}
 
 	// W sumie, to może należałoby odwrócić logikę, bo != jest dużo częsciej?
 	if newUnit.Type == unitCow {
 		// Bez tego nowa krowa stoi bezczynnie
-		newUnit.grazeCowPhase(bs)
+		newUnit.grazeCowPhase(bState)
 	}
 
 	log.Printf("DEBUG: Stworzono jednostkę. Populacja Gracza: %d, AI: %d",
-		bs.HumanPlayerState.CurrentPopulation, bs.AIEnemyState.CurrentPopulation)
+		bState.HumanPlayerState.CurrentPopulation, bState.AIEnemyState.CurrentPopulation)
 }
 
 // produceUnit odpowiada za próbę wytworzenia jednostki.
-func (bld *building) produceUnit(unitType unitType, bs *battleState) {
+func (bld *building) produceUnit(unitType unitType, bState *battleState) {
 	// 1. Sprawdzamy, czy są jakieś przeszkody w stworzeniu jednostki
-	if !bld.canProduceUnit(unitType, bs) {
+	if !bld.canProduceUnit(unitType, bState) {
 		return
 	}
 
@@ -897,20 +896,20 @@ func (bld *building) produceUnit(unitType unitType, bs *battleState) {
 	}
 
 	// 3. Ustalamy właściciela
-	playerState := bs.HumanPlayerState
-	if bld.Owner == bs.AIPlayerID {
-		playerState = bs.AIEnemyState
+	owner := bState.HumanPlayerState
+	if bld.Owner == bState.AIPlayerID {
+		owner = bState.AIEnemyState
 	}
 
 	// 4. Pobieramy mleko za jednostkę
-	playerState.Milk -= stats.Cost
+	owner.Milk -= stats.Cost
 
 	// 5. Tworzymy jednostkę
 
-	spawnX, spawnY, ok := bld.getClosestWalkableTile(bs)
+	spawnX, spawnY, ok := bld.getClosestWalkableTile(bState)
 	if ok {
-		bld.spawnUnit(unitType, spawnX, spawnY, bs)
-		log.Printf("INFO: Budynek ID %d zrobił jednostkę typu %v. Mleka gracza: %d.", bld.ID, unitType, playerState.Milk)
+		bld.spawnUnit(unitType, spawnX, spawnY, bState)
+		log.Printf("INFO: Budynek ID %d zrobił jednostkę typu %v. Mleka gracza: %d.", bld.ID, unitType, owner.Milk)
 	}
 }
 
@@ -941,7 +940,7 @@ func (bld *building) increaseHPBuilding(amount uint16) {
 	}
 }
 
-func (bld *building) convertToTerrain(bs *battleState) {
+func (bld *building) convertToTerrain(bState *battleState) {
 	// 1. Rozsprzężamy kafelki i budynek
 	for _, tilePoint := range bld.OccupiedTiles {
 		// W granicach planszy
@@ -949,15 +948,15 @@ func (bld *building) convertToTerrain(bs *battleState) {
 			continue
 		}
 
-		tile := &bs.Board.Tiles[tilePoint.X][tilePoint.Y]
+		currentTile := &bState.Board.Tiles[tilePoint.X][tilePoint.Y]
 
-		tile.Building = nil
+		currentTile.Building = nil
 		// @reminder: sprawdź, czy trzeba ustawić przechodniość na sztywno
 		// @reminder: sprawdź, czy trzeb zmieniać teksturę
 	}
 
 	// 2. Usuwamy z bs
-	bs.Buildings = slices.DeleteFunc(bs.Buildings, func(b *building) bool {
+	bState.Buildings = slices.DeleteFunc(bState.Buildings, func(b *building) bool {
 		return b.ID == bld.ID
 	})
 }

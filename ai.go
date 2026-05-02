@@ -25,13 +25,13 @@ const (
 // SZTUCZNA INTELIGENCJA
 
 // Główna funkcja decyzyjna SI, operująca na battleState
-func aiMakeDecision(bs *battleState) {
-	ai := &bs.AI
+func aiMakeDecision(bState *battleState) {
+	ai := &bState.AI
 
 	// Inicjalizacja - tylko raz
 	if ai.EconomyManager == nil {
 		ai.EconomyManager = newEconomyAI()
-		ai.MilitaryManager = newMilitaryAI(bs)
+		ai.MilitaryManager = newMilitaryAI(bState)
 		ai.CurrentGoals = []aiGoal{
 			{Type: goalProduceCows, Priority: 0.8},
 			{Type: goalBuildArmy, Priority: 0.6},
@@ -40,16 +40,16 @@ func aiMakeDecision(bs *battleState) {
 	}
 
 	// Generuj mleko
-	bs.AIEnemyState.Milk += ai.MilkGenerationRate
+	bState.AIEnemyState.Milk += ai.MilkGenerationRate
 
 	// Aktualizuj cele co 100 pyknięć
 	if ai.ActionDelay%100 == 0 {
-		ai.updateGoals(bs)
+		ai.updateGoals(bState)
 	}
 
 	// Wykonuj cele w kolejności priorytetu
 	for _, goal := range ai.CurrentGoals {
-		if ai.executeGoal(goal, bs) {
+		if ai.executeGoal(goal, bState) {
 			break // Jeden cel na tick
 		}
 	}
@@ -57,10 +57,10 @@ func aiMakeDecision(bs *battleState) {
 	ai.ActionDelay++
 }
 
-func (ai *aiState) updateGoals(bs *battleState) {
+func (ai *aiState) updateGoals(bState *battleState) {
 	// Dostosowanie celów
-	cowCount := ai.countCows(bs)
-	armyStrength := ai.countArmyStrength(bs)
+	cowCount := ai.countCows(bState)
+	armyStrength := ai.countArmyStrength(bState)
 
 	// Jeżeli niedobór, krów to zwiększamy wagę
 	if cowCount < 5 {
@@ -84,16 +84,16 @@ func newEconomyAI() *economyAI {
 	return &economyAI{lastBarnChecked: 0}
 }
 
-func (econ *economyAI) produceCows(bs *battleState) bool {
+func (econ *economyAI) produceCows(bState *battleState) bool {
 	// Znajdź oborę z miejscem
-	barn := econ.findAvailableBarn(bs)
+	barn := econ.findAvailableBarn(bState)
 	if barn == nil {
 		return false
 	}
 
 	// Sprawdź czy stać nas na krowę
 	cowCost := unitDefs[unitCow].Cost
-	if bs.AIEnemyState.Milk < cowCost {
+	if bState.AIEnemyState.Milk < cowCost {
 		return false
 	}
 
@@ -104,8 +104,8 @@ func (econ *economyAI) produceCows(bs *battleState) bool {
 		InteractionTargetID: barn.ID,
 		ProduceType:         unitCow,
 	}
-	bs.CurrentCommands[1] = cmd
-	bs.AIEnemyState.Milk -= cowCost
+	bState.CurrentCommands[1] = cmd
+	bState.AIEnemyState.Milk -= cowCost
 	barn.Food++
 
 	log.Printf("AI: Produkuję krowę w oborze %d", barn.ID)
@@ -113,11 +113,11 @@ func (econ *economyAI) produceCows(bs *battleState) bool {
 }
 
 // TODO: nie bardzo rozumiem czemu mamy takie dziwne poszukiwania zamiast liniowego
-func (econ *economyAI) findAvailableBarn(bs *battleState) *building {
-	for i := 0; i < len(bs.Buildings); i++ {
-		building := bs.Buildings[i]
+func (econ *economyAI) findAvailableBarn(bState *battleState) *building {
+	for i := 0; i < len(bState.Buildings); i++ {
+		building := bState.Buildings[i]
 		if building != nil && building.Exists &&
-			building.Owner == bs.AIEnemyState.PlayerID &&
+			building.Owner == bState.AIEnemyState.PlayerID &&
 			building.Type == buildingBarn &&
 			building.Food < building.MaxFood {
 			return building
@@ -127,20 +127,20 @@ func (econ *economyAI) findAvailableBarn(bs *battleState) *building {
 	return nil
 }
 
-func (ai *aiState) countCows(bs *battleState) int {
+func (ai *aiState) countCows(bState *battleState) int {
 	count := 0
-	for _, unit := range bs.Units {
-		if unit != nil && unit.Exists && unit.Owner == bs.AIEnemyState.PlayerID && unit.Type == unitCow {
+	for _, unit := range bState.Units {
+		if unit != nil && unit.Exists && unit.Owner == bState.AIEnemyState.PlayerID && unit.Type == unitCow {
 			count++
 		}
 	}
 	return count
 }
 
-func (ai *aiState) countArmyStrength(bs *battleState) int {
+func (ai *aiState) countArmyStrength(bState *battleState) int {
 	count := 0
-	for _, unit := range bs.Units {
-		if unit != nil && unit.Exists && unit.Owner == bs.AIEnemyState.PlayerID && unit.Type != unitCow &&
+	for _, unit := range bState.Units {
+		if unit != nil && unit.Exists && unit.Owner == bState.AIEnemyState.PlayerID && unit.Type != unitCow &&
 			unit.Type != unitShepherd {
 			count++
 		}
@@ -164,10 +164,10 @@ func (ai *aiState) setGoalPriority(goalType aiGoalType, priority float32) {
 	})
 }
 
-func (ai *aiState) executeGoal(goal aiGoal, bs *battleState) bool {
+func (ai *aiState) executeGoal(goal aiGoal, bState *battleState) bool {
 	switch goal.Type {
 	case goalProduceCows:
-		return ai.EconomyManager.produceCows(bs)
+		return ai.EconomyManager.produceCows(bState)
 	case goalBuildArmy:
 		// @todo: wytwarzanie jednostek
 		return false
@@ -179,45 +179,45 @@ func (ai *aiState) executeGoal(goal aiGoal, bs *battleState) bool {
 	}
 }
 
-func newMilitaryAI(bs *battleState) *militaryAI {
+func newMilitaryAI(bState *battleState) *militaryAI {
 	return &militaryAI{}
 }
 
-func (mil *militaryAI) buildUnits(bs *battleState) bool {
+func (mil *militaryAI) buildUnits(bState *battleState) bool {
 	// Na razie nic nie rób
 	return false
 }
 
-func (mil *militaryAI) attackEnemy(bs *battleState) bool {
+func (mil *militaryAI) attackEnemy(bState *battleState) bool {
 	// Na razie nic nie rób
 	return false
 }
 
 // SI tworzące nowe jednostki w dynamicznych bitwach
-func aiMakeNewUnits(bs *battleState) {
-	if !bs.CampaignData.GeneratorActive {
+func aiMakeNewUnits(bState *battleState) {
+	if !bState.CampaignData.GeneratorActive {
 		return
 	}
 
 	// --- 1. Obsługa ogólnego licznika tworzenia nowych jednostek ---
 	// Próg generowania jednostek, dostosowany do poziomu trudności.
-	generationThreshold := 150 - int(bs.DifficultyLevel)*50
-	if bs.CampaignData.GeneratorTimer < generationThreshold {
-		bs.CampaignData.GeneratorTimer++
+	generationThreshold := 150 - int(bState.DifficultyLevel)*50
+	if bState.CampaignData.GeneratorTimer < generationThreshold {
+		bState.CampaignData.GeneratorTimer++
 	} else {
 		// Timer osiągnął próg, więc próbujemy stworzyć jednostkę i zerujemy licznik.
-		bs.CampaignData.GeneratorTimer = 0
+		bState.CampaignData.GeneratorTimer = 0
 
 		spawnX, spawnY := uint8(1), uint8(5) // Przypisuję miejsce stworzenia na sztywno @todo: sprawdź, czy przy tworzeniu przez gracza jest już układ doboru miejsca
 
-		tile := &bs.Board.Tiles[spawnX][spawnY]
+		tile := &bState.Board.Tiles[spawnX][spawnY]
 		isSpawnPointFree := tile.Unit == nil && tile.Building == nil && tile.IsWalkable
 
 		if isSpawnPointFree {
 			// Sprawdź, czy "generująca" jednostka (ID 2) już istnieje i jest żywa.
 			var existingSpecialUnitID2 *unit
-			for _, unit := range bs.Units {
-				if unit != nil && unit.Exists && unit.Owner == bs.AIEnemyState.PlayerID && unit.ID == 2 {
+			for _, unit := range bState.Units {
+				if unit != nil && unit.Exists && unit.Owner == bState.AIEnemyState.PlayerID && unit.ID == 2 {
 					existingSpecialUnitID2 = unit
 					break
 				}
@@ -232,17 +232,17 @@ func aiMakeNewUnits(bs *battleState) {
 				}
 				randomUnitType := unitTypesForGenerator[rand.Intn(len(unitTypesForGenerator))]
 
-				newUnit.initUnit(randomUnitType, spawnX, spawnY, cmdIdle, bs)
-				newUnit.Owner = bs.AIEnemyState.PlayerID
-				newUnit.Experience = uint(20 + int(bs.DifficultyLevel)*20)
+				newUnit.initUnit(randomUnitType, spawnX, spawnY, cmdIdle, bState)
+				newUnit.Owner = bState.AIEnemyState.PlayerID
+				newUnit.Experience = uint(20 + int(bState.DifficultyLevel)*20)
 
 				// Rejestracja w nowej strukturze
-				newUnit.show(bs)
+				newUnit.show(bState)
 
-				bs.Units = append(bs.Units, newUnit)
+				bState.Units = append(bState.Units, newUnit)
 
 				// Aktualizacja licznika populacji SI (skoro zmieniliśmy strukturę, warto to trzymać)
-				bs.AIEnemyState.CurrentPopulation++
+				bState.AIEnemyState.CurrentPopulation++
 
 				// Natychmiastowe wydanie rozkazu nowej jednostce
 				var targetX, targetY uint8
@@ -252,14 +252,14 @@ func aiMakeNewUnits(bs *battleState) {
 				var ok bool
 				var tempX uint8
 				var tempY uint8
-				targetUnit, targetBuilding, found = findNearestEnemyExtended(newUnit, bs) // Szukaj celu dla NOWEJ jednostki
+				targetUnit, targetBuilding, found = findNearestEnemyExtended(newUnit, bState) // Szukaj celu dla NOWEJ jednostki
 
 				if found {
 					if targetUnit != nil {
 						targetX, targetY = targetUnit.X, targetUnit.Y
 					} else if targetBuilding != nil {
 						// Ważne: dla budynków znajdź dostępny kafelek wokół nich
-						tempX, tempY, ok = targetBuilding.getClosestWalkableTile(bs)
+						tempX, tempY, ok = targetBuilding.getClosestWalkableTile(bState)
 						if ok {
 							targetX, targetY = tempX, tempY
 						} else {
@@ -275,7 +275,7 @@ func aiMakeNewUnits(bs *battleState) {
 							targetIDForCommand = targetBuilding.ID
 						}
 
-						newUnit.addUnitCommand(cmdAttack, targetX, targetY, targetIDForCommand, bs)
+						newUnit.addUnitCommand(cmdAttack, targetX, targetY, targetIDForCommand, bState)
 						log.Printf("SI (wytwórca): Nowa jednostka %d (%d) wysłana na cel (%d,%d) ID %d.",
 							newUnit.ID, newUnit.Type, targetX, targetY, targetIDForCommand)
 					} else {
@@ -291,10 +291,10 @@ func aiMakeNewUnits(bs *battleState) {
 	}
 
 	// --- 2. Obsługa komend dla jednostki „wytwórczej” (ID 2), jeśli istnieje ---
-	if bs.CampaignData.GeneratorTimer%25 == 0 && bs.CampaignData.GeneratorTimer != 0 {
+	if bState.CampaignData.GeneratorTimer%25 == 0 && bState.CampaignData.GeneratorTimer != 0 {
 		var generatorUnit *unit
-		for _, unit := range bs.Units {
-			if unit != nil && unit.Exists && unit.Owner == bs.AIEnemyState.PlayerID && unit.ID == 2 {
+		for _, unit := range bState.Units {
+			if unit != nil && unit.Exists && unit.Owner == bState.AIEnemyState.PlayerID && unit.ID == 2 {
 				generatorUnit = unit
 				break
 			}
@@ -305,13 +305,13 @@ func aiMakeNewUnits(bs *battleState) {
 			var targetUnit *unit
 			var targetBuilding *building
 			var found bool
-			targetUnit, targetBuilding, found = findNearestEnemyExtended(generatorUnit, bs)
+			targetUnit, targetBuilding, found = findNearestEnemyExtended(generatorUnit, bState)
 
 			if found {
 				if targetUnit != nil {
 					targetX, targetY = targetUnit.X, targetUnit.Y
 				} else if targetBuilding != nil {
-					tempX, tempY, ok := targetBuilding.getClosestWalkableTile(bs)
+					tempX, tempY, ok := targetBuilding.getClosestWalkableTile(bState)
 					if ok {
 						targetX, targetY = tempX, tempY
 					} else {
@@ -325,7 +325,7 @@ func aiMakeNewUnits(bs *battleState) {
 				} else if targetBuilding != nil {
 					targetIDForCommand = targetBuilding.ID
 				}
-				generatorUnit.addUnitCommand(cmdAttack, targetX, targetY, targetIDForCommand, bs)
+				generatorUnit.addUnitCommand(cmdAttack, targetX, targetY, targetIDForCommand, bState)
 			} else {
 				generatorUnit.setIdle()
 			}
@@ -335,7 +335,7 @@ func aiMakeNewUnits(bs *battleState) {
 
 // @todo: ogarnij czemu szuka po całej planszy a nie tylko w zasięgu wzroku
 // findNearestEnemyExtended znajduje najbliższego wroga
-func findNearestEnemyExtended(seeker *unit, bs *battleState) (*unit, *building, bool) {
+func findNearestEnemyExtended(seeker *unit, bState *battleState) (*unit, *building, bool) {
 	const (
 		PriorityUnit         = 100
 		PriorityBuilding     = 200
@@ -349,7 +349,7 @@ func findNearestEnemyExtended(seeker *unit, bs *battleState) (*unit, *building, 
 
 	// Faza 1: Jednostki wroga
 
-	for _, unit := range bs.Units {
+	for _, unit := range bState.Units {
 		if unit == nil || !unit.Exists || unit.Owner == seeker.Owner {
 			continue
 		}
@@ -372,7 +372,7 @@ func findNearestEnemyExtended(seeker *unit, bs *battleState) (*unit, *building, 
 	}
 
 	// Faza 2: Budynki wroga (inne niż palisady)
-	for _, bld := range bs.Buildings {
+	for _, bld := range bState.Buildings {
 		if bld == nil || !bld.Exists || bld.Owner == seeker.Owner || bld.Type == buildingPalisade {
 			continue
 		}
@@ -395,12 +395,12 @@ func findNearestEnemyExtended(seeker *unit, bs *battleState) (*unit, *building, 
 	}
 
 	// Faza 3: Ważne palisady
-	for _, bld := range bs.Buildings {
+	for _, bld := range bState.Buildings {
 		if bld == nil || !bld.Exists || bld.Owner == seeker.Owner || bld.Type != buildingPalisade {
 			continue
 		}
 
-		if !seeker.isImportantPalisade(bld, bs) {
+		if !seeker.isImportantPalisade(bld, bState) {
 			continue
 		}
 
@@ -425,47 +425,47 @@ func findNearestEnemyExtended(seeker *unit, bs *battleState) (*unit, *building, 
 	return nil, nil, false
 }
 
-func findNearestEnemyCached(seeker *unit, bs *battleState) (*unit, *building, bool) {
-	if entry, exists := bs.EnemyCache[seeker.ID]; exists {
-		if (bs.GlobalFrameCounter - entry.LastUpdateTick) < entry.CacheValidFor {
+func findNearestEnemyCached(seeker *unit, bState *battleState) (*unit, *building, bool) {
+	if entry, exists := bState.EnemyCache[seeker.ID]; exists {
+		if (bState.GlobalFrameCounter - entry.LastUpdateTick) < entry.CacheValidFor {
 			return entry.NearestEnemyUnit, entry.NearestEnemyBuilding, entry.Found
 		}
 	}
 
-	if bs.GlobalFrameCounter != bs.enemyCacheUpdateTick {
-		bs.enemyCacheUpdateTick = bs.GlobalFrameCounter
-		bs.enemyCacheUpdatesThisTick = 0
+	if bState.GlobalFrameCounter != bState.enemyCacheUpdateTick {
+		bState.enemyCacheUpdateTick = bState.GlobalFrameCounter
+		bState.enemyCacheUpdatesThisTick = 0
 	}
 
-	if bs.enemyCacheUpdatesThisTick >= 3 {
-		if entry, exists := bs.EnemyCache[seeker.ID]; exists {
+	if bState.enemyCacheUpdatesThisTick >= 3 {
+		if entry, exists := bState.EnemyCache[seeker.ID]; exists {
 			return entry.NearestEnemyUnit, entry.NearestEnemyBuilding, entry.Found
 		}
 		return nil, nil, false
 	}
 
-	unit, building, found := findNearestEnemyExtended(seeker, bs)
+	unit, building, found := findNearestEnemyExtended(seeker, bState)
 
 	var cacheTime uint16 = 15
 	if !found {
 		cacheTime = 30
 	}
 
-	bs.EnemyCache[seeker.ID] = &enemyCacheEntry{
+	bState.EnemyCache[seeker.ID] = &enemyCacheEntry{
 		NearestEnemyUnit:     unit,
 		NearestEnemyBuilding: building,
 		Found:                found,
-		LastUpdateTick:       bs.GlobalFrameCounter,
+		LastUpdateTick:       bState.GlobalFrameCounter,
 		CacheValidFor:        cacheTime,
 	}
 
-	bs.enemyCacheUpdatesThisTick++
+	bState.enemyCacheUpdatesThisTick++
 	return unit, building, found
 }
 
 // findGrass znajduje odpowiedni kafelek trawy do wypasu krów.
 // @todo: czemu to jest w ai.go a nie cow.go?
-func findGrass(xp, yp uint8, xe, ye *uint8, bs *battleState) {
+func findGrass(xp, yp uint8, xe, ye *uint8, bState *battleState) {
 	*xe = uint8(0)
 	*ye = uint8(0)
 
@@ -479,7 +479,7 @@ func findGrass(xp, yp uint8, xe, ye *uint8, bs *battleState) {
 					continue
 				}
 
-				tile := &bs.Board.Tiles[i][j]
+				tile := &bState.Board.Tiles[i][j]
 				if (i == xp-k || i == xp+k || j == yp-k || j == yp+k) &&
 					// @todo: @reminder: ogarnij, czy dobry SPRITE_GRASS dodałeś
 					tile.TextureID < spriteGrassEnd &&
@@ -496,8 +496,8 @@ func findGrass(xp, yp uint8, xe, ye *uint8, bs *battleState) {
 	*ye = yp + 3
 }
 
-func sendCowToBarn(cow *unit, bs *battleState) bool {
-	for _, building := range bs.Buildings {
+func sendCowToBarn(cow *unit, bState *battleState) bool {
+	for _, building := range bState.Buildings {
 		if building == nil || !building.Exists {
 			continue
 		}
@@ -505,10 +505,10 @@ func sendCowToBarn(cow *unit, bs *battleState) bool {
 		if building.Type == buildingBarn {
 			for _, unitID := range building.AssignedUnits {
 				if unitID == cow.ID {
-					targetX, targetY, ok := building.getClosestWalkableTile(bs)
+					targetX, targetY, ok := building.getClosestWalkableTile(bState)
 
 					if ok {
-						cow.addUnitCommand(cmdMove, targetX, targetY, 0, bs)
+						cow.addUnitCommand(cmdMove, targetX, targetY, 0, bState)
 						log.Printf("Krowa %d wraca do obory %d na pozycję (%d,%d).", cow.ID, building.ID, targetX, targetY)
 						return true
 					}
@@ -523,17 +523,17 @@ func sendCowToBarn(cow *unit, bs *battleState) bool {
 }
 
 // who sprawdza do kogo przynależy dana jednostka
-func who(objectID uint, bs *battleState) uint8 {
+func who(objectID uint, bState *battleState) uint8 {
 	if objectID == 0 {
 		return 0
 	}
 	// Ta funkcja iteruje po listach, więc jest niezależna od zmian w BoardData
-	for _, unit := range bs.Units {
+	for _, unit := range bState.Units {
 		if unit != nil && unit.Exists && unit.ID == objectID {
 			return unit.Owner
 		}
 	}
-	for _, bld := range bs.Buildings {
+	for _, bld := range bState.Buildings {
 		if bld != nil && bld.Exists && bld.ID == objectID {
 			return bld.Owner
 		}

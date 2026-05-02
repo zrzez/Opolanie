@@ -4,31 +4,31 @@ package main
 
 // updateActionButtons przelicza stan przycisków na podstawie obecnego zaznaczenia.
 // Powinna być wywoływana w każdej klatce logicznej (updateGame).
-func updateActionButtons(bs *battleState) {
+func updateActionButtons(bState *battleState) {
 	// 1. Czyścimy obecne działanie przycisków
 	for btnIndex := range uiActionMaxButtons {
-		bs.UI.CurrentActions[btnIndex] = uiAction{IsActive: false}
+		bState.UI.CurrentActions[btnIndex] = uiAction{IsActive: false}
 	}
 
 	// 2. Sprawdzamy, czy jesteśmy właścicielami zaznaczonego obiektu
 	// jeżeli nie, to nie ma nic do pokazania
-	selected := bs.CurrentSelection
+	selected := bState.CurrentSelection
 
-	if selected.OwnerID != bs.PlayerID {
+	if selected.OwnerID != bState.PlayerID {
 		return
 	}
 
 	// 3. Przekazujemy dobór logiki do odpowiednich pomocników
 	if selected.IsUnit {
-		fillUnitActions(bs, selected.UnitID)
+		fillUnitActions(bState, selected.UnitID)
 	} else if selected.BuildingID != 0 {
-		fillBuildingActions(bs, selected.BuildingID)
+		fillBuildingActions(bState, selected.BuildingID)
 	}
 }
 
 // Wypełnia przyciski na podstawie przepisu budynku.
-func fillBuildingActions(bs *battleState, buildingID uint) {
-	bld, ok := getBuildingByID(buildingID, bs)
+func fillBuildingActions(bState *battleState, buildingID uint) {
+	bld, ok := getBuildingByID(buildingID, bState)
 	if !ok || !bld.Exists || bld.IsUnderConstruction {
 		return
 	}
@@ -42,7 +42,7 @@ func fillBuildingActions(bs *battleState, buildingID uint) {
 		recipe := recipes[rIndex]
 
 		// Warunek poziomu (np. Pastuch wymaga poziomu 26)
-		if recipe.MinLevel <= bs.CurrentLevel {
+		if recipe.MinLevel <= bState.CurrentLevel {
 			var cmd command
 
 			// === ROZGAŁĘZIENIE LOGIKI ===
@@ -69,7 +69,7 @@ func fillBuildingActions(bs *battleState, buildingID uint) {
 			}
 
 			// Przypisanie gotowego rozkazu do UI
-			bs.UI.CurrentActions[rIndex] = uiAction{
+			bState.UI.CurrentActions[rIndex] = uiAction{
 				IsActive: true,
 				Label:    recipe.Label,
 				IconID:   recipe.IconID,
@@ -80,28 +80,28 @@ func fillBuildingActions(bs *battleState, buildingID uint) {
 }
 
 // Wypełnia przyciski na podstawie rodzaju jednostki.
-func fillUnitActions(bs *battleState, unitID uint) {
-	unit, ok := getUnitByID(unitID, bs)
+func fillUnitActions(bState *battleState, unitID uint) {
+	currentUnit, ok := getUnitByID(unitID, bState)
 
-	if !ok || !unit.Exists || unit.Owner != bs.PlayerID {
+	if !ok || !currentUnit.Exists || currentUnit.Owner != bState.PlayerID {
 		return
 	}
 
 	// @todo: jest to nieprawidłowy rozkaz, powinno być „broń się”, czy coś podobnego
 	// @reminder sprawdź, jak to wyglądało w pierwowzorze!
-	bs.UI.CurrentActions[0] = uiAction{
+	bState.UI.CurrentActions[0] = uiAction{
 		IsActive: true,
 		Label:    "Stop",
 		IconID:   spriteBtnShield,
 		Cmd: command{
 			ActionType:      cmdStop,
-			ExecutorID:      unit.ID,
+			ExecutorID:      currentUnit.ID,
 			CommandCategory: 1,
 		},
 	}
 	// @todo: podejrzewam, że zamiast if-ów będzie potrzebny switch później
-	if unit.Type == unitAxeman {
-		bs.UI.CurrentActions[1] = uiAction{
+	if currentUnit.Type == unitAxeman {
+		bState.UI.CurrentActions[1] = uiAction{
 			IsActive: true,
 			Label:    "Napraw",
 			IconID:   spriteBtnRepair,
@@ -113,8 +113,8 @@ func fillUnitActions(bs *battleState, unitID uint) {
 		}
 	}
 
-	if unit.Type == unitPriestess {
-		bs.UI.CurrentActions[1] = uiAction{
+	if currentUnit.Type == unitPriestess {
+		bState.UI.CurrentActions[1] = uiAction{
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Magiczna tarcza",
 			IconID:   spriteBtnSpellMagicShield,
@@ -126,8 +126,8 @@ func fillUnitActions(bs *battleState, unitID uint) {
 		}
 	}
 
-	if unit.Type == unitPriestess {
-		bs.UI.CurrentActions[2] = uiAction{
+	if currentUnit.Type == unitPriestess {
+		bState.UI.CurrentActions[2] = uiAction{
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Gromobicie",
 			IconID:   spriteBtnSpellMagicLighting,
@@ -139,8 +139,8 @@ func fillUnitActions(bs *battleState, unitID uint) {
 		}
 	}
 
-	if unit.Type == unitPriest {
-		bs.UI.CurrentActions[1] = uiAction{
+	if currentUnit.Type == unitPriest {
+		bState.UI.CurrentActions[1] = uiAction{
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Dalekie widzenie",
 			IconID:   spriteBtnSpellVision,
@@ -152,8 +152,8 @@ func fillUnitActions(bs *battleState, unitID uint) {
 		}
 	}
 
-	if unit.Type == unitPriest {
-		bs.UI.CurrentActions[2] = uiAction{
+	if currentUnit.Type == unitPriest {
+		bState.UI.CurrentActions[2] = uiAction{
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Deszcz ognia",
 			IconID:   spriteBtnSpellMagicFire, // @todo powinno być potrójne, a nie jeden!

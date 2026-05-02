@@ -286,9 +286,9 @@ func (t *tile) applyFireDamage(bState *battleState) {
 }
 
 // Odpowiada za zadanie obrażeń jednostce lub budynkowi, który się znajduje na danym kafelku.
-func (t *tile) applyFallingTreeDamage(bs *battleState) {
+func (t *tile) applyFallingTreeDamage(bState *battleState) {
 	if t.Unit != nil && t.Unit.Exists {
-		t.Unit.takeDamage(fallingTreeDamage, bs)
+		t.Unit.takeDamage(fallingTreeDamage, bState)
 	}
 
 	if t.Building != nil && t.Building.Exists {
@@ -296,11 +296,11 @@ func (t *tile) applyFallingTreeDamage(bs *battleState) {
 	}
 }
 
-func (t *tile) accumulateTreeCuts(bs *battleState) {
+func (t *tile) accumulateTreeCuts(bState *battleState) {
 	t.treeCuts++
 
 	if t.treeCuts >= strikesToCutTree {
-		t.treeFall(bs)
+		t.treeFall(bState)
 	}
 }
 

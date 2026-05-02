@@ -19,9 +19,9 @@ const (
 	maxMovementHistory    = 6
 )
 
-func (u *unit) initUnit(unitType unitType, x, y uint8, command uint16, bs *battleState) {
-	u.ID = bs.NextUniqueObjectID
-	bs.NextUniqueObjectID++
+func (u *unit) initUnit(unitType unitType, x, y uint8, command uint16, bState *battleState) {
+	u.ID = bState.NextUniqueObjectID
+	bState.NextUniqueObjectID++
 	u.Exists = true
 	u.Type = unitType
 	u.X = x
@@ -136,10 +136,10 @@ func (u *unit) decreaseHPUnit(amount uint16) {
 }
 
 // show umieszcza jednostkę na mapie w Tiles.
-func (u *unit) show(bs *battleState) {
+func (u *unit) show(bState *battleState) {
 	if u.X < boardMaxX && u.Y < boardMaxY {
 		// ZMIANA: Ustawiamy wskaźnik unit w nowej strukturze Tiles
-		bs.Board.Tiles[u.X][u.Y].Unit = u
+		bState.Board.Tiles[u.X][u.Y].Unit = u
 	} else {
 		log.Printf("OSTRZEŻENIE: Próba umieszczenia jednostki poza mapą: (%d,%d)", u.X, u.Y)
 	}
@@ -149,18 +149,18 @@ func (u *unit) show(bs *battleState) {
 // LOGIKA JEDNOSTEK
 // ============================================================================
 
-func (u *unit) updateUnit(bs *battleState) {
+func (u *unit) updateUnit(bState *battleState) {
 	// Aktualizowanie ran
 	// @todo przenieś do osobnej funkcji, szkoda zajmować tutaj miejsce
 	nextFreeIndex := 0
 
 	for scanIndex := range u.Wounds {
-		wound := &u.Wounds[scanIndex]
-		wound.Timer--
+		currentWound := &u.Wounds[scanIndex]
+		currentWound.Timer--
 
-		if wound.Timer > 1 {
+		if currentWound.Timer > 1 {
 			if scanIndex != nextFreeIndex {
-				u.Wounds[nextFreeIndex] = *wound
+				u.Wounds[nextFreeIndex] = *currentWound
 			}
 
 			nextFreeIndex++
@@ -169,13 +169,13 @@ func (u *unit) updateUnit(bs *battleState) {
 
 	u.Wounds = u.Wounds[:nextFreeIndex]
 
-	u.handleAttackCooldown(bs)
+	u.handleAttackCooldown(bState)
 
 	if u.handleNoMovementDetection() {
 		return
 	}
 
-	if u.handleDelay(bs) {
+	if u.handleDelay(bState) {
 		return
 	}
 
@@ -186,13 +186,13 @@ func (u *unit) updateUnit(bs *battleState) {
 	}
 
 	u.handleWaitingToActiveTransition()
-	u.handleMovementTargetReached(bs)
-	u.executeCommandAction(bs)
+	u.handleMovementTargetReached(bState)
+	u.executeCommandAction(bState)
 	u.resetDelayIfActive()
 }
 
-func (u *unit) handleAttackCooldown(bs *battleState) {
-	if bs.GlobalFrameCounter%logicSpeedDivisor == 0 {
+func (u *unit) handleAttackCooldown(bState *battleState) {
+	if bState.GlobalFrameCounter%logicSpeedDivisor == 0 {
 		if u.AttackCooldown > 0 {
 			u.AttackCooldown--
 		}
@@ -217,7 +217,7 @@ func (u *unit) handleNoMovementDetection() bool {
 	return false
 }
 
-func (u *unit) handleDelay(bs *battleState) bool {
+func (u *unit) handleDelay(bState *battleState) bool {
 	if u.State == stateIdle {
 		u.Delay = u.MaxDelay
 
@@ -226,7 +226,7 @@ func (u *unit) handleDelay(bs *battleState) bool {
 	if u.Delay <= 0 {
 		return false
 	}
-	if bs.GlobalFrameCounter%logicSpeedDivisor != 0 {
+	if bState.GlobalFrameCounter%logicSpeedDivisor != 0 {
 		return true
 	}
 	u.Delay--
@@ -270,36 +270,36 @@ func (u *unit) handleWaitingToActiveTransition() {
 	}
 }
 
-func (u *unit) handleMovementTargetReached(bs *battleState) {
+func (u *unit) handleMovementTargetReached(bState *battleState) {
 	if u.State == stateMoving && u.X == u.TargetX && u.Y == u.TargetY {
-		u.handleTargetReached(bs)
+		u.handleTargetReached(bState)
 	}
 }
 
-func (u *unit) executeCommandAction(bs *battleState) {
+func (u *unit) executeCommandAction(bState *battleState) {
 	switch u.Type {
 	case unitCow:
-		u.handleCowBehavior(bs)
+		u.handleCowBehavior(bState)
 	default:
-		u.executeStandardUnitCommand(bs)
+		u.executeStandardUnitCommand(bState)
 	}
 }
 
-func (u *unit) executeStandardUnitCommand(bs *battleState) {
+func (u *unit) executeStandardUnitCommand(bState *battleState) {
 	switch u.Command {
 	case cmdMove:
-		u.move(bs)
+		u.move(bState)
 	case cmdAttack:
-		if u.canAttackTargetFromCurrentPosition(bs) {
+		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.State = stateAttacking
 			u.clearPath()
-			u.attack(bs)
+			u.attack(bState)
 		} else {
 			u.State = stateMoving
-			u.move(bs)
+			u.move(bState)
 		}
 	case cmdRepairStructure:
-		if u.canAttackTargetFromCurrentPosition(bs) {
+		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.State = stateRepairing
 
 			if u.AnimationType != "fight" {
@@ -308,7 +308,7 @@ func (u *unit) executeStandardUnitCommand(bs *battleState) {
 			}
 
 			u.clearPath()
-			u.repair(bs)
+			u.repair(bState)
 		} else {
 			u.State = stateMoving
 
@@ -316,16 +316,16 @@ func (u *unit) executeStandardUnitCommand(bs *battleState) {
 				u.AnimationType = "walk"
 			}
 
-			u.move(bs)
+			u.move(bState)
 		}
 	case cmdMagicShield:
 		u.castMagicShield()
 	case cmdMagicFire:
 		// u.castMagicFire(bs)
 	case cmdMagicSight:
-		u.castMagicSight(bs)
+		u.castMagicSight(bState)
 	case cmdIdle, cmdStop:
-		u.actOnIdle(bs)
+		u.actOnIdle(bState)
 	default:
 		panic("unhandled default case")
 	}
@@ -356,12 +356,12 @@ func (u *unit) determineActiveStateFromCommand() unitState {
 	}
 }
 
-func getSelectedUnits(bs *battleState) []*unit {
+func getSelectedUnits(bState *battleState) []*unit {
 	var selected []*unit
 
-	for _, unit := range bs.Units {
-		if unit.IsSelected && unit.Exists && unit.Owner == bs.PlayerID {
-			selected = append(selected, unit)
+	for _, currentUnit := range bState.Units {
+		if currentUnit.IsSelected && currentUnit.Exists && currentUnit.Owner == bState.PlayerID {
+			selected = append(selected, currentUnit)
 		}
 	}
 
@@ -372,19 +372,19 @@ func canDamagePalisades(unit *unit) bool {
 	return unit.Type == unitAxeman || unit.Type == unitPriest
 }
 
-func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, bs *battleState) (uint8, uint8, error) {
-	targetUnit, targetBuilding := getObjectByID(targetID, bs)
+func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, bState *battleState) (uint8, uint8, error) {
+	targetUnit, targetBuilding := getObjectByID(targetID, bState)
 
 	// Cel jest budynkiem
 	if targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge) {
 		if u.AttackRange > 1 {
-			x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, targetBuilding, bs)
+			x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, targetBuilding, bState)
 			if ok {
 				return x, y, nil
 			}
 		}
 
-		x, y, ok := targetBuilding.getClosestWalkableTile(bs)
+		x, y, ok := targetBuilding.getClosestWalkableTile(bState)
 		if ok {
 			return x, y, nil
 		}
@@ -394,12 +394,12 @@ func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, b
 
 	// Cel jest jednostką
 	if targetUnit != nil && targetUnit.Exists {
-		bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bs)
+		bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState)
 
 		// findBestPositionAroundUnit zwraca pozycję celu jako bezpiecznik.
 		if bestX == targetUnit.X && bestY == targetUnit.Y {
 			// Sprawdź, czy to naprawdę fallback (kafel jest zajęty przez cel)
-			targetTile := &bs.Board.Tiles[bestX][bestY]
+			targetTile := &bState.Board.Tiles[bestX][bestY]
 			if targetTile.Unit == targetUnit {
 				return 0, 0, fmt.Errorf("brak wolnego kafelka wokół jednostki ID %d", targetID)
 			}
@@ -408,10 +408,10 @@ func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, b
 		return bestX, bestY, nil
 	}
 
-	targetTile := &bs.Board.Tiles[*targetX][*targetY]
+	targetTile := &bState.Board.Tiles[*targetX][*targetY]
 
 	if isTreeStump(targetTile.TextureID) {
-		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(*targetX, *targetY, bs)
+		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(*targetX, *targetY, bState)
 		if !ok {
 			return 0, 0, fmt.Errorf("Nie ma pozycji do ataku tego drzewa")
 		}
@@ -422,7 +422,7 @@ func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, b
 	return 0, 0, fmt.Errorf("cel ataku ID %d nie istnieje", targetID)
 }
 
-func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bs *battleState) (uint8, uint8, bool) {
+func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bState *battleState) (uint8, uint8, bool) {
 	var bestX, bestY uint8
 
 	minDistance := math.MaxFloat64
@@ -437,7 +437,7 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bs *battleSta
 				continue // wiersz poza planszą
 			}
 
-			if !isWalkable(bs, uint8(column), uint8(row)) {
+			if !isWalkable(bState, uint8(column), uint8(row)) {
 				continue // kafelek nieprzechodni
 			}
 
@@ -449,7 +449,7 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bs *battleSta
 				continue // pomijamy samo drzewo
 			}
 
-			electedTile := &bs.Board.Tiles[uint8(column)][uint8(row)]
+			electedTile := &bState.Board.Tiles[uint8(column)][uint8(row)]
 
 			if electedTile.Unit != nil && electedTile.Unit.ID != u.ID {
 				continue // ktoś już tam stoi
@@ -474,7 +474,7 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bs *battleSta
 	return bestX, bestY, true
 }
 
-func (u *unit) addUnitCommand(command uint16, targetX, targetY uint8, targetID uint, bs *battleState) {
+func (u *unit) addUnitCommand(command uint16, targetX, targetY uint8, targetID uint, bState *battleState) {
 	log.Printf("INFO: unit.go dodano rozkaz %d.", command)
 
 	if u.shouldSkipDuplicate(command, targetX, targetY, targetID) {
@@ -483,14 +483,14 @@ func (u *unit) addUnitCommand(command uint16, targetX, targetY uint8, targetID u
 		return
 	}
 
-	if err := u.resolveInteractionTarget(&targetX, &targetY, command, targetID, bs); err != nil {
+	if err := u.resolveInteractionTarget(&targetX, &targetY, command, targetID, bState); err != nil {
 		u.setIdleWithReason("cel nieosiągalny")
 
 		return
 	}
 
-	if !u.validateCommand(command, targetID, bs) {
-		log.Printf("INFO: unit.go rozkaz nie przeszedł sprawdzenia %t.", u.validateCommand(command, targetID, bs))
+	if !u.validateCommand(command, targetID, bState) {
+		log.Printf("INFO: unit.go rozkaz nie przeszedł sprawdzenia %t.", u.validateCommand(command, targetID, bState))
 
 		return
 	}
@@ -504,7 +504,7 @@ func (u *unit) shouldSkipDuplicate(command uint16, targetX, targetY uint8, targe
 		u.TargetY == targetY && u.TargetID == targetID
 }
 
-func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command uint16, targetID uint, bs *battleState) error {
+func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command uint16, targetID uint, bState *battleState) error {
 	if !isInteractionCommand(command) {
 		return nil
 	}
@@ -513,7 +513,7 @@ func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command uint16,
 		u.interactionTargetX, u.interactionTargetY = *targetX, *targetY
 	}
 
-	finalX, finalY, err := u.resolveApproachPosition(targetX, targetY, targetID, bs)
+	finalX, finalY, err := u.resolveApproachPosition(targetX, targetY, targetID, bState)
 	if err != nil {
 		return err
 	}
@@ -532,23 +532,23 @@ func isInteractionCommand(command uint16) bool {
 	}
 }
 
-func (u *unit) validateCommand(command uint16, targetID uint, bs *battleState) bool {
+func (u *unit) validateCommand(command uint16, targetID uint, bState *battleState) bool {
 	switch command {
 	case cmdAttack:
-		return u.canAttack(targetID, bs)
+		return u.canAttack(targetID, bState)
 	default:
 		return true
 	}
 }
 
 // caDamageTree sprawdza, czy jednostka może zaatakować dane drzewo.
-func (u *unit) canDamageTree(treeX, treeY uint8, bs *battleState) bool {
+func (u *unit) canDamageTree(treeX, treeY uint8, bState *battleState) bool {
 	// Tylko unitAxeman i unitPriest może atakować drzewa
 	if u.Type != unitPriest && u.Type != unitAxeman {
 		return false
 	}
 
-	treeTile := bs.Board.Tiles[treeX][treeY]
+	treeTile := bState.Board.Tiles[treeX][treeY]
 
 	// Tylko stojące drzewa
 	if !treeTile.isStandingTree() {
@@ -571,17 +571,17 @@ func (u *unit) canDamageTree(treeX, treeY uint8, bs *battleState) bool {
 	return false
 }
 
-func (u *unit) canAttack(targetID uint, bs *battleState) bool {
+func (u *unit) canAttack(targetID uint, bState *battleState) bool {
 	// Drzewa
 	// Kapłan może podpalić każde drzewo
 	// Drwal może ściąć suche drzewo
 	if targetID == 0 {
-		return u.canDamageTree(u.interactionTargetX, u.interactionTargetY, bs)
+		return u.canDamageTree(u.interactionTargetX, u.interactionTargetY, bState)
 	}
 
 	// targetTile := &bs.Board.Tiles[targetX][targetY]
 
-	targetUnit, targetBuilding := getObjectByID(targetID, bs)
+	targetUnit, targetBuilding := getObjectByID(targetID, bState)
 
 	// Jednostki
 	// musi istnieć
@@ -675,11 +675,11 @@ func (u *unit) isAtTarget() bool {
 	return u.X == u.TargetX && u.Y == u.TargetY
 }
 
-func (u *unit) move(bs *battleState) {
+func (u *unit) move(bState *battleState) {
 	if u.Command == cmdAttack {
 		log.Printf("INFO: units.go move rozkaz to cmdAttack")
 
-		if u.canAttackTargetFromCurrentPosition(bs) {
+		if u.canAttackTargetFromCurrentPosition(bState) {
 			log.Printf("INFO: units.go move cel osiągalny z tego miejsca")
 			u.clearPath()
 			u.State = stateAttacking
@@ -690,7 +690,7 @@ func (u *unit) move(bs *battleState) {
 		// 25.04.2026 Dodaję bezpiecznik przerywający ruch jeśli cel przestał istnieć
 		// Bez tego jednostka atakująca drzewo zaczyna się przemieszczać po jego upadku
 		// szukając nowej pozycji do ataku nieistniejącego już celu.
-		if _, err := u.validateTargetExists(bs); err != nil {
+		if _, err := u.validateTargetExists(bState); err != nil {
 			u.setIdleWithReason("cel ataku przestał istnieć")
 
 			return
@@ -700,7 +700,7 @@ func (u *unit) move(bs *battleState) {
 	if u.isAtTarget() {
 		log.Printf("INFO: units.go move u celu")
 
-		u.handleTargetReached(bs)
+		u.handleTargetReached(bState)
 
 		return
 	}
@@ -711,13 +711,13 @@ func (u *unit) move(bs *battleState) {
 		return
 	}
 
-	u.executeAStarMovement(bs)
+	u.executeAStarMovement(bState)
 }
 
-func (u *unit) canAttackTargetFromCurrentPosition(bs *battleState) bool {
+func (u *unit) canAttackTargetFromCurrentPosition(bState *battleState) bool {
 	log.Println("Sprawdzam, czy cel istnieje")
 
-	target, err := u.validateTargetExists(bs)
+	target, err := u.validateTargetExists(bState)
 	if err != nil {
 		return false
 	}
@@ -758,34 +758,34 @@ func (u *unit) detectSimpleOscillation() bool {
 	return a.X == c.X && a.Y == c.Y && b.X == d.X && b.Y == d.Y
 }
 
-func (u *unit) executeAStarMovement(bs *battleState) {
-	if !u.ensureValidPath(bs) {
+func (u *unit) executeAStarMovement(bState *battleState) {
+	if !u.ensureValidPath(bState) {
 		return
 	}
 
-	u.moveAlongPath(bs)
+	u.moveAlongPath(bState)
 }
 
-func (u *unit) ensureValidPath(bs *battleState) bool {
-	if u.hasValidPath(bs) {
+func (u *unit) ensureValidPath(bState *battleState) bool {
+	if u.hasValidPath(bState) {
 		return true
 	}
 
-	if bs.pathfindingUnitsThisTick >= maxPathfindingBudget {
+	if bState.pathfindingUnitsThisTick >= maxPathfindingBudget {
 		u.waitForPathfindingBudget()
 
 		return false
 	}
 
-	return u.calculateNewPath(bs)
+	return u.calculateNewPath(bState)
 }
 
-func (u *unit) hasValidPath(bs *battleState) bool {
+func (u *unit) hasValidPath(bState *battleState) bool {
 	if len(u.Path) == 0 || u.PathIndex >= len(u.Path) {
 		return false
 	}
 
-	target, err := u.validateTargetExists(bs)
+	target, err := u.validateTargetExists(bState)
 	if err != nil {
 		return false
 	}
@@ -811,10 +811,10 @@ func (u *unit) waitForPathfindingBudget() {
 	log.Printf("unit %d: waiting for pathfinding budget", u.ID)
 }
 
-func (u *unit) calculateNewPath(bs *battleState) bool {
-	bs.pathfindingUnitsThisTick++
+func (u *unit) calculateNewPath(bState *battleState) bool {
+	bState.pathfindingUnitsThisTick++
 
-	newPath := findPath(bs, u.ID, u.X, u.Y, u.TargetX, u.TargetY)
+	newPath := findPath(bState, u.ID, u.X, u.Y, u.TargetX, u.TargetY)
 
 	if newPath == nil {
 		u.handlePathfindingFailure()
@@ -835,7 +835,7 @@ func (u *unit) setPathAndState(path []*pathNode) {
 	u.RetryAttempts = 0
 }
 
-func (u *unit) moveAlongPath(bs *battleState) {
+func (u *unit) moveAlongPath(bState *battleState) {
 	if u.PathIndex >= len(u.Path) {
 		u.clearPath()
 
@@ -844,24 +844,24 @@ func (u *unit) moveAlongPath(bs *battleState) {
 
 	next := u.Path[u.PathIndex]
 
-	if u.canMoveTo(next.X, next.Y, bs) {
-		u.executeSuccessfulMove(next.X, next.Y, bs)
+	if u.canMoveTo(next.X, next.Y, bState) {
+		u.executeSuccessfulMove(next.X, next.Y, bState)
 	} else {
-		u.handleMovementBlocked(bs, next.X, next.Y)
+		u.handleMovementBlocked(bState, next.X, next.Y)
 	}
 }
 
-func (u *unit) executeSuccessfulMove(x, y uint8, bs *battleState) {
-	u.executeMove(x, y, bs)
+func (u *unit) executeSuccessfulMove(x, y uint8, bState *battleState) {
+	u.executeMove(x, y, bState)
 	u.resetMovementCounters()
 	u.updateMovementHistory()
 }
 
-func (u *unit) handleMovementBlocked(bs *battleState, blockedX, blockedY uint8) {
-	detourX, detourY, ok := u.findLocalDetour(bs, blockedX, blockedY)
+func (u *unit) handleMovementBlocked(bState *battleState, blockedX, blockedY uint8) {
+	detourX, detourY, ok := u.findLocalDetour(bState, blockedX, blockedY)
 
 	if !ok {
-		u.executeSuccessfulMove(detourX, detourY, bs)
+		u.executeSuccessfulMove(detourX, detourY, bState)
 		u.invalidatePathForRecalculation()
 		return
 	}
@@ -869,7 +869,7 @@ func (u *unit) handleMovementBlocked(bs *battleState, blockedX, blockedY uint8) 
 	u.handlePersistentBlock()
 }
 
-func (u *unit) findLocalDetour(bs *battleState, blockedX, blockedY uint8) (uint8, uint8, bool) {
+func (u *unit) findLocalDetour(bState *battleState, blockedX, blockedY uint8) (uint8, uint8, bool) {
 	bestX, bestY := 0, 0
 	bestScore := math.MaxFloat64
 
@@ -885,7 +885,7 @@ func (u *unit) findLocalDetour(bs *battleState, blockedX, blockedY uint8) (uint8
 				continue
 			}
 
-			if !u.canMoveTo(uint8(x), uint8(y), bs) {
+			if !u.canMoveTo(uint8(x), uint8(y), bState) {
 				continue
 			}
 
@@ -1006,7 +1006,7 @@ func (u *unit) setIdleWithReason(reason string) {
 	}
 }
 
-func (u *unit) handleTargetReached(bs *battleState) {
+func (u *unit) handleTargetReached(bState *battleState) {
 	u.clearPath()
 
 	switch u.Command {
@@ -1014,16 +1014,16 @@ func (u *unit) handleTargetReached(bs *battleState) {
 		log.Printf("INFO: units.go handleTargetReached cmdAttack jesteśmy u celu")
 
 		u.State = stateAttacking
-		u.attack(bs)
+		u.attack(bState)
 	case cmdRepairStructure:
 		u.State = stateRepairing
-		u.repair(bs)
+		u.repair(bState)
 	default:
 		u.setIdle()
 	}
 }
 
-func (bs *battleState) assignGroupCommand(
+func (bState *battleState) assignGroupCommand(
 	command uint16, mainTargetX, mainTargetY uint8, mainTargetID uint,
 	selectedUnits []*unit,
 ) {
@@ -1031,22 +1031,22 @@ func (bs *battleState) assignGroupCommand(
 		return
 	}
 
-	targetX, targetY := bs.resolveActualTarget(mainTargetX, mainTargetY, mainTargetID)
+	targetX, targetY := bState.resolveActualTarget(mainTargetX, mainTargetY, mainTargetID)
 
 	if len(selectedUnits) <= 4 {
-		bs.assignSmallGroupTargets(selectedUnits, command, targetX, targetY, mainTargetID)
+		bState.assignSmallGroupTargets(selectedUnits, command, targetX, targetY, mainTargetID)
 		return
 	}
 
-	bs.assignScatteredGroupTargets(selectedUnits, command, targetX, targetY, mainTargetID)
+	bState.assignScatteredGroupTargets(selectedUnits, command, targetX, targetY, mainTargetID)
 }
 
-func (bs *battleState) resolveActualTarget(mainTargetX, mainTargetY uint8, mainTargetID uint) (uint8, uint8) {
+func (bState *battleState) resolveActualTarget(mainTargetX, mainTargetY uint8, mainTargetID uint) (uint8, uint8) {
 	if mainTargetID == 0 {
 		return mainTargetX, mainTargetY
 	}
 
-	targetUnit, targetBuilding := getObjectByID(mainTargetID, bs)
+	targetUnit, targetBuilding := getObjectByID(mainTargetID, bState)
 
 	if targetUnit != nil && targetUnit.Exists {
 		return targetUnit.X, targetUnit.Y
@@ -1062,14 +1062,14 @@ func (bs *battleState) resolveActualTarget(mainTargetX, mainTargetY uint8, mainT
 	return mainTargetX, mainTargetY
 }
 
-func (bs *battleState) assignSmallGroupTargets(units []*unit, command uint16, targetX, targetY uint8, targetID uint) {
+func (bState *battleState) assignSmallGroupTargets(units []*unit, command uint16, targetX, targetY uint8, targetID uint) {
 	for _, unit := range units {
-		unit.addUnitCommand(command, targetX, targetY, targetID, bs)
+		unit.addUnitCommand(command, targetX, targetY, targetID, bState)
 	}
 }
 
-func (bs *battleState) assignScatteredGroupTargets(units []*unit, command uint16, targetX, targetY uint8, targetID uint) {
-	positions := bs.generateFormationPositions(targetX, targetY, uint8(len(units)))
+func (bState *battleState) assignScatteredGroupTargets(units []*unit, command uint16, targetX, targetY uint8, targetID uint) {
+	positions := bState.generateFormationPositions(targetX, targetY, uint8(len(units)))
 
 	for i, unit := range units {
 		assignedX, assignedY := targetX, targetY
@@ -1079,11 +1079,11 @@ func (bs *battleState) assignScatteredGroupTargets(units []*unit, command uint16
 			assignedY = positions[i].Y
 		}
 
-		unit.addUnitCommand(command, assignedX, assignedY, targetID, bs)
+		unit.addUnitCommand(command, assignedX, assignedY, targetID, bState)
 	}
 }
 
-func (bs *battleState) generateFormationPositions(centerX, centerY, count uint8) []point {
+func (bState *battleState) generateFormationPositions(centerX, centerY, count uint8) []point {
 	positions := make([]point, 0, count)
 	cols := uint8(math.Sqrt(float64(count))) + 1
 
@@ -1097,7 +1097,7 @@ func (bs *battleState) generateFormationPositions(centerX, centerY, count uint8)
 		x := centerX + offsetX
 		y := centerY + offsetY
 
-		if x < boardMaxX && y < boardMaxY && isWalkable(bs, x, y) {
+		if x < boardMaxX && y < boardMaxY && isWalkable(bState, x, y) {
 			positions = append(positions, point{X: x, Y: y})
 		} else {
 			positions = append(positions, point{X: centerX, Y: centerY})
@@ -1107,21 +1107,21 @@ func (bs *battleState) generateFormationPositions(centerX, centerY, count uint8)
 	return positions
 }
 
-func (u *unit) canMoveTo(x, y uint8, bs *battleState) bool {
+func (u *unit) canMoveTo(x, y uint8, bState *battleState) bool {
 	if x >= boardMaxX || y >= boardMaxY {
 		return false
 	}
 
-	tile := &bs.Board.Tiles[x][y]
+	currentTile := &bState.Board.Tiles[x][y]
 
 	// Kolizja z jednostkami (standardowo)
-	if tile.Unit != nil && tile.Unit.ID != u.ID {
+	if currentTile.Unit != nil && currentTile.Unit.ID != u.ID {
 		return false
 	}
 
 	// Kolizja z terenem/budynkami (używamy nowej funkcji z pathfinding.go)
 	// Przekazujemy 'u', aby obsłużyć wyjątek krowy wchodzącej do obory
-	return isWalkableUnit(bs, x, y, u)
+	return isWalkableUnit(bState, x, y, u)
 }
 
 // calculateMilkingSpot oblicza milking spot dla obory
@@ -1146,11 +1146,11 @@ func calculateMilkingSpot(bld *building) (uint8, uint8, bool) {
 }
 
 // executeMove wykonuje ruch na nową pozycję.
-func (u *unit) executeMove(x, y uint8, bs *battleState) {
+func (u *unit) executeMove(x, y uint8, bState *battleState) {
 	// ZMIANA: Używamy nowej struktury Tiles
 	// Usuń z poprzedniej pozycji (jeśli to ta jednostka tam jest)
-	if bs.Board.Tiles[u.X][u.Y].Unit == u {
-		bs.Board.Tiles[u.X][u.Y].Unit = nil
+	if bState.Board.Tiles[u.X][u.Y].Unit == u {
+		bState.Board.Tiles[u.X][u.Y].Unit = nil
 	}
 
 	oldX, oldY := u.X, u.Y
@@ -1158,7 +1158,7 @@ func (u *unit) executeMove(x, y uint8, bs *battleState) {
 	u.X, u.Y = x, y
 
 	// Ustaw na nowej pozycji
-	bs.Board.Tiles[u.X][u.Y].Unit = u
+	bState.Board.Tiles[u.X][u.Y].Unit = u
 
 	u.PathIndex++
 	u.updateMovementAnimation(oldX, oldY)
@@ -1216,10 +1216,10 @@ func (u *unit) updateMovementAnimation(prevX, prevY uint8) {
 }
 
 // attack zadaje obrażenia celowi lub ustawia ruch w jego kierunku.
-func (u *unit) attack(bs *battleState) {
+func (u *unit) attack(bState *battleState) {
 	log.Printf("units.go attack weszliśmy do metody")
 
-	target, err := u.validateAttackTarget(bs)
+	target, err := u.validateAttackTarget(bState)
 	if err != nil {
 		u.setIdleWithReason(err.Error())
 
@@ -1244,12 +1244,12 @@ func (u *unit) attack(bs *battleState) {
 	if u.canAttackTarget(target) {
 		log.Printf("units.go attack weszliśmy do canAttackTarget")
 
-		u.performDirectAttack(target, bs)
+		u.performDirectAttack(target, bState)
 	} else {
 		log.Printf("units.go attack weszliśmy do !canAttackTarget.")
 
 		// Jeśli cel oddalił się, gonimy go
-		u.startMoveToAttack(bs)
+		u.startMoveToAttack(bState)
 	}
 }
 
@@ -1288,8 +1288,8 @@ func (u *unit) faceTarget(target *combatTarget) {
 	}
 }
 
-func (u *unit) validateAttackTarget(bs *battleState) (*combatTarget, error) {
-	target, err := u.validateTargetExists(bs)
+func (u *unit) validateAttackTarget(bState *battleState) (*combatTarget, error) {
+	target, err := u.validateTargetExists(bState)
 	if err != nil {
 		return nil, fmt.Errorf("cel zniknął")
 	}
@@ -1324,13 +1324,13 @@ func (u *unit) canAttackTarget(target *combatTarget) bool {
 	return distance <= u.AttackRange
 }
 
-func (u *unit) performDirectAttack(target *combatTarget, bs *battleState) {
+func (u *unit) performDirectAttack(target *combatTarget, bState *battleState) {
 	damage := u.calculateAttackDamage()
 
 	if u.AttackRange > 1 {
-		u.performRangedAttack(target, damage, bs)
+		u.performRangedAttack(target, damage, bState)
 	} else {
-		u.performMeleeAttack(target, damage, bs)
+		u.performMeleeAttack(target, damage, bState)
 	}
 
 	u.setAttackTimings()
@@ -1347,7 +1347,7 @@ func (u *unit) calculateAttackDamage() uint16 {
 	return u.Damage + uint16(damageBonus)
 }
 
-func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bs *battleState) {
+func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bState *battleState) {
 	targetX, targetY, ok := u.getRangedTargetCoords(target)
 	if !ok {
 		log.Printf("UWAGA: jednostka %d: nie udało się określić koordynatów celu dla pocisku", u.ID)
@@ -1367,7 +1367,7 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bs *batt
 		damage,
 	)
 
-	bs.Projectiles = append(bs.Projectiles, proj)
+	bState.Projectiles = append(bState.Projectiles, proj)
 
 	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, targetX, targetY, damage)
 }
@@ -1403,16 +1403,16 @@ func (u *unit) getRangedTargetCoords(target *combatTarget) (uint8, uint8, bool) 
 	return 0, 0, false
 }
 
-func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, bs *battleState) {
+func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, bState *battleState) {
 	switch {
 	case target.Unit != nil && target.Unit.Exists:
-		target.Unit.takeDamage(damage, bs)
-		u.gainExperience(target.Unit, nil, bs)
+		target.Unit.takeDamage(damage, bState)
+		u.gainExperience(target.Unit, nil, bState)
 	case target.Building != nil && target.Building.Exists:
 		target.Building.takeDamage(damage)
-		u.gainExperience(nil, target.Building, bs)
-	case bs.Board.Tiles[u.interactionTargetX][u.interactionTargetY].TextureID == spriteDryTreeStump00:
-		bs.Board.Tiles[u.interactionTargetX][u.interactionTargetY].accumulateTreeCuts(bs)
+		u.gainExperience(nil, target.Building, bState)
+	case bState.Board.Tiles[u.interactionTargetX][u.interactionTargetY].TextureID == spriteDryTreeStump00:
+		bState.Board.Tiles[u.interactionTargetX][u.interactionTargetY].accumulateTreeCuts(bState)
 	default:
 		log.Printf("UWAGA: jednostka %d: cel ataku wręcz już nie istnieje", u.ID)
 	}
@@ -1479,7 +1479,7 @@ func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
 	}
 }
 
-func (u *unit) gainExperience(targetUnit *unit, targetBuilding *building, bs *battleState) {
+func (u *unit) gainExperience(targetUnit *unit, targetBuilding *building, bState *battleState) {
 	if u.Experience >= 235 {
 		return
 	}
@@ -1497,7 +1497,7 @@ func (u *unit) gainExperience(targetUnit *unit, targetBuilding *building, bs *ba
 
 	var canGainExp bool
 
-	if u.Owner == bs.PlayerID {
+	if u.Owner == bState.PlayerID {
 		canGainExp = isEnemyUnit
 	} else {
 		canGainExp = isEnemyBuilding || isEnemyUnit
@@ -1525,9 +1525,9 @@ func (u *unit) getExperienceBonus() (damageBonus, armorBonus uint8, manaBonus ui
 	return dDamage[tier], dArmor[tier], dMana[tier]
 }
 
-func (u *unit) repair(bs *battleState) {
+func (u *unit) repair(bState *battleState) {
 	// 1. Sprawdzamy, czy istnieje
-	_, targetBuilding := getObjectByID(u.TargetID, bs)
+	_, targetBuilding := getObjectByID(u.TargetID, bState)
 
 	if targetBuilding == nil || !targetBuilding.Exists || targetBuilding.HP >= targetBuilding.MaxHP {
 		u.State = stateIdle
@@ -1542,14 +1542,14 @@ func (u *unit) repair(bs *battleState) {
 	var amount uint16
 
 	switch u.Owner {
-	case bs.PlayerID:
+	case bState.PlayerID:
 		amount = repairAmountPlayer
-	case bs.AIPlayerID:
+	case bState.AIPlayerID:
 		amount = repairAmountAI
 	}
 
 	if distance == 1 {
-		targetBuilding.applyWork(amount, bs)
+		targetBuilding.applyWork(amount, bState)
 	}
 }
 
@@ -1566,7 +1566,7 @@ func (u *unit) castMagicShield() {
 	u.Command = cmdIdle
 }
 
-func (u *unit) castMagicSight(bs *battleState) {
+func (u *unit) castMagicSight(bState *battleState) {
 	if u.Mana >= spellCostMagicSight {
 		u.Mana -= spellCostMagicSight
 		log.Printf("Jednostka %d rzuca czar widzenia", u.ID)
@@ -1577,7 +1577,7 @@ func (u *unit) castMagicSight(bs *battleState) {
 				if i <= boardMaxX && j <= boardMaxY {
 					// @todo: czemu 18?!
 					if math.Abs(float64(u.X-i))+math.Abs(float64(u.Y-j)) < 18 {
-						bs.Board.Tiles[i][j].Visibility = visibilityVisible
+						bState.Board.Tiles[i][j].Visibility = visibilityVisible
 					}
 				}
 			}
@@ -1611,7 +1611,7 @@ func handleMagicShield(u *unit) {
 	}
 }
 
-func (u *unit) takeDamage(damage uint16, bs *battleState) {
+func (u *unit) takeDamage(damage uint16, bState *battleState) {
 	// @todo: w ogóle nie ogarnięty temat.
 	if u.Type == unitPriestess {
 		handleMagicShield(u)
@@ -1668,9 +1668,9 @@ func (u *unit) takeDamage(damage uint16, bs *battleState) {
 
 	if u.Type == unitCow && u.Exists {
 		if u.Udder < 100 && u.Command != cmdFlee {
-			barnX, barnY, foundBarn := findNearestBarnMilkingSpot(u, bs)
+			barnX, barnY, foundBarn := findNearestBarnMilkingSpot(u, bState)
 			if foundBarn {
-				u.addUnitCommand(cmdFlee, barnX, barnY, 0, bs)
+				u.addUnitCommand(cmdFlee, barnX, barnY, 0, bState)
 				log.Printf("unit %d (COW): Otrzymała obrażenia, uciekam do obory na (%d,%d).", u.ID, barnX, barnY)
 			} else {
 				log.Printf("unit %d (COW): Otrzymała obrażenia, ale nie znalazła obory do ucieczki. "+
@@ -1684,33 +1684,33 @@ func (u *unit) takeDamage(damage uint16, bs *battleState) {
 		u.Exists = false
 
 		// Zabita jednostka nie powinna zliczać się do górnej granicy ludności
-		decreasePopulation(u, bs)
+		decreasePopulation(u, bState)
 
-		occupiedTile := &bs.Board.Tiles[u.X][u.Y]
+		occupiedTile := &bState.Board.Tiles[u.X][u.Y]
 		if occupiedTile.Unit == u {
 			occupiedTile.Unit = nil
 		}
 
-		createCorpses(u, bs)
+		createCorpses(u, bState)
 		u.unregisterFromBuilding()
 		log.Printf("Jednostka %d została zabita!", u.ID)
 	}
 }
 
-func decreasePopulation(u *unit, bs *battleState) {
+func decreasePopulation(u *unit, bState *battleState) {
 	switch u.Owner {
-	case bs.HumanPlayerState.PlayerID:
-		bs.HumanPlayerState.CurrentPopulation--
-	case bs.AIEnemyState.PlayerID:
-		bs.AIEnemyState.CurrentPopulation--
+	case bState.HumanPlayerState.PlayerID:
+		bState.HumanPlayerState.CurrentPopulation--
+	case bState.AIEnemyState.PlayerID:
+		bState.AIEnemyState.CurrentPopulation--
 	}
 }
 
-func createCorpses(u *unit, bs *battleState) {
+func createCorpses(u *unit, bState *battleState) {
 	steps := 18
 	stepAngle := 10
 	rotation := float32(rand.Intn(steps) * stepAngle)
-	corpse := corpse{
+	currentCorpse := corpse{
 		X:          u.X,
 		Y:          u.Y,
 		UnitType:   u.Type,
@@ -1722,16 +1722,16 @@ func createCorpses(u *unit, bs *battleState) {
 
 	// @todo: ogarnąć jakie powinny być zwłoki
 	// coś tam pod spriteBtnBuildAcademy o współrzędnych
-	switch corpse.UnitType {
+	switch currentCorpse.UnitType {
 	case unitCow:
-		corpse.SkeletonType = 1
+		currentCorpse.SkeletonType = 1
 	case unitBear:
-		corpse.SkeletonType = 2
+		currentCorpse.SkeletonType = 2
 	default:
-		corpse.SkeletonType = 0
+		currentCorpse.SkeletonType = 0
 	}
 
-	bs.CorpsesList = append(bs.CorpsesList, corpse)
+	bState.CorpsesList = append(bState.CorpsesList, currentCorpse)
 }
 
 func (u *unit) unregisterFromBuilding() {
@@ -1742,12 +1742,12 @@ func (u *unit) unregisterFromBuilding() {
 	}
 }
 
-func (u *unit) findNearestPalisade(bs *battleState, radius uint8,
+func (u *unit) findNearestPalisade(bState *battleState, radius uint8,
 ) *building {
 	var best *building
 	minD := math.MaxFloat64
 
-	for _, pal := range bs.Buildings {
+	for _, pal := range bState.Buildings {
 		if pal == nil || !pal.Exists || pal.Type != buildingPalisade {
 			continue
 		}
@@ -1758,7 +1758,7 @@ func (u *unit) findNearestPalisade(bs *battleState, radius uint8,
 		d := math.Max(dx, dy)
 
 		if d <= float64(radius) && d < minD {
-			if u.isImportantPalisade(pal, bs) {
+			if u.isImportantPalisade(pal, bState) {
 				minD = d
 				best = pal
 			}
@@ -1768,7 +1768,7 @@ func (u *unit) findNearestPalisade(bs *battleState, radius uint8,
 	return best
 }
 
-func (u *unit) actOnIdle(bs *battleState) {
+func (u *unit) actOnIdle(bState *battleState) {
 	if !u.canActOnIdle() {
 		return
 	}
@@ -1777,28 +1777,28 @@ func (u *unit) actOnIdle(bs *battleState) {
 		return
 	}
 
-	if !u.shouldSearchForTarget(bs) {
+	if !u.shouldSearchForTarget(bState) {
 		return
 	}
 
-	u.handleTargetSearch(bs)
+	u.handleTargetSearch(bState)
 }
 
 func (u *unit) canActOnIdle() bool {
 	return u.Type != unitCow && u.Type != unitShepherd
 }
 
-func (u *unit) shouldSearchForTarget(bs *battleState) bool {
-	return u.isReadyToAct(bs)
+func (u *unit) shouldSearchForTarget(bState *battleState) bool {
+	return u.isReadyToAct(bState)
 }
 
-func (u *unit) isReadyToAct(bs *battleState) bool {
+func (u *unit) isReadyToAct(bState *battleState) bool {
 	if u.State == stateIdle && u.Command == cmdIdle {
 		return true
 	}
 
 	if u.Command == cmdAttack {
-		_, err := u.validateTargetExists(bs)
+		_, err := u.validateTargetExists(bState)
 		if err != nil {
 			return true
 		}
@@ -1809,8 +1809,8 @@ func (u *unit) isReadyToAct(bs *battleState) bool {
 
 const palisadeStrategicBuildingProximity = 10
 
-func (u *unit) isImportantPalisade(palisade *building, bs *battleState) bool {
-	if u.Owner != bs.AIPlayerID || !canDamagePalisades(u) {
+func (u *unit) isImportantPalisade(palisade *building, bState *battleState) bool {
+	if u.Owner != bState.AIPlayerID || !canDamagePalisades(u) {
 		return false
 	}
 
@@ -1822,7 +1822,7 @@ func (u *unit) isImportantPalisade(palisade *building, bs *battleState) bool {
 
 	palCenterX, palCenterY, _ := palisade.getCenter()
 
-	for _, bld := range bs.Buildings {
+	for _, bld := range bState.Buildings {
 		if bld == nil || !bld.Exists || bld.Owner == u.Owner || bld.Type == buildingPalisade || bld.ID == palisade.ID {
 			continue
 		}
@@ -1837,7 +1837,7 @@ func (u *unit) isImportantPalisade(palisade *building, bs *battleState) bool {
 			continue
 		}
 
-		_, _, ok = bld.getClosestWalkableTile(bs)
+		_, _, ok = bld.getClosestWalkableTile(bState)
 
 		if !ok {
 			return true
@@ -1847,16 +1847,16 @@ func (u *unit) isImportantPalisade(palisade *building, bs *battleState) bool {
 	return false
 }
 
-func (u *unit) handleTargetSearch(bs *battleState) {
-	if u.Owner == bs.HumanPlayerState.PlayerID {
-		u.handleTargetSearchForHumanPlayer(bs)
+func (u *unit) handleTargetSearch(bState *battleState) {
+	if u.Owner == bState.HumanPlayerState.PlayerID {
+		u.handleTargetSearchForHumanPlayer(bState)
 	} else {
-		u.handleTargetSearchForAI(bs)
+		u.handleTargetSearchForAI(bState)
 	}
 }
 
-func (u *unit) handleTargetSearchForHumanPlayer(bs *battleState) {
-	primaryTargetUnit, primaryTargetBuilding, foundPrimary := findNearestEnemyExtended(u, bs)
+func (u *unit) handleTargetSearchForHumanPlayer(bState *battleState) {
+	primaryTargetUnit, primaryTargetBuilding, foundPrimary := findNearestEnemyExtended(u, bState)
 
 	if !foundPrimary {
 		u.setIdle()
@@ -1865,7 +1865,7 @@ func (u *unit) handleTargetSearchForHumanPlayer(bs *battleState) {
 	}
 
 	if primaryTargetUnit != nil && primaryTargetUnit.Exists {
-		u.handleUnitTarget(primaryTargetUnit, bs)
+		u.handleUnitTarget(primaryTargetUnit, bState)
 
 		return
 	}
@@ -1879,19 +1879,19 @@ func (u *unit) handleTargetSearchForHumanPlayer(bs *battleState) {
 	u.setIdle()
 }
 
-func (u *unit) handleTargetSearchForAI(bs *battleState) {
+func (u *unit) handleTargetSearchForAI(bState *battleState) {
 	isPalisadeBreaker := canDamagePalisades(u)
 
-	primaryTargetUnit, primaryTargetBuilding, foundPrimary := findNearestEnemyExtended(u, bs)
+	primaryTargetUnit, primaryTargetBuilding, foundPrimary := findNearestEnemyExtended(u, bState)
 
 	if isPalisadeBreaker && foundPrimary && primaryTargetBuilding != nil && primaryTargetBuilding.Exists {
-		_, _, ok := primaryTargetBuilding.getClosestWalkableTile(bs)
+		_, _, ok := primaryTargetBuilding.getClosestWalkableTile(bState)
 
 		if !ok {
-			palisadeTarget := u.findNearestPalisade(bs, u.SightRange)
+			palisadeTarget := u.findNearestPalisade(bState, u.SightRange)
 
 			if palisadeTarget != nil {
-				u.handleBuildingTarget(palisadeTarget, bs)
+				u.handleBuildingTarget(palisadeTarget, bState)
 
 				return
 			}
@@ -1904,26 +1904,26 @@ func (u *unit) handleTargetSearchForAI(bs *battleState) {
 	}
 
 	if primaryTargetUnit != nil {
-		u.handleUnitTarget(primaryTargetUnit, bs)
+		u.handleUnitTarget(primaryTargetUnit, bState)
 	} else {
-		u.handleBuildingTarget(primaryTargetBuilding, bs)
+		u.handleBuildingTarget(primaryTargetBuilding, bState)
 	}
 }
 
-func (u *unit) handleUnitTarget(targetUnit *unit, bs *battleState) {
+func (u *unit) handleUnitTarget(targetUnit *unit, bState *battleState) {
 	u.TargetID = targetUnit.ID
-	u.setMoveTargetForUnit(targetUnit, bs)
+	u.setMoveTargetForUnit(targetUnit, bState)
 
-	u.executeActionBasedOnDistance(bs)
+	u.executeActionBasedOnDistance(bState)
 }
 
-func (u *unit) handleBuildingTarget(targetBuilding *building, bs *battleState) {
+func (u *unit) handleBuildingTarget(targetBuilding *building, bState *battleState) {
 	u.TargetID = targetBuilding.ID
 
 	currentDistanceToBuilding := targetBuilding.getDistanceToUnit(u.X, u.Y)
 
 	if currentDistanceToBuilding != math.MaxUint8 && currentDistanceToBuilding <= u.AttackRange {
-		u.startDirectAttack(u.X, u.Y, bs)
+		u.startDirectAttack(u.X, u.Y, bState)
 		return
 	}
 
@@ -1934,13 +1934,13 @@ func (u *unit) handleBuildingTarget(targetBuilding *building, bs *battleState) {
 	var ok bool
 
 	if u.AttackRange > 1 {
-		optimalRangedX, optimalRangedY, ok = findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, targetBuilding, bs)
+		optimalRangedX, optimalRangedY, ok = findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, targetBuilding, bState)
 	}
 
 	if !ok {
 		finalMoveTargetX, finalMoveTargetY = optimalRangedX, optimalRangedY
 	} else {
-		closestWalkableX, closestWalkableY, ok = targetBuilding.getClosestWalkableTile(bs)
+		closestWalkableX, closestWalkableY, ok = targetBuilding.getClosestWalkableTile(bState)
 		if ok {
 			finalMoveTargetX, finalMoveTargetY = closestWalkableX, closestWalkableY
 		}
@@ -1954,17 +1954,17 @@ func (u *unit) handleBuildingTarget(targetBuilding *building, bs *battleState) {
 
 	u.TargetX = finalMoveTargetX
 	u.TargetY = finalMoveTargetY
-	u.startMoveToAttack(bs)
+	u.startMoveToAttack(bState)
 	log.Printf("DEBUG_AI: unit %d (Type:%d) moving to attack bld %d, target tile: (%d,%d). Current position: (%d,%d).",
 		u.ID, u.Type, u.TargetID, u.TargetX, u.TargetY, u.X, u.Y)
 }
 
-func (u *unit) setMoveTargetForUnit(targetUnit *unit, bs *battleState) {
-	bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bs)
+func (u *unit) setMoveTargetForUnit(targetUnit *unit, bState *battleState) {
+	bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState)
 	u.TargetX, u.TargetY = bestX, bestY
 }
 
-func (u *unit) findBestPositionAroundUnit(targetUnit *unit, bs *battleState) (uint8, uint8) {
+func (u *unit) findBestPositionAroundUnit(targetUnit *unit, bState *battleState) (uint8, uint8) {
 	bestX, bestY := int(targetUnit.X), int(targetUnit.Y)
 	minDist := math.MaxFloat64
 	foundFreeSpot := false
@@ -1978,7 +1978,7 @@ func (u *unit) findBestPositionAroundUnit(targetUnit *unit, bs *battleState) (ui
 			checkX := int(targetUnit.X) + dx
 			checkY := int(targetUnit.Y) + dy
 
-			if u.isValidMoveTarget(uint8(checkX), uint8(checkY), bs) {
+			if u.isValidMoveTarget(uint8(checkX), uint8(checkY), bState) {
 				// log.Println("Funkcja findBestPositionAroundUnit isValidMoveTarget = true, szukam freeSpot")
 				dist := math.Abs(float64(int(u.X)-checkX)) + math.Abs(float64(int(u.Y)-checkY))
 				if dist < minDist {
@@ -2001,22 +2001,22 @@ func (u *unit) findBestPositionAroundUnit(targetUnit *unit, bs *battleState) (ui
 	return uint8(bestX), uint8(bestY)
 }
 
-func (u *unit) isValidMoveTarget(x, y uint8, bs *battleState) bool {
+func (u *unit) isValidMoveTarget(x, y uint8, bState *battleState) bool {
 	return x < boardMaxX && y < boardMaxY &&
-		bs.Board.Tiles[x][y].Unit == nil &&
-		bs.Board.Tiles[x][y].Building == nil &&
-		isWalkable(bs, x, y)
+		bState.Board.Tiles[x][y].Unit == nil &&
+		bState.Board.Tiles[x][y].Building == nil &&
+		isWalkable(bState, x, y)
 }
 
-func (u *unit) validateTargetExists(bs *battleState) (*combatTarget, error) {
-	targetUnit, targetBuilding := getObjectByID(u.TargetID, bs)
+func (u *unit) validateTargetExists(bState *battleState) (*combatTarget, error) {
+	targetUnit, targetBuilding := getObjectByID(u.TargetID, bState)
 
 	if targetBuilding != nil && targetBuilding.Type == buildingBridge {
 		return &combatTarget{Unit: targetUnit, Building: targetBuilding}, nil
 	}
 
 	if u.TargetID == 0 {
-		treeTile := bs.Board.Tiles[u.interactionTargetX][u.interactionTargetY]
+		treeTile := bState.Board.Tiles[u.interactionTargetX][u.interactionTargetY]
 		if treeTile.isStandingTree() && !treeTile.IsBurning {
 			return &combatTarget{Unit: nil, Building: nil}, nil
 		}
@@ -2050,7 +2050,7 @@ func (u *unit) calculateDistanceToTarget(target *combatTarget) uint8 {
 	))
 }
 
-func (u *unit) executeActionByDistance(distance uint8, bs *battleState) {
+func (u *unit) executeActionByDistance(distance uint8, bState *battleState) {
 	if distance > u.SightRange {
 		log.Printf("DEBUG_AI: U %d: cel ID %d poza zasięgiem widzenia. IDLE", u.ID, u.TargetID)
 		u.setIdle()
@@ -2061,16 +2061,16 @@ func (u *unit) executeActionByDistance(distance uint8, bs *battleState) {
 	if distance <= u.AttackRange {
 		log.Printf("DEBUT_AI: U %d: Odległość <= zasięg ataku. Rozpoczynam bezpośredni atak na cel ID %d.",
 			u.ID, u.TargetID)
-		u.startDirectAttack(u.TargetX, u.TargetY, bs)
+		u.startDirectAttack(u.TargetX, u.TargetY, bState)
 	} else {
 		log.Printf("DEBUG_AI: U %d: odległość %d > zasięg ataku %d. Ruszam w kierunku %d.",
 			u.ID, distance, u.AttackRange, u.TargetID)
-		u.startMoveToAttack(bs)
+		u.startMoveToAttack(bState)
 	}
 }
 
-func (u *unit) executeActionBasedOnDistance(bs *battleState) {
-	target, err := u.validateTargetExists(bs)
+func (u *unit) executeActionBasedOnDistance(bState *battleState) {
+	target, err := u.validateTargetExists(bState)
 	if err != nil {
 		u.setIdle()
 
@@ -2078,15 +2078,15 @@ func (u *unit) executeActionBasedOnDistance(bs *battleState) {
 	}
 
 	distance := u.calculateDistanceToTarget(target)
-	u.executeActionByDistance(distance, bs)
+	u.executeActionByDistance(distance, bState)
 }
 
-func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bs *battleState) {
+func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bState *battleState) {
 	realTargetX := placeholderX
 	realTargetY := placeholderY
 
 	if u.TargetID != 0 {
-		targetUnit, targetBld := getObjectByID(u.TargetID, bs)
+		targetUnit, targetBld := getObjectByID(u.TargetID, bState)
 
 		if targetUnit != nil && targetUnit.Exists {
 			realTargetX = targetUnit.X
@@ -2100,7 +2100,7 @@ func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bs *battleSta
 		}
 	}
 
-	u.addUnitCommand(cmdAttack, realTargetX, realTargetY, u.TargetID, bs)
+	u.addUnitCommand(cmdAttack, realTargetX, realTargetY, u.TargetID, bState)
 
 	u.State = stateAttacking
 	u.AnimationType = "fight"
@@ -2133,8 +2133,8 @@ func (bld *building) getClosestOccupiedTile(fromX, fromY uint8) (uint8, uint8, b
 	return closestX, closestY, true
 }
 
-func (u *unit) startMoveToAttack(bs *battleState) {
-	u.addUnitCommand(cmdAttack, u.TargetX, u.TargetY, u.TargetID, bs)
+func (u *unit) startMoveToAttack(bState *battleState) {
+	u.addUnitCommand(cmdAttack, u.TargetX, u.TargetY, u.TargetID, bState)
 	u.State = stateMoving
 	u.AnimationType = "walk"
 
@@ -2146,7 +2146,7 @@ func getLegacyUnitIndex(t unitType) int {
 	return int(t)
 }
 
-func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *building, bs *battleState) (uint8, uint8, bool) {
+func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *building, bState *battleState) (uint8, uint8, bool) {
 	if len(bld.OccupiedTiles) == 0 {
 		return 0, 0, false
 	}
@@ -2183,7 +2183,7 @@ func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *b
 	for _, candidate := range candidates {
 		x, y := candidate.X, candidate.Y
 
-		if !bld.isValidWalkableTile(x, y, bs) {
+		if !bld.isValidWalkableTile(x, y, bState) {
 			continue
 		}
 

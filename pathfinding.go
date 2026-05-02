@@ -59,13 +59,13 @@ func (h *pathNodeHeap) update(node, parent *pathNode, goCost, heuristicCost floa
 const maxPathfindingIterations = 10000
 
 // odnajduje ścieżkę do celu używając algo A*.
-func findPath(bs *battleState, moverID uint, startX, startY, endX, endY uint8) []*pathNode {
+func findPath(bState *battleState, moverID uint, startX, startY, endX, endY uint8) []*pathNode {
 	startNode := &pathNode{parent: nil, X: startX, Y: startY}
 
 	// 1. Pobieramy jednostkę, żeby wiedzieć kim jesteśmy (dla wyjątków ruchu - np. Krowa->Obora)
 	var mover *unit
 	if moverID > 0 {
-		mover, _ = getObjectByID(moverID, bs)
+		mover, _ = getObjectByID(moverID, bState)
 	}
 
 	openHeap := &pathNodeHeap{}
@@ -102,11 +102,11 @@ func findPath(bs *battleState, moverID uint, startX, startY, endX, endY uint8) [
 
 				// 2. KLUCZOWE: Używamy isWalkableUnit zamiast zwykłego isWalkable
 				// To pozwala krowie wejść w ścianę obory, jeśli to jej cel.
-				if !isWalkableUnit(bs, uint8(checkX), uint8(checkY), mover) {
+				if !isWalkableUnit(bState, uint8(checkX), uint8(checkY), mover) {
 					continue
 				}
 
-				newGoCost := currentNode.goCost + calculateMoveCost(currentNode, &pathNode{X: uint8(checkX), Y: uint8(checkY)}, bs, moverID)
+				newGoCost := currentNode.goCost + calculateMoveCost(currentNode, &pathNode{X: uint8(checkX), Y: uint8(checkY)}, bState, moverID)
 
 				if existingNode, found := nodeMap[coordKey]; found {
 					if newGoCost <= existingNode.goCost {
@@ -131,18 +131,18 @@ func findPath(bs *battleState, moverID uint, startX, startY, endX, endY uint8) [
 	return nil
 }
 
-func isWalkable(bs *battleState, x, y uint8) bool {
-	return isWalkableUnit(bs, x, y, nil)
+func isWalkable(bState *battleState, x, y uint8) bool {
+	return isWalkableUnit(bState, x, y, nil)
 }
 
 // isWalkableUnit - Sprawdza czy dana jednostka może wejść na kafelek.
 // Obsługuje wyjątek: Krowa wchodzi do swojej Obory (punkt dojenia).
-func isWalkableUnit(bs *battleState, x, y uint8, mover *unit) bool {
+func isWalkableUnit(bState *battleState, x, y uint8, mover *unit) bool {
 	if x >= boardMaxX || y >= boardMaxY {
 		return false
 	}
 
-	currentTile := &bs.Board.Tiles[x][y]
+	currentTile := &bState.Board.Tiles[x][y]
 
 	// 1. Sprawdź czy to budynek
 	if currentTile.Building != nil {
@@ -220,14 +220,14 @@ func isWaterOrObstacle(spriteID uint16) bool {
 	return false
 }
 
-func calculateMoveCost(from, to *pathNode, bs *battleState, moverID uint) float64 {
+func calculateMoveCost(from, to *pathNode, bState *battleState, moverID uint) float64 {
 	cost := 1.0
 	// koszt ruchu po przekątnej
 	if from.X != to.X && from.Y != to.Y {
 		cost = 1.414
 	}
 
-	terrainID := bs.Board.Tiles[to.X][to.Y].TextureID
+	terrainID := bState.Board.Tiles[to.X][to.Y].TextureID
 
 	// Drogi ułatwiają ruch
 	if terrainID >= spriteRoadStart && terrainID <= spriteRoadEnd {
@@ -236,7 +236,7 @@ func calculateMoveCost(from, to *pathNode, bs *battleState, moverID uint) float6
 
 	// Unikanie tłoku (sztuczka A*):
 	// Inne jednostki nie są ścianą (isWalkableUnit puszcza), ale są bardzo drogie.
-	tile := &bs.Board.Tiles[to.X][to.Y]
+	tile := &bState.Board.Tiles[to.X][to.Y]
 	if tile.Unit != nil && uint(tile.Unit.Owner) == moverID {
 		cost *= 3
 	}

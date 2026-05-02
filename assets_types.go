@@ -7,7 +7,7 @@ const (
 	atlasUnits1
 	atlasUnits2
 	atlasBuildings
-	// ↓↓↓ZAWSZE NA KOŃCU!↓↓↓
+	// ↓↓↓ZAWSZE NA KOŃCU!↓↓↓.
 	atlasCount // Musi być na końcu, zawsze!
 )
 

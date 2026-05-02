@@ -13,13 +13,13 @@ import (
 
 // checkEndConditions sprawdza warunki zakończenia gry.
 // @todo: jeszcze w ogóle nie sprawdzane i nie testowane!
-func checkEndConditions(bs *battleState) {
+func checkEndConditions(bState *battleState) {
 	// Jeżeli już ustalono, że gra zakończona, to nie ma co dalej liczyć
-	if bs.BattleOutcome != 0 {
+	if bState.BattleOutcome != 0 {
 		return
 	}
 
-	switch bs.CampaignData.EndCondition {
+	switch bState.CampaignData.EndCondition {
 	case endKillAll, endNothing:
 		// Zniszczyć i zabić wszystko LUB?
 		// Nie wiem, czy jest end_nothing
@@ -28,34 +28,34 @@ func checkEndConditions(bs *battleState) {
 		playerStillAlive := false
 
 		// Sprawdź jednostki gracza
-		for _, unit := range bs.Units {
-			if unit.Exists && unit.Owner == bs.PlayerID {
+		for _, unit := range bState.Units {
+			if unit.Exists && unit.Owner == bState.PlayerID {
 				playerStillAlive = true
 				break
 			}
 		}
 		// Sprawdź budynki gracza
 		if !playerStillAlive {
-			for _, bld := range bs.Buildings {
-				if bld.Exists && bld.Owner == bs.PlayerID && bld.Type == buildingMain { //&& !bld.IsUnderConstruction {
+			for _, bld := range bState.Buildings {
+				if bld.Exists && bld.Owner == bState.PlayerID && bld.Type == buildingMain { //&& !bld.IsUnderConstruction {
 					playerStillAlive = true
 					break
 				}
 			}
 		}
 
-		if bs.CampaignData.EndCondition == endKillAll {
+		if bState.CampaignData.EndCondition == endKillAll {
 			// Sprawdź jednostki wroga
-			for _, unit := range bs.Units {
-				if unit.Exists && unit.Owner == bs.AIPlayerID {
+			for _, unit := range bState.Units {
+				if unit.Exists && unit.Owner == bState.AIPlayerID {
 					allEnemiesDead = false
 					break
 				}
 			}
 			// Sprawdź budynki wroga
 			if allEnemiesDead {
-				for _, bld := range bs.Buildings {
-					if bld.Exists && bld.Owner == bs.AIPlayerID && bld.Type == buildingMain {
+				for _, bld := range bState.Buildings {
+					if bld.Exists && bld.Owner == bState.AIPlayerID && bld.Type == buildingMain {
 						allEnemiesDead = false
 						break
 					}
@@ -66,34 +66,34 @@ func checkEndConditions(bs *battleState) {
 		}
 
 		if allEnemiesDead {
-			bs.BattleOutcome = outcomeVictory
+			bState.BattleOutcome = outcomeVictory
 			// @todo: wróć do poprawienia tego warunku
 			log.Println("WARUNEK ZAKOŃCZENIA: Zniszczono wszystkich wrogów. Zwycięstwo!")
-			bs.CurrentMessage.Text = "Zwycięstwo!"
-			bs.CurrentMessage.Duration = 120
+			bState.CurrentMessage.Text = "Zwycięstwo!"
+			bState.CurrentMessage.Duration = 120
 		} else if !playerStillAlive {
 			// @todo: wróć do poprawienia tego warunku
-			bs.BattleOutcome = outcomeDefeat
+			bState.BattleOutcome = outcomeDefeat
 			log.Println("WARUNEK ZAKOŃCZENIA: Gracz przegrał (brak jednostek/głównego budynku). Porażka!")
-			bs.CurrentMessage.Text = "Porażka!"
-			bs.CurrentMessage.Duration = 120
+			bState.CurrentMessage.Text = "Porażka!"
+			bState.CurrentMessage.Duration = 120
 		}
 		return
 
 	case endRescue:
 		// Cel do uratowania
 		targetKilled := false
-		rx, ry := bs.CampaignData.RescueTargetX, bs.CampaignData.RescueTargetY
+		rx, ry := bState.CampaignData.RescueTargetX, bState.CampaignData.RescueTargetY
 
 		if rx != 0 || ry != 0 {
 			// ZMIANA: Używamy nowej struktury Tiles
-			tile := &bs.Board.Tiles[rx][ry]
+			tile := &bState.Board.Tiles[rx][ry]
 
 			// Sprawdzamy widoczność i obecność jednostki bezpośrednio
 			if tile.Visibility != visibilityUnexplored { // Dawne PlcFogOfWar != 0
 				// Jeśli na polu nie ma jednostki (nil) lub jednostka nie należy do AI (czyli zginęła/została przejęta?)
 				// w oryginale sprawdzano czy ID==0 lub Owner!=AI
-				if tile.Unit == nil || tile.Unit.Owner != bs.AIPlayerID {
+				if tile.Unit == nil || tile.Unit.Owner != bState.AIPlayerID {
 					targetKilled = true
 				}
 			}
@@ -101,9 +101,9 @@ func checkEndConditions(bs *battleState) {
 
 		// Czy dotarto do punktu zwycięstwa
 		rescueAchieved := false
-		for _, unit := range bs.Units {
-			if unit.Exists && unit.Owner == bs.PlayerID {
-				if unit.X == bs.CampaignData.VictoryPointX && unit.Y == bs.CampaignData.VictoryPointY {
+		for _, unit := range bState.Units {
+			if unit.Exists && unit.Owner == bState.PlayerID {
+				if unit.X == bState.CampaignData.VictoryPointX && unit.Y == bState.CampaignData.VictoryPointY {
 					rescueAchieved = true
 					break
 				}
@@ -112,15 +112,15 @@ func checkEndConditions(bs *battleState) {
 
 		// Sprawdzenie czy gracz żyje (kopiowane z góry dla bezpieczeństwa)
 		playerStillAlive := false
-		for _, unit := range bs.Units {
-			if unit.Exists && unit.Owner == bs.PlayerID {
+		for _, unit := range bState.Units {
+			if unit.Exists && unit.Owner == bState.PlayerID {
 				playerStillAlive = true
 				break
 			}
 		}
 		if !playerStillAlive {
-			for _, bld := range bs.Buildings {
-				if bld.Exists && bld.Owner == bs.PlayerID && bld.Type == buildingMain {
+			for _, bld := range bState.Buildings {
+				if bld.Exists && bld.Owner == bState.PlayerID && bld.Type == buildingMain {
 					playerStillAlive = true
 					break
 				}
@@ -128,45 +128,45 @@ func checkEndConditions(bs *battleState) {
 		}
 
 		if rescueAchieved {
-			bs.BattleOutcome = outcomeVictory
+			bState.BattleOutcome = outcomeVictory
 			// @todo: wróć do poprawienia tego warunku
 			log.Println("WARUNEK ZAKOŃCZENIA: Cel uratowany. Zwycięstwo!")
-			bs.CurrentMessage.Text = "Uratowano!"
-			bs.CurrentMessage.Duration = 120
+			bState.CurrentMessage.Text = "Uratowano!"
+			bState.CurrentMessage.Duration = 120
 		} else if targetKilled {
-			bs.BattleOutcome = outcomeDefeat
+			bState.BattleOutcome = outcomeDefeat
 			// @todo: wróć do poprawienia tego warunku
 			log.Println("WARUNEK ZAKOŃCZENIA: Cel ratunkowy został zabity. Porażka!")
-			bs.CurrentMessage.Text = "Cel zabity!"
-			bs.CurrentMessage.Duration = 120
+			bState.CurrentMessage.Text = "Cel zabity!"
+			bState.CurrentMessage.Duration = 120
 		} else if !playerStillAlive {
-			bs.BattleOutcome = outcomeDefeat
+			bState.BattleOutcome = outcomeDefeat
 			// @todo: wróć do poprawienia tego warunku
 			log.Println("WARUNEK ZAKOŃCZENIA: Gracz przegrał. Porażka!")
-			bs.CurrentMessage.Text = "Porażka!"
-			bs.CurrentMessage.Duration = 120
+			bState.CurrentMessage.Text = "Porażka!"
+			bState.CurrentMessage.Duration = 120
 		}
 		return
 
 	case endKillOne:
 		targetKilled := true
 		// Szukamy konkretnego dowódcy po ID (to akurat zostaje, bo szukamy w liście Units)
-		commanderUnit, ok := getUnitByID(1, bs)
+		commanderUnit, ok := getUnitByID(1, bState)
 		if ok && commanderUnit.Exists {
 			targetKilled = false
 		}
 
 		playerStillAlive := false
-		for _, unit := range bs.Units {
-			if unit.Exists && unit.Owner == bs.PlayerID {
+		for _, unit := range bState.Units {
+			if unit.Exists && unit.Owner == bState.PlayerID {
 				playerStillAlive = true
 
 				break
 			}
 		}
 		if !playerStillAlive {
-			for _, bld := range bs.Buildings {
-				if bld.Exists && bld.Owner == bs.PlayerID && bld.Type == buildingMain {
+			for _, bld := range bState.Buildings {
+				if bld.Exists && bld.Owner == bState.PlayerID && bld.Type == buildingMain {
 					playerStillAlive = true
 
 					break
@@ -175,18 +175,18 @@ func checkEndConditions(bs *battleState) {
 		}
 
 		if targetKilled {
-			bs.BattleOutcome = outcomeVictory
+			bState.BattleOutcome = outcomeVictory
 
 			log.Println("WARUNEK ZAKOŃCZENIA: Cel zabity. Zwycięstwo!")
 			// @todo: wróć do poprawienia tego warunku
-			bs.CurrentMessage.Text = "Cel zabity!"
-			bs.CurrentMessage.Duration = 120
+			bState.CurrentMessage.Text = "Cel zabity!"
+			bState.CurrentMessage.Duration = 120
 		} else if !playerStillAlive {
-			bs.BattleOutcome = outcomeDefeat
+			bState.BattleOutcome = outcomeDefeat
 			// @todo: wróć do poprawienia tego warunku
 			log.Println("WARUNEK ZAKOŃCZENIA: Gracz przegrał. Porażka!")
-			bs.CurrentMessage.Text = "Porażka!"
-			bs.CurrentMessage.Duration = 120
+			bState.CurrentMessage.Text = "Porażka!"
+			bState.CurrentMessage.Duration = 120
 		}
 		return
 
@@ -197,9 +197,9 @@ func checkEndConditions(bs *battleState) {
 		// Przykładowo level_15.json wymaga łącznie 7 budowli
 		// To 1xMAIN + 2xBarn + 1xBARRACKS+ 3 nowe budowle żeby wygrać
 		buildingCount := uint8(0)
-		for _, bld := range bs.Buildings {
+		for _, bld := range bState.Buildings {
 			// Nie zniszczone budynki gracza, nieukończone budowle się nie wliczają!
-			if bld.Exists && bld.Owner == bs.PlayerID && !bld.IsUnderConstruction {
+			if bld.Exists && bld.Owner == bState.PlayerID && !bld.IsUnderConstruction {
 				buildingCount++
 			}
 		}
@@ -210,8 +210,8 @@ func checkEndConditions(bs *battleState) {
 		// @todo: sama jedna krowa bez budynków nie pozwoli wygrać
 		// z pastuchem to samo!
 		playerStillAlive := false
-		for _, unit := range bs.Units {
-			if unit.Exists && unit.Owner == bs.PlayerID {
+		for _, unit := range bState.Units {
+			if unit.Exists && unit.Owner == bState.PlayerID {
 				playerStillAlive = true
 				// Wystarczy jedna żywa jednostka, aby gracz „wciąż żył”
 				break
@@ -222,8 +222,8 @@ func checkEndConditions(bs *battleState) {
 		// @todo: wróć do poprawienia tego warunku
 		// sama jedna obora bez innych budynków nie pozwala na wygraną!
 		if !playerStillAlive {
-			for _, bld := range bs.Buildings {
-				if bld.Exists && bld.Owner == bs.PlayerID && bld.Type == buildingMain {
+			for _, bld := range bState.Buildings {
+				if bld.Exists && bld.Owner == bState.PlayerID && bld.Type == buildingMain {
 					playerStillAlive = true
 					break
 				}
@@ -231,18 +231,18 @@ func checkEndConditions(bs *battleState) {
 		}
 
 		// Czy mamy dość ukończonych budynków, aby zakończyć bitwę?
-		if buildingCount >= bs.CampaignData.TargetType {
-			bs.BattleOutcome = outcomeVictory
+		if buildingCount >= bState.CampaignData.TargetType {
+			bState.BattleOutcome = outcomeVictory
 			// @todo: usuń po zweryfikowaniu, czy działa poprawnie
 			log.Println("WARUNEK ZAKOŃCZENIA: Wymagana liczba budynków zbudowana. Zwycięstwo!")
-			bs.CurrentMessage.Text = "Zbudowano!"
-			bs.CurrentMessage.Duration = 30
+			bState.CurrentMessage.Text = "Zbudowano!"
+			bState.CurrentMessage.Duration = 30
 		} else if !playerStillAlive {
-			bs.BattleOutcome = outcomeDefeat
+			bState.BattleOutcome = outcomeDefeat
 			// @todo: usuń po zweryfikowaniu, czy działa poprawnie
 			log.Println("WARUNEK ZAKOŃCZENIA: Gracz przegrał. Porażka!")
-			bs.CurrentMessage.Text = "Porażka!"
-			bs.CurrentMessage.Duration = 30
+			bState.CurrentMessage.Text = "Porażka!"
+			bState.CurrentMessage.Duration = 30
 		}
 		return
 	}
@@ -251,14 +251,14 @@ func checkEndConditions(bs *battleState) {
 // GŁÓWNA PĘTLA GRY NA POZIOMIE KADRU
 
 // @todo: czy nie lepiej używać ticker time.NewTicker?
-func updateGame(bs *battleState) {
+func updateGame(bState *battleState) {
 	// 1. Odświeżanie logiki co klatkowej
-	updatePerFrameLogic(bs)
+	updatePerFrameLogic(bState)
 
 	// 2. Tick Logiki
-	logicTickInterval := bs.GameSpeed + uint16(1)
-	if bs.GlobalFrameCounter%logicTickInterval != 0 {
-		updateMessageTimer(bs)
+	logicTickInterval := bState.GameSpeed + uint16(1)
+	if bState.GlobalFrameCounter%logicTickInterval != 0 {
+		updateMessageTimer(bState)
 
 		return
 	}
@@ -267,134 +267,134 @@ func updateGame(bs *battleState) {
 
 	// 3. Czyszczenie pamięci
 	// @todo: zastanów się, czy nie dodać czyszczenia innych list, jak budynki, zwłoki, czy płonące kafelki.
-	if bs.GlobalFrameCounter%120 == 0 {
-		performPeriodicCleanup(bs)
-		updateBurningTilesList(bs)
-		updateFallingTreesList(bs)
-		updateGhostList(bs)
+	if bState.GlobalFrameCounter%120 == 0 {
+		performPeriodicCleanup(bState)
+		updateBurningTilesList(bState)
+		updateFallingTreesList(bState)
+		updateGhostList(bState)
 	}
 
 	// 4. Sprawdzanie warunki zakończenia bitwy
 	// @todo: ogarnij, bo jeszcze nie ruszone w ogóle
-	checkEndConditions(bs)
+	checkEndConditions(bState)
 
-	if bs.BattleOutcome != 0 {
-		bs.QuitLevel = true
-		log.Printf("Gra zakończona! Wynik: %d. Poziom do zamknięcia: %v", bs.BattleOutcome, bs.QuitLevel)
+	if bState.BattleOutcome != 0 {
+		bState.QuitLevel = true
+		log.Printf("Gra zakończona! Wynik: %d. Poziom do zamknięcia: %v", bState.BattleOutcome, bState.QuitLevel)
 
 		return
 	}
 
 	// 5. SI
 	// @todo: ogarnij, bo jeszcze nie ruszone w ogóle
-	processAI(bs)
+	processAI(bState)
 
 	// 6. Komendy
 	// @todo: ogarnij, bo to CHYBA jeszcze nie ruszone było
-	processCommands(bs)
+	processCommands(bState)
 
 	// 7. Odświeżenie jednostek
-	updateUnits(bs)
+	updateUnits(bState)
 
 	// 8. Odświeżenie pocisków
-	updateProjectiles(bs)
+	updateProjectiles(bState)
 
 	// 9. Budynki i niszczenie ich
 	// @todo: to brzmi, jak coś co powinno się rozdzielić
 	// ogarnij, czy da się tego potwora uprościć, ulepszyć
-	updateBuildings(bs)
+	updateBuildings(bState)
 
 	// 10. Efekty globalne
-	applyGlobalEffects(bs)
+	applyGlobalEffects(bState)
 
 	// 11. Skrypty poziomu (przemiana w niedźwiedzia itd)
 	// @todo: do zrobienia, nie sprawdzałem jeszcze czy w ogóle działają
-	handleLevelEvents(bs)
+	handleLevelEvents(bState)
 
 	// 12. Wiadomość
 	// @todo: nie wiem nawet po co to jest!
-	updateMessageTimer(bs)
+	updateMessageTimer(bState)
 }
 
-func updatePerFrameLogic(bs *battleState) {
-	bs.pathfindingUnitsThisTick = 0
-	bs.enemyCacheUpdateTick = 0
+func updatePerFrameLogic(bState *battleState) {
+	bState.pathfindingUnitsThisTick = 0
+	bState.enemyCacheUpdateTick = 0
 
-	if bs.CheatsEnabled {
-		log.Printf("DEBUG GAME: Level %d, Difficulty %d, GameState %d", bs.CurrentLevel, bs.DifficultyLevel, bs.BattleOutcome)
+	if bState.CheatsEnabled {
+		log.Printf("DEBUG GAME: Level %d, Difficulty %d, GameState %d", bState.CurrentLevel, bState.DifficultyLevel, bState.BattleOutcome)
 	}
 
 	// Animacje
-	if bs.GlobalFrameCounter%envAnimSpeedDivisor == 0 {
-		updateAnimationCounters(bs)
+	if bState.GlobalFrameCounter%envAnimSpeedDivisor == 0 {
+		updateAnimationCounters(bState)
 	}
 
-	updateWorldTimers(bs)
+	updateWorldTimers(bState)
 }
 
 // Nie pamiętam po co to w ogóle jest potrzebne.
-func updateMessageTimer(bs *battleState) {
-	if bs.CurrentMessage.Duration > 0 {
-		bs.CurrentMessage.Duration--
-		if bs.CurrentMessage.Duration == 0 {
-			bs.CurrentMessage.Text = ""
+func updateMessageTimer(bState *battleState) {
+	if bState.CurrentMessage.Duration > 0 {
+		bState.CurrentMessage.Duration--
+		if bState.CurrentMessage.Duration == 0 {
+			bState.CurrentMessage.Text = ""
 		}
 	}
 }
 
 // Sprawdza, czy w budynku znajdują się zabite jednostki i zwalnia im miejsce.
-func performPeriodicCleanup(bs *battleState) {
-	for _, bld := range bs.Buildings {
+func performPeriodicCleanup(bState *battleState) {
+	for _, bld := range bState.Buildings {
 		if bld != nil && bld.Exists {
-			bld.cleanupDeadUnits(bs)
+			bld.cleanupDeadUnits(bState)
 		}
 	}
 }
 
 // Sprawdza, czy można usunąć kafelki, które zakończyły cykl płonięcia.
-func updateBurningTilesList(bs *battleState) {
+func updateBurningTilesList(bState *battleState) {
 	var burningTiles []*tile
 
-	for _, currentTile := range bs.BurningTilesList {
+	for _, currentTile := range bState.BurningTilesList {
 		if currentTile.IsBurning || currentTile.hasAsh {
 			burningTiles = append(burningTiles, currentTile)
 		}
 	}
 
-	bs.BurningTilesList = burningTiles
+	bState.BurningTilesList = burningTiles
 }
 
 // Sprawdza, czy drzewo dopełniło cykl upadku i można je usunąć z listy.
-func updateFallingTreesList(bs *battleState) {
+func updateFallingTreesList(bState *battleState) {
 	var fallingTrees []*tile
 
-	for _, currentTile := range bs.FallingTreesList {
+	for _, currentTile := range bState.FallingTreesList {
 		if currentTile.treeState != treeFell {
 			fallingTrees = append(fallingTrees, currentTile)
 		}
 	}
 
-	bs.FallingTreesList = fallingTrees
+	bState.FallingTreesList = fallingTrees
 }
 
-func updateGhostList(bs *battleState) {
+func updateGhostList(bState *battleState) {
 	var ghostList []*tile
 
-	for _, ghostTile := range bs.GhostsList {
+	for _, ghostTile := range bState.GhostsList {
 		if ghostTile.GhostEffect {
 			ghostList = append(ghostList, ghostTile)
 		}
 	}
 
-	bs.GhostsList = ghostList
+	bState.GhostsList = ghostList
 }
 
-func updateCorpses(bs *battleState) {
+func updateCorpses(bState *battleState) {
 	// nextFreeIndex wskaźnik do miejsca dla nowych zwłok
 	nextFreeIndex := 0
 
-	for scanIndex := range bs.CorpsesList {
-		corpseToUpdate := &bs.CorpsesList[scanIndex]
+	for scanIndex := range bState.CorpsesList {
+		corpseToUpdate := &bState.CorpsesList[scanIndex]
 
 		corpseToUpdate.DecayTimer--
 
@@ -419,65 +419,65 @@ func updateCorpses(bs *battleState) {
 		if corpseToUpdate.DecayTimer > 0 {
 			// Jeśli zwłoki są pod adresem większym niż wolny adres, to przenosimy.
 			if scanIndex != nextFreeIndex {
-				bs.CorpsesList[nextFreeIndex] = *corpseToUpdate
+				bState.CorpsesList[nextFreeIndex] = *corpseToUpdate
 			}
 
 			nextFreeIndex++
 		}
 	}
 
-	bs.CorpsesList = bs.CorpsesList[:nextFreeIndex]
+	bState.CorpsesList = bState.CorpsesList[:nextFreeIndex]
 }
 
 // processAI zarządza sztuczną inteligencją przeciwnika
-func processAI(bs *battleState) {
-	switch bs.CampaignData.DecisionType {
+func processAI(bState *battleState) {
+	switch bState.CampaignData.DecisionType {
 	case boardVillage:
-		aiMakeDecision(bs)
+		aiMakeDecision(bState)
 	case boardBattleDyn:
-		aiMakeDecision(bs)
+		aiMakeDecision(bState)
 	case boardBattleStat:
-		aiMakeDecision(bs)
+		aiMakeDecision(bState)
 	case boardNothing:
 	default:
-		log.Printf("OSTRZEŻENIE: Nieznany typ decyzji planszy: %d", bs.CampaignData.DecisionType)
+		log.Printf("OSTRZEŻENIE: Nieznany typ decyzji planszy: %d", bState.CampaignData.DecisionType)
 	}
 }
 
 // processCommands przetwarza rozkazy
-func processCommands(bs *battleState) {
-	if bs.CurrentCommands[0].ActionType != cmdIdle {
+func processCommands(bState *battleState) {
+	if bState.CurrentCommands[0].ActionType != cmdIdle {
 		log.Printf("ProcComm: Gracz wykonuje komendę. TargetObject: %d, ActionType: %d",
-			bs.CurrentCommands[0].CommandCategory, bs.CurrentCommands[0].ActionType)
-		bs.HumanPlayerState.setCommand(&bs.CurrentCommands[0], bs)
-		bs.CurrentCommands[0].ActionType = cmdIdle
+			bState.CurrentCommands[0].CommandCategory, bState.CurrentCommands[0].ActionType)
+		bState.HumanPlayerState.setCommand(&bState.CurrentCommands[0], bState)
+		bState.CurrentCommands[0].ActionType = cmdIdle
 	}
 
-	if bs.CurrentCommands[1].ActionType != cmdIdle {
+	if bState.CurrentCommands[1].ActionType != cmdIdle {
 		log.Printf("ProcComm: SI wykonuje komendę. TargetObject: %d, ActionType: %d",
-			bs.CurrentCommands[1].CommandCategory, bs.CurrentCommands[1].ActionType)
-		bs.AIEnemyState.setCommand(&bs.CurrentCommands[1], bs)
-		bs.CurrentCommands[1].ActionType = cmdIdle
+			bState.CurrentCommands[1].CommandCategory, bState.CurrentCommands[1].ActionType)
+		bState.AIEnemyState.setCommand(&bState.CurrentCommands[1], bState)
+		bState.CurrentCommands[1].ActionType = cmdIdle
 	}
 }
 
 // odświeża jednostki, sprawdza, która została zabita itd.
-func updateUnits(bs *battleState) {
-	for _, unit := range bs.Units {
-		if unit.Exists {
-			unit.updateUnit(bs)
+func updateUnits(bState *battleState) {
+	for _, currentUnit := range bState.Units {
+		if currentUnit.Exists {
+			currentUnit.updateUnit(bState)
 		}
 	}
 
-	cleanupDeadUnits(bs)
+	cleanupDeadUnits(bState)
 }
 
 // updateProjectiles odświeża pociski, sprawdza, czy dodać nowe.
-func updateProjectiles(bs *battleState) {
-	activeProjectiles := bs.Projectiles[:0]
-	for _, p := range bs.Projectiles {
+func updateProjectiles(bState *battleState) {
+	activeProjectiles := bState.Projectiles[:0]
+	for _, p := range bState.Projectiles {
 		if p.Exists {
-			p.updateProjectile(bs)
+			p.updateProjectile(bState)
 
 			if p.Exists {
 				activeProjectiles = append(activeProjectiles, p)
@@ -485,11 +485,11 @@ func updateProjectiles(bs *battleState) {
 		}
 	}
 
-	bs.Projectiles = activeProjectiles
+	bState.Projectiles = activeProjectiles
 }
 
-func updateBuildings(bs *battleState) {
-	for _, bld := range bs.Buildings {
+func updateBuildings(bState *battleState) {
+	for _, bld := range bState.Buildings {
 		if !bld.Exists {
 			continue
 		}
@@ -498,17 +498,17 @@ func updateBuildings(bs *battleState) {
 			finalDamage := bld.AccumulatedDamage - uint16(bld.Armor)
 
 			if finalDamage > 0 {
-				applyBuildingDamage(bld, finalDamage, bs)
+				applyBuildingDamage(bld, finalDamage, bState)
 			}
 
 			bld.AccumulatedDamage = 0
 		}
 	}
 
-	cleanupDestroyedBuildings(bs)
+	cleanupDestroyedBuildings(bState)
 }
 
-func applyBuildingDamage(bld *building, finalDamage uint16, bs *battleState) {
+func applyBuildingDamage(bld *building, finalDamage uint16, bState *battleState) {
 	// Bez tego bld.HP przekręca się na 65 tys.
 	if bld.HP >= finalDamage {
 		bld.HP -= finalDamage
@@ -520,73 +520,73 @@ func applyBuildingDamage(bld *building, finalDamage uint16, bs *battleState) {
 		bld.ID, finalDamage, bld.HP, bld.MaxHP)
 
 	if bld.HP <= 0 {
-		removeBuilding(bld, bs)
+		removeBuilding(bld, bState)
 	}
 }
 
-func removeBuilding(bld *building, bs *battleState) {
+func removeBuilding(bld *building, bState *battleState) {
 	bld.HP = 0
 
 	if bld.Type != buildingPalisade {
-		placeDestroyedBuilding(bld, bs)
+		placeDestroyedBuilding(bld, bState)
 	} else {
-		placeDestroyedPalisade(bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, bld, bs)
+		placeDestroyedPalisade(bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, bld, bState)
 	}
 }
 
-func placeDestroyedBuilding(bld *building, bs *battleState) {
+func placeDestroyedBuilding(bld *building, bState *battleState) {
 	bld.Exists = false
 	log.Printf("building %d destroyed!", bld.ID)
 
 	switch bld.Owner {
-	case bs.HumanPlayerState.PlayerID:
-		bs.HumanPlayerState.CurrentBuildings--
-	case bs.AIEnemyState.PlayerID:
-		bs.AIEnemyState.CurrentBuildings--
+	case bState.HumanPlayerState.PlayerID:
+		bState.HumanPlayerState.CurrentBuildings--
+	case bState.AIEnemyState.PlayerID:
+		bState.AIEnemyState.CurrentBuildings--
 	}
 
-	placeRuins(bs, bld)
+	placeRuins(bState, bld)
 
-	for _, tile := range bld.OccupiedTiles {
-		if tile.X < boardMaxX && tile.Y < boardMaxY {
+	for _, occupiedTile := range bld.OccupiedTiles {
+		if occupiedTile.X < boardMaxX && occupiedTile.Y < boardMaxY {
 			// Usuwamy odnośnik do budynku z kafelka
-			if bs.Board.Tiles[tile.X][tile.Y].Building == bld {
-				bs.Board.Tiles[tile.X][tile.Y].Building = nil
-				bs.Board.Tiles[tile.X][tile.Y].IsWalkable = true
+			if bState.Board.Tiles[occupiedTile.X][occupiedTile.Y].Building == bld {
+				bState.Board.Tiles[occupiedTile.X][occupiedTile.Y].Building = nil
+				bState.Board.Tiles[occupiedTile.X][occupiedTile.Y].IsWalkable = true
 			}
 		}
 	}
 }
 
-func applyGlobalEffects(bs *battleState) {
-	healingShrine(bs)
-	manaRegen(bs)
-	updateCorpses(bs)
-	burningTileEffect(bs)
-	fallingTreeEffect(bs)
-	ghostEffect(bs)
+func applyGlobalEffects(bState *battleState) {
+	healingShrine(bState)
+	manaRegen(bState)
+	updateCorpses(bState)
+	burningTileEffect(bState)
+	fallingTreeEffect(bState)
+	ghostEffect(bState)
 }
 
 // handleLevelEvents przemiana w niedźwiedzia, odprowadzenie jednostki do punktu ucieczki
 // @todo: nie ogarnięte w ogóle! przemiana powinna być jak healingShires
 // czemu sprawdzenie miejsca ucieczki jest na w tym miejscu a nie przy
 // sprawdzaniu warunków końca bitwy?!
-func handleLevelEvents(bs *battleState) {
+func handleLevelEvents(bState *battleState) {
 	// Przemiana w niedźwiedzia
-	if bs.CampaignData.TransformationSiteX != 0 || bs.CampaignData.TransformationSiteY != 0 {
-		tx, ty := bs.CampaignData.TransformationSiteX, bs.CampaignData.TransformationSiteY
+	if bState.CampaignData.TransformationSiteX != 0 || bState.CampaignData.TransformationSiteY != 0 {
+		tx, ty := bState.CampaignData.TransformationSiteX, bState.CampaignData.TransformationSiteY
 
-		tile := &bs.Board.Tiles[tx][ty]
+		currentTile := &bState.Board.Tiles[tx][ty]
 
-		if tile.TextureID == spriteEffectTransform00 && tile.Unit != nil {
-			unit := tile.Unit // Bezpośredni wskaźnik!
-			if unit.Exists && unit.Owner == bs.PlayerID {
+		if currentTile.TextureID == spriteEffectTransform00 && currentTile.Unit != nil {
+			currentUnit := currentTile.Unit // Bezpośredni wskaźnik!
+			if currentUnit.Exists && currentUnit.Owner == bState.PlayerID {
 				// @todo: Ten warunek kompletnie nie ma sensu! Każdy kto wejdzie w
 				// miejsce przemiany zamienia się w niedźwiedzia, a nie tylko AXEMAN LVL50
 				// KONIECZNIE SPRAWDŹ TO w PIERWOTNYM KODZIE I OGARNIJ O CO CHODZI!!!
-				if unit.Type == unitAxeman && unit.Experience >= 50 {
-					log.Printf("GAME: Przemiana jednostki %d!", unit.ID)
-					unit.Type = unitBear
+				if currentUnit.Type == unitAxeman && currentUnit.Experience >= 50 {
+					log.Printf("GAME: Przemiana jednostki %d!", currentUnit.ID)
+					currentUnit.Type = unitBear
 					// unit.SightRange = UNIT_TYPE_DATA[UNIT_BEAR][0]
 					// unit.AttackRange = UNIT_TYPE_DATA[UNIT_BEAR][1]
 					// unit.Damage = UNIT_TYPE_DATA[UNIT_BEAR][2]
@@ -595,19 +595,19 @@ func handleLevelEvents(bs *battleState) {
 					// unit.MaxDelay = UNIT_TYPE_DATA[UNIT_BEAR][5]
 					stats, ok := unitDefs[unitBear]
 					if !ok {
-						panic(fmt.Sprintf("BŁĄD KRYTYCZNY: Nie udało się przemienić jednostki ID%d w UNIT_BEAR", unit.ID))
+						panic(fmt.Sprintf("BŁĄD KRYTYCZNY: Nie udało się przemienić jednostki ID%d w UNIT_BEAR", currentUnit.ID))
 					}
 
-					unit.SightRange = stats.SightRange
-					unit.AttackRange = stats.AttackRange
-					unit.Damage = stats.BaseDamage
-					unit.Armor = stats.BaseArmor
-					unit.MaxHP = stats.MaxHP
-					unit.MaxDelay = stats.MoveDelay
-					unit.Mana = stats.MaxMana
+					currentUnit.SightRange = stats.SightRange
+					currentUnit.AttackRange = stats.AttackRange
+					currentUnit.Damage = stats.BaseDamage
+					currentUnit.Armor = stats.BaseArmor
+					currentUnit.MaxHP = stats.MaxHP
+					currentUnit.MaxDelay = stats.MoveDelay
+					currentUnit.Mana = stats.MaxMana
 
-					if unit.HP > stats.MaxHP {
-						unit.HP = stats.MaxHP
+					if currentUnit.HP > stats.MaxHP {
+						currentUnit.HP = stats.MaxHP
 					}
 				}
 			}
@@ -615,19 +615,19 @@ func handleLevelEvents(bs *battleState) {
 	}
 
 	// RATUNEK
-	if bs.CampaignData.EndCondition == endRescue &&
-		bs.CampaignData.RescueTargetX != 0 && bs.CampaignData.RescueTargetY != 0 {
+	if bState.CampaignData.EndCondition == endRescue &&
+		bState.CampaignData.RescueTargetX != 0 && bState.CampaignData.RescueTargetY != 0 {
 
-		rx, ry := bs.CampaignData.RescueTargetX, bs.CampaignData.RescueTargetY
-		tile := &bs.Board.Tiles[rx][ry]
+		rx, ry := bState.CampaignData.RescueTargetX, bState.CampaignData.RescueTargetY
+		tile := &bState.Board.Tiles[rx][ry]
 
 		// ZMIANA: Visibility i unit pointer
 		if tile.Visibility != visibilityUnexplored {
 			if tile.Unit != nil {
 				rescuedUnit := tile.Unit
 				if rescuedUnit.Exists &&
-					rescuedUnit.Owner == bs.PlayerID &&
-					rescuedUnit.Type == unitType(bs.CampaignData.TargetType) {
+					rescuedUnit.Owner == bState.PlayerID &&
+					rescuedUnit.Type == unitType(bState.CampaignData.TargetType) {
 					log.Printf("RESCUE: cel jest w punkcie!")
 				}
 			}
@@ -635,14 +635,14 @@ func handleLevelEvents(bs *battleState) {
 	}
 }
 
-func placeDestroyedPalisade(x, y uint8, bld *building, bs *battleState) {
-	tile := &bs.Board.Tiles[x][y]
-	tile.TextureID = spritePalisadeDestroyed
-	tile.IsWalkable = true
+func placeDestroyedPalisade(x, y uint8, bld *building, bState *battleState) {
+	currentTile := &bState.Board.Tiles[x][y]
+	currentTile.TextureID = spritePalisadeDestroyed
+	currentTile.IsWalkable = true
 	bld.IsUnderConstruction = true
 }
 
-func placeRuins(bs *battleState, bld *building) {
+func placeRuins(bState *battleState, bld *building) {
 	if len(bld.OccupiedTiles) == 0 {
 		return
 	}
@@ -673,7 +673,7 @@ func placeRuins(bs *battleState, bld *building) {
 	for _, pt := range bld.OccupiedTiles {
 		x, y := pt.X, pt.Y
 
-		tile := &bs.Board.Tiles[x][y]
+		tile := &bState.Board.Tiles[x][y]
 
 		// Czyścimy wskaźnik na budynek
 		tile.Building = nil
@@ -690,45 +690,45 @@ func placeRuins(bs *battleState, bld *building) {
 
 // Usuwa uśmiercone jednostki z bs.
 // Nie mylić z logiką rozkładu zwłok updateCorpses().
-func cleanupDeadUnits(bs *battleState) {
-	if bs.GlobalFrameCounter%6000 != 0 {
+func cleanupDeadUnits(bState *battleState) {
+	if bState.GlobalFrameCounter%6000 != 0 {
 		return
 	}
 
-	if len(bs.Units) < int(maxUnitsPerPlayer)*4 {
+	if len(bState.Units) < int(maxUnitsPerPlayer)*4 {
 		return
 	}
 
-	newUnitsList := make([]*unit, 0, len(bs.Units))
-	for _, u := range bs.Units {
+	newUnitsList := make([]*unit, 0, len(bState.Units))
+	for _, u := range bState.Units {
 		if u.Exists {
 			newUnitsList = append(newUnitsList, u)
 		}
 	}
 
-	bs.Units = newUnitsList
+	bState.Units = newUnitsList
 }
 
-func cleanupDestroyedBuildings(bs *battleState) {
-	if bs.GlobalFrameCounter%6000 != 0 {
+func cleanupDestroyedBuildings(bState *battleState) {
+	if bState.GlobalFrameCounter%6000 != 0 {
 		return
 	}
 
-	if len(bs.Buildings) < int(maxBuildingsPerPlayer)*4 {
+	if len(bState.Buildings) < int(maxBuildingsPerPlayer)*4 {
 		return
 	}
 
 	log.Println("INFO: Rozpoczynam czyszczenie pamięci z budynków...")
 
-	newBuildingsList := make([]*building, 0, len(bs.Buildings))
-	for _, bld := range bs.Buildings {
+	newBuildingsList := make([]*building, 0, len(bState.Buildings))
+	for _, bld := range bState.Buildings {
 		if bld.Exists {
 			newBuildingsList = append(newBuildingsList, bld)
 		}
 	}
 
-	removedCount := len(bs.Buildings) - len(newBuildingsList)
-	bs.Buildings = newBuildingsList
+	removedCount := len(bState.Buildings) - len(newBuildingsList)
+	bState.Buildings = newBuildingsList
 
 	if removedCount > 0 {
 		log.Printf("INFO: Wyczyszczono %d zniszczonych budynków.", removedCount)

@@ -291,11 +291,11 @@ import (
 
 // OBSŁUGA WEJŚCIA - UI I INTERFEJS
 
-func handleGameUIClicks(input inputState, bs *battleState, ps *programState) bool {
+func handleGameUIClicks(input inputState, bState *battleState, ps *programState) bool {
 	virtualMouse := input.MousePosition
 
 	// 1. Najpierw sprawdzamy minimapę (to kluczowe, by nie klikać "przez" nią)
-	if handleMinimapInteraction(input, bs, ps) {
+	if handleMinimapInteraction(input, bState, ps) {
 		return true
 	}
 
@@ -303,38 +303,38 @@ func handleGameUIClicks(input inputState, bs *battleState, ps *programState) boo
 	if input.IsLeftMouseButtonPressed {
 		// Sprawdzamy każdy z 5 przycisków
 		for btnIndex := range uiActionMaxButtons {
-			action := bs.UI.CurrentActions[btnIndex]
+			action := bState.UI.CurrentActions[btnIndex]
 
 			// Pomijamy wyłączone przyciski
 			if !action.IsActive {
 				continue
 			}
 
-			rect := bs.UI.ActionButtons[btnIndex]
+			rect := bState.UI.ActionButtons[btnIndex]
 			if rl.CheckCollisionPointRec(virtualMouse, rect) {
 				log.Printf("UI: Wybrano akcję przycisku %d: %s (Typ: %d)", btnIndex, action.Label, action.Cmd.ActionType)
 
 				switch action.Cmd.ActionType {
 				case cmdBuildStructure:
 					// To jest tryb myszy. Nie wysyłamy rozkazu, lecz zmieniamy stan kursora.
-					bs.MouseCommandMode = cmdBuildStructure
+					bState.MouseCommandMode = cmdBuildStructure
 					// Zapisujemy rodzaj budynku do "plecaka" w battleState
-					bs.PendingBuildingType = buildingType(action.Cmd.InteractionTargetID)
+					bState.PendingBuildingType = buildingType(action.Cmd.InteractionTargetID)
 
-					bs.CurrentMessage.Text = "Wskaż miejsce"
-					bs.CurrentMessage.Duration = 60
+					bState.CurrentMessage.Text = "Wskaż miejsce"
+					bState.CurrentMessage.Duration = 60
 
 					// Opcjonalnie: czyścimy zaznaczenie jednostek, by nie przeszkadzały
-					clearSelection(bs)
+					clearSelection(bState)
 				case cmdRepairStructure:
-					bs.MouseCommandMode = cmdRepairStructure
-					bs.CurrentMessage.Text = "Wskaż budynek do naprawy"
-					bs.CurrentMessage.Duration = 60
+					bState.MouseCommandMode = cmdRepairStructure
+					bState.CurrentMessage.Text = "Wskaż budynek do naprawy"
+					bState.CurrentMessage.Duration = 60
 
 				default:
 					// Rozkazy natychmiastowe (CMD_PRODUCE, CMD_MILK, itp.)
 					// Wysyłamy je bezpośrednio do kolejki rozkazów.
-					bs.CurrentCommands[0] = action.Cmd
+					bState.CurrentCommands[0] = action.Cmd
 				}
 
 				return true
@@ -351,19 +351,19 @@ func handleGameUIClicks(input inputState, bs *battleState, ps *programState) boo
 	return false
 }
 
-func handleGameShortcuts(bs *battleState) bool {
+func handleGameShortcuts(bState *battleState) bool {
 	if rl.IsKeyPressed(rl.KeyKpSubtract) || rl.IsKeyPressed(rl.KeyMinus) {
-		if bs.GameSpeed < 5 {
-			bs.GameSpeed++
-			log.Printf("SKRÓT: Prędkość gry zmniejszona do %d", bs.GameSpeed)
+		if bState.GameSpeed < 5 {
+			bState.GameSpeed++
+			log.Printf("SKRÓT: Prędkość gry zmniejszona do %d", bState.GameSpeed)
 			return true
 		}
 	}
 
 	if rl.IsKeyPressed(rl.KeyKpAdd) || rl.IsKeyPressed(rl.KeyEqual) {
-		if bs.GameSpeed > 0 {
-			bs.GameSpeed--
-			log.Printf("SKRÓT: Prędkość gry zwiększona do %d", bs.GameSpeed)
+		if bState.GameSpeed > 0 {
+			bState.GameSpeed--
+			log.Printf("SKRÓT: Prędkość gry zwiększona do %d", bState.GameSpeed)
 			return true
 		}
 	}
@@ -375,40 +375,40 @@ func handleGameShortcuts(bs *battleState) bool {
 
 		if rl.IsKeyPressed(key) {
 			if isShiftDown {
-				if bs.CurrentSelection.OwnerID != bs.PlayerID {
+				if bState.CurrentSelection.OwnerID != bState.PlayerID {
 					return true
 				}
 
 				log.Printf("SKRÓT: Zapamiętywanie grupy %d", i)
 				var selectedUnitIDs []uint
-				for _, unit := range bs.Units {
-					if unit.Exists && unit.Owner == bs.PlayerID && unit.IsSelected {
+				for _, unit := range bState.Units {
+					if unit.Exists && unit.Owner == bState.PlayerID && unit.IsSelected {
 						selectedUnitIDs = append(selectedUnitIDs, unit.ID)
 					}
 				}
-				bs.ControlGroups[i] = controlGroup{}
+				bState.ControlGroups[i] = controlGroup{}
 				for _, unitID := range selectedUnitIDs {
-					bs.ControlGroups[i].Units = append(bs.ControlGroups[i].Units, controlGroupUnit{UnitID: unitID})
+					bState.ControlGroups[i].Units = append(bState.ControlGroups[i].Units, controlGroupUnit{UnitID: unitID})
 				}
-				log.Printf("SKRÓT: Grupa %d utworzona z %d jednostek.", i, len(bs.ControlGroups[i].Units))
+				log.Printf("SKRÓT: Grupa %d utworzona z %d jednostek.", i, len(bState.ControlGroups[i].Units))
 				return true
 
 			}
 
-			if len(bs.ControlGroups[i].Units) == 0 {
+			if len(bState.ControlGroups[i].Units) == 0 {
 				return true
 			}
 
 			log.Printf("SKRÓT: Przywoływanie grupy %d", i)
-			clearSelection(bs)
+			clearSelection(bState)
 
 			firstUnitInGroup := true
-			for _, groupUnit := range bs.ControlGroups[i].Units {
-				unit, ok := getUnitByID(groupUnit.UnitID, bs)
-				if ok && unit.Exists && unit.Owner == bs.PlayerID {
+			for _, groupUnit := range bState.ControlGroups[i].Units {
+				unit, ok := getUnitByID(groupUnit.UnitID, bState)
+				if ok && unit.Exists && unit.Owner == bState.PlayerID {
 					unit.IsSelected = true
 					if firstUnitInGroup {
-						bs.CurrentSelection = selectionState{
+						bState.CurrentSelection = selectionState{
 							OwnerID:    unit.Owner,
 							IsUnit:     true,
 							UnitID:     unit.ID,
@@ -419,30 +419,30 @@ func handleGameShortcuts(bs *battleState) bool {
 				}
 			}
 			if firstUnitInGroup {
-				clearSelection(bs)
+				clearSelection(bState)
 			}
-			bs.MouseCommandMode = 1
+			bState.MouseCommandMode = 1
 			return true
 		}
 	}
 
-	if bs.CurrentSelection.IsUnit && bs.CurrentSelection.OwnerID == bs.PlayerID {
-		selectedUnit, ok := getUnitByID(bs.CurrentSelection.UnitID, bs)
+	if bState.CurrentSelection.IsUnit && bState.CurrentSelection.OwnerID == bState.PlayerID {
+		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
 		if !ok || !selectedUnit.Exists {
-			clearSelection(bs)
+			clearSelection(bState)
 			return false
 		}
 
 		if rl.IsKeyPressed(rl.KeyS) {
 			log.Println("SKRÓT: Komenda STOP dla jednostki")
-			selectedUnit.addUnitCommand(cmdStop, selectedUnit.X, selectedUnit.Y, 0, bs)
+			selectedUnit.addUnitCommand(cmdStop, selectedUnit.X, selectedUnit.Y, 0, bState)
 			return true
 		}
 		if rl.IsKeyPressed(rl.KeyC) {
 			if (selectedUnit.Type == unitPriestess || selectedUnit.Type == unitPriest ||
 				selectedUnit.Type == unitMage) && selectedUnit.Mana >= 79 {
 				log.Println("SKRÓT: Wejście w tryb rzucania czaru bojowego")
-				bs.MouseCommandMode = cmdCastSpell
+				bState.MouseCommandMode = cmdCastSpell
 				return true
 			}
 		}
@@ -452,7 +452,7 @@ func handleGameShortcuts(bs *battleState) bool {
 }
 
 // handleCameraScroll obsługuje przewijanie kamery.
-func handleCameraScroll(input inputState, bs *battleState, ps *programState) bool {
+func handleCameraScroll(input inputState, bState *battleState, ps *programState) bool {
 	scrollSpeed := 200.0 * rl.GetFrameTime()
 	moved := false
 
@@ -462,7 +462,7 @@ func handleCameraScroll(input inputState, bs *battleState, ps *programState) boo
 		// Krok 0.5 jest bezpieczny dla kafelków 16x14 (bo 16*1.5=24, 14*1.5=21 - liczby całkowite)
 		const zoomStep = 0.5
 
-		currentZoom := bs.GameCamera.Zoom
+		currentZoom := bState.GameCamera.Zoom
 		newZoom := currentZoom
 
 		if wheelMove > 0 {
@@ -484,46 +484,46 @@ func handleCameraScroll(input inputState, bs *battleState, ps *programState) boo
 
 		// Przypisujemy tylko jeśli wartość faktycznie się zmieniła
 		if newZoom != currentZoom {
-			bs.GameCamera.Zoom = newZoom
-			log.Printf("Przybliżenie kamery (skokowe): %.1f", bs.GameCamera.Zoom)
+			bState.GameCamera.Zoom = newZoom
+			log.Printf("Przybliżenie kamery (skokowe): %.1f", bState.GameCamera.Zoom)
 			moved = true
 		}
 	}
 
 	// --- 1. Obsługa Klawiatury ---
 	if rl.IsKeyDown(rl.KeyRight) {
-		bs.GameCamera.Target.X += scrollSpeed
+		bState.GameCamera.Target.X += scrollSpeed
 		moved = true
 	}
 	// ... reszta funkcji bez zmian ...
 	if rl.IsKeyDown(rl.KeyLeft) {
-		bs.GameCamera.Target.X -= scrollSpeed
+		bState.GameCamera.Target.X -= scrollSpeed
 		moved = true
 	}
 	if rl.IsKeyDown(rl.KeyUp) {
-		bs.GameCamera.Target.Y -= scrollSpeed
+		bState.GameCamera.Target.Y -= scrollSpeed
 		moved = true
 	}
 	if rl.IsKeyDown(rl.KeyDown) {
-		bs.GameCamera.Target.Y += scrollSpeed
+		bState.GameCamera.Target.Y += scrollSpeed
 		moved = true
 	}
 
 	// --- 2. Obsługa Myszki (Krawędzie Ekranu) ---
 	if input.MousePosition.X < scrollZoneXThreshold && input.MousePosition.X >= 0 {
-		bs.GameCamera.Target.X -= scrollSpeed
+		bState.GameCamera.Target.X -= scrollSpeed
 		moved = true
 	}
 	if input.MousePosition.X > ps.VirtualWidth-scrollZoneXThreshold {
-		bs.GameCamera.Target.X += scrollSpeed
+		bState.GameCamera.Target.X += scrollSpeed
 		moved = true
 	}
 	if input.MousePosition.Y < scrollZoneYThreshold {
-		bs.GameCamera.Target.Y -= scrollSpeed
+		bState.GameCamera.Target.Y -= scrollSpeed
 		moved = true
 	}
 	if input.MousePosition.Y > ps.VirtualHeight-scrollZoneYThreshold {
-		bs.GameCamera.Target.Y += scrollSpeed
+		bState.GameCamera.Target.Y += scrollSpeed
 		moved = true
 	}
 
@@ -531,24 +531,24 @@ func handleCameraScroll(input inputState, bs *battleState, ps *programState) boo
 	fullMapWidth := float32(uint16(boardMaxX) * uint16(tileWidth))
 	fullMapHeight := float32(uint16(boardMaxY) * uint16(tileHeight))
 
-	clampCameraTarget(&bs.GameCamera, fullMapWidth, fullMapHeight, ps.GameViewWidth, ps.VirtualHeight)
+	clampCameraTarget(&bState.GameCamera, fullMapWidth, fullMapHeight, ps.GameViewWidth, ps.VirtualHeight)
 
 	return moved
 }
 
-func handleBoardInitialChecks(input inputState, bs *battleState, ps *programState) (bool, uint8, uint8) {
+func handleBoardInitialChecks(input inputState, bState *battleState, ps *programState) (bool, uint8, uint8) {
 	// Sprawdzamy dynamiczną szerokość widoku
 	if input.MousePosition.X < 0 || input.MousePosition.X >= ps.GameViewWidth {
 		return true, 0, 0
 	}
 
-	worldPos := rl.GetScreenToWorld2D(input.MousePosition, bs.GameCamera)
+	worldPos := rl.GetScreenToWorld2D(input.MousePosition, bState.GameCamera)
 	tileX := uint8(worldPos.X / float32(tileWidth))
 	tileY := uint8(worldPos.Y / float32(tileHeight))
 
 	if tileX >= boardMaxX || tileY >= boardMaxY {
-		if input.IsLeftMouseButtonPressed && !bs.IsSelectingBox {
-			clearSelection(bs)
+		if input.IsLeftMouseButtonPressed && !bState.IsSelectingBox {
+			clearSelection(bState)
 		}
 
 		return true, tileX, tileY
@@ -557,28 +557,28 @@ func handleBoardInitialChecks(input inputState, bs *battleState, ps *programStat
 	return false, tileX, tileY
 }
 
-func handleBoardRightClick(input inputState, bs *battleState, tileX, tileY uint8) bool {
+func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY uint8) bool {
 	if input.IsRightMouseButtonPressed {
-		if bs.IsSelectingBox {
-			bs.IsSelectingBox = false
-			bs.SelectionStart = rl.NewVector2(0, 0)
-			bs.InitialClickPos = rl.NewVector2(0, 0)
-			bs.MouseCommandMode = 1
+		if bState.IsSelectingBox {
+			bState.IsSelectingBox = false
+			bState.SelectionStart = rl.NewVector2(0, 0)
+			bState.InitialClickPos = rl.NewVector2(0, 0)
+			bState.MouseCommandMode = 1
 			return true
 		}
 
-		if bs.MouseCommandMode > 1 {
+		if bState.MouseCommandMode > 1 {
 			log.Println("INPUT: Anulowano tryb celowania prawym przyciskiem.")
-			bs.MouseCommandMode = cmdIdle
-			bs.PendingBuildingType = 0
-			bs.CurrentMessage.Text = "Anulowano"
-			bs.CurrentMessage.Duration = 30
+			bState.MouseCommandMode = cmdIdle
+			bState.PendingBuildingType = 0
+			bState.CurrentMessage.Text = "Anulowano"
+			bState.CurrentMessage.Duration = 30
 			return true
 		}
 
-		selectedUnits := getSelectedUnits(bs)
+		selectedUnits := getSelectedUnits(bState)
 		if len(selectedUnits) > 0 {
-			tileUnderCursor := &bs.Board.Tiles[tileX][tileY]
+			tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
 			targetID := uint(0)
 			var targetOwner uint8
 
@@ -594,13 +594,13 @@ func handleBoardRightClick(input inputState, bs *battleState, tileX, tileY uint8
 
 			// 1. Atak na wrogie jednostki/budynki
 			switch {
-			case targetID != 0 && targetOwner != bs.PlayerID:
+			case targetID != 0 && targetOwner != bState.PlayerID:
 				commandType = cmdAttack
 			case isTreeStump(tileUnderCursor.TextureID):
 				canAttackTree := false
 
 				for _, u := range selectedUnits {
-					if u.canDamageTree(tileX, tileY, bs) {
+					if u.canDamageTree(tileX, tileY, bState) {
 						canAttackTree = true
 
 						break
@@ -610,24 +610,24 @@ func handleBoardRightClick(input inputState, bs *battleState, tileX, tileY uint8
 					commandType = cmdAttack
 					// targetID pozostaje 0; koordynaty ataku są przekazywane przez tileX, tileY
 				} else {
-					bs.CurrentMessage.Text = "Zaznaczone jednostki nie mogą atakować drzew!"
-					bs.CurrentMessage.Duration = 60
+					bState.CurrentMessage.Text = "Zaznaczone jednostki nie mogą atakować drzew!"
+					bState.CurrentMessage.Duration = 60
 
 					return true
 				}
 			case !tileUnderCursor.IsWalkable:
-				bs.CurrentMessage.Text = "Nieprzechodnie!"
-				bs.CurrentMessage.Duration = 60
+				bState.CurrentMessage.Text = "Nieprzechodnie!"
+				bState.CurrentMessage.Duration = 60
 				return true
 			}
 
-			sendUnitCommand(bs, selectedUnits, commandType, tileX, tileY, targetID, input.IsCtrlKeyDown)
+			sendUnitCommand(bState, selectedUnits, commandType, tileX, tileY, targetID, input.IsCtrlKeyDown)
 
 			return true
 		}
 
-		if bs.MouseCommandMode != 1 {
-			bs.MouseCommandMode = 1
+		if bState.MouseCommandMode != 1 {
+			bState.MouseCommandMode = 1
 
 			return true
 		}
@@ -644,20 +644,20 @@ const dragThresholdPixels float32 = 3.0
 // do przycisków „rodzajowych”. Chyba muszę podobnie zrobić, bo mam miejsce tylko na
 // pięć przycisków: atak(0), stop(1), czar1(2), czar2(3),naprawa(4) jeżeli coś innego będzie
 // dodane to mam problem. Dodatkowo jest problem mieszania kontekstu bojowego z gospodarczym.
-func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8) bool {
-	bs.InitialClickPos = input.MousePosition
-	log.Printf("DBG_LCLICK: Kliknięto kafelek (%d, %d). Tryb myszy: %d", tileX, tileY, bs.MouseCommandMode)
+func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY uint8) bool {
+	bState.InitialClickPos = input.MousePosition
+	log.Printf("DBG_LCLICK: Kliknięto kafelek (%d, %d). Tryb myszy: %d", tileX, tileY, bState.MouseCommandMode)
 
-	switch bs.MouseCommandMode {
+	switch bState.MouseCommandMode {
 
 	// === 1. TRYB BUDOWANIA ===
 	case cmdBuildStructure:
-		log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bs.PendingBuildingType)
+		log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bState.PendingBuildingType)
 
-		tryBuildStructure(bs, tileX, tileY)
+		tryBuildStructure(bState, tileX, tileY)
 
-		bs.MouseCommandMode = cmdIdle
-		bs.PendingBuildingType = 0
+		bState.MouseCommandMode = cmdIdle
+		bState.PendingBuildingType = 0
 
 		return true
 
@@ -667,13 +667,13 @@ func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8)
 		// wcześniej nie znaliśmy celu. Dlatego nie dało się wybrać. Od tej chwili rozdzielamy.
 		log.Println("DBG_LCLICK: Tryb naprawy. Typ z pamięci")
 		// 1. Ponieważ nacisnęliśmy lewy przycisk myszy, to bierzemy współrzędne z planszy
-		tile := &bs.Board.Tiles[tileX][tileY]
-		targetBld := tile.Building
+		currentTile := &bState.Board.Tiles[tileX][tileY]
+		targetBld := currentTile.Building
 
 		// Idziemy dalej tylko jeżeli jako cel obraliśmy budynek
 		if targetBld == nil {
-			bs.CurrentMessage.Text = "Wskaż budynek!"
-			bs.CurrentMessage.Duration = 40
+			bState.CurrentMessage.Text = "Wskaż budynek!"
+			bState.CurrentMessage.Duration = 40
 			// Nie powinno być drugiej szansy, ale musimy wyjść z tej funkcji
 			// O ile dobrze pamiętam, to musi być true, inaczej jest przeciąganie
 			return true
@@ -682,19 +682,19 @@ func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8)
 		cmd := cmdRepairStructure
 
 		// 2. Możemy naprawiać tylko palisady oraz swoje budynki, które są uszkodzone
-		canRepair := ((targetBld.Owner == bs.PlayerID) || (targetBld.Type == buildingPalisade) ||
+		canBeRepaired := ((targetBld.Owner == bState.PlayerID) || (targetBld.Type == buildingPalisade) ||
 			targetBld.Type == buildingBridge) && targetBld.HP < targetBld.MaxHP
 
-		if !canRepair {
-			bs.CurrentMessage.Text = "Nie możesz naprawiać wrogich budynków!"
-			bs.CurrentMessage.Duration = 60
-			bs.MouseCommandMode = cmdIdle
+		if !canBeRepaired {
+			bState.CurrentMessage.Text = "Nie możesz naprawiać wrogich budynków!"
+			bState.CurrentMessage.Duration = 60
+			bState.MouseCommandMode = cmdIdle
 			// Niech stoją bezczynnie
 			return true
 		}
 
 		// 3. Odsianie jednostek, które nie są UNIT_AXEMAN z całej zaznaczonej drużyny
-		selectedUnits := getSelectedUnits(bs)
+		selectedUnits := getSelectedUnits(bState)
 
 		var repairCrew []*unit
 
@@ -705,18 +705,18 @@ func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8)
 		}
 
 		if len(repairCrew) == 0 {
-			bs.CurrentMessage.Text = "Brak Toporników w zaznaczeniu!"
-			bs.CurrentMessage.Duration = 60
-			bs.MouseCommandMode = cmdIdle
+			bState.CurrentMessage.Text = "Brak Toporników w zaznaczeniu!"
+			bState.CurrentMessage.Duration = 60
+			bState.MouseCommandMode = cmdIdle
 
 			return true
 		}
 		// 4. Rozkaz gotowy, wiadomo kto, co, można przekazać dalej
-		sendUnitCommand(bs, repairCrew, cmd, tileX, tileY, targetBld.ID, input.IsCtrlKeyDown)
+		sendUnitCommand(bState, repairCrew, cmd, tileX, tileY, targetBld.ID, input.IsCtrlKeyDown)
 		log.Printf("INPUT: Wysłano %d Toporników do naprawy budynku ID %d.", len(repairCrew), targetBld.ID)
 
 		// Zmieniamy stan myszki i wracamy
-		bs.MouseCommandMode = cmdIdle
+		bState.MouseCommandMode = cmdIdle
 
 		return true
 
@@ -724,22 +724,22 @@ func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8)
 	case cmdCastSpell:
 		log.Println("DBG_LCLICK: Tryb rzucania czaru.")
 
-		selectedUnit, ok := getUnitByID(bs.CurrentSelection.UnitID, bs)
+		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
 
 		if !ok && selectedUnit.Exists {
 			// TODO: Tutaj CMD_MAGIC_FIRE jest na sztywno, docelowo powinno zależeć od wybranego czaru w UI
-			selectedUnit.addUnitCommand(cmdMagicFire, tileX, tileY, 0, bs)
+			selectedUnit.addUnitCommand(cmdMagicFire, tileX, tileY, 0, bState)
 			log.Printf("DBG_LCLICK: Wydano komendę czaru dla jednostki %d na (%d,%d).", selectedUnit.ID, tileX, tileY)
 		}
 
-		bs.MouseCommandMode = 1
+		bState.MouseCommandMode = 1
 
 		return true
 
 	// === 3. DOMYŚLNY TRYB (SELEKCJA I RUCH) ===
 	default:
 		// Sprawdzamy, czy kliknięto w obiekt (Jednostkę lub Budynek)
-		tileUnderCursor := &bs.Board.Tiles[tileX][tileY]
+		tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
 		targetID := uint(0)
 
 		if tileUnderCursor.Unit != nil {
@@ -750,7 +750,7 @@ func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8)
 
 		if targetID != 0 {
 			log.Println("DBG_LCLICK: Kliknięto na OBIEKT. Wywołuję selectObjectByClick.")
-			selectObjectByClick(tileX, tileY, bs)
+			selectObjectByClick(tileX, tileY, bState)
 
 			return true
 		}
@@ -760,27 +760,27 @@ func handleBoardLeftClick(input inputState, bs *battleState, tileX, tileY uint8)
 
 		if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
 			// Jeśli nie trzymamy Shift, czyścimy poprzednie zaznaczenie
-			clearSelection(bs)
+			clearSelection(bState)
 		}
 		// Zwracamy false, aby pozwolić funkcji nadrzędnej obsłużyć ciągnięcie myszy (drag) w handleBoardDrag
 		return false
 	}
 }
 
-func handleBoardDrag(input inputState, bs *battleState) bool {
+func handleBoardDrag(input inputState, bState *battleState) bool {
 	if !input.IsLeftMouseButtonDown {
 		return false
 	}
 
-	if bs.IsSelectingBox || bs.MouseCommandMode != 1 || bs.CurrentSelection.IsUnit || bs.CurrentSelection.BuildingID != 0 {
+	if bState.IsSelectingBox || bState.MouseCommandMode != 1 || bState.CurrentSelection.IsUnit || bState.CurrentSelection.BuildingID != 0 {
 		return false
 	}
 
-	distance := rl.Vector2Distance(bs.InitialClickPos, input.MousePosition)
+	distance := rl.Vector2Distance(bState.InitialClickPos, input.MousePosition)
 
 	if distance > dragThresholdPixels {
-		bs.IsSelectingBox = true
-		bs.SelectionStart = bs.InitialClickPos
+		bState.IsSelectingBox = true
+		bState.SelectionStart = bState.InitialClickPos
 
 		return true
 	}
@@ -790,7 +790,7 @@ func handleBoardDrag(input inputState, bs *battleState) bool {
 
 // @todo: ogarnij czemu to nie działa jako przekazanie STOP do wszystkich
 // zaznaczonych jednostek!
-func sendUnitCommand(bs *battleState, units []*unit, command uint16, x, y uint8, targetID uint, ctrlDown bool) {
+func sendUnitCommand(bState *battleState, units []*unit, command uint16, x, y uint8, targetID uint, ctrlDown bool) {
 	log.Printf("INFO: input.go wysłano rozkaz.")
 
 	for _, u := range units {
@@ -798,44 +798,44 @@ func sendUnitCommand(bs *battleState, units []*unit, command uint16, x, y uint8,
 	}
 
 	if len(units) > 1 {
-		bs.assignGroupCommand(command, x, y, targetID, units)
+		bState.assignGroupCommand(command, x, y, targetID, units)
 	} else {
-		units[0].addUnitCommand(command, x, y, targetID, bs)
+		units[0].addUnitCommand(command, x, y, targetID, bState)
 	}
 
-	bs.MouseCommandMode = 1
+	bState.MouseCommandMode = 1
 }
 
-func handleBoardInteraction(input inputState, bs *battleState, ps *programState) {
+func handleBoardInteraction(input inputState, bState *battleState, ps *programState) {
 	// Przekazujemy ps do checks
-	handledInitial, tileX, tileY := handleBoardInitialChecks(input, bs, ps)
+	handledInitial, tileX, tileY := handleBoardInitialChecks(input, bState, ps)
 	if handledInitial {
 		return
 	}
 
-	if bs.IsSelectingBox && input.IsLeftMouseButtonReleased {
-		bs.IsSelectingBox = false
-		performBoxSelection(bs, bs.SelectionStart, input.MousePosition)
-		bs.SelectionStart = rl.NewVector2(0, 0)
-		bs.InitialClickPos = rl.NewVector2(0, 0)
+	if bState.IsSelectingBox && input.IsLeftMouseButtonReleased {
+		bState.IsSelectingBox = false
+		performBoxSelection(bState, bState.SelectionStart, input.MousePosition)
+		bState.SelectionStart = rl.NewVector2(0, 0)
+		bState.InitialClickPos = rl.NewVector2(0, 0)
 
 		return
 	}
 
-	if handleBoardRightClick(input, bs, tileX, tileY) {
+	if handleBoardRightClick(input, bState, tileX, tileY) {
 		return
 	}
 
-	if input.IsLeftMouseButtonPressed && handleBoardLeftClick(input, bs, tileX, tileY) {
+	if input.IsLeftMouseButtonPressed && handleBoardLeftClick(input, bState, tileX, tileY) {
 		return
 	}
 
 	if input.IsLeftMouseButtonDown {
-		handleBoardDrag(input, bs)
+		handleBoardDrag(input, bState)
 	}
 }
 
-func handleGameInput(bs *battleState, ps *programState) {
+func handleGameInput(bState *battleState, ps *programState) {
 	screenMouse := rl.GetMousePosition()
 	virtualMouse := screenToVirtualCoords(ps, screenMouse)
 
@@ -854,39 +854,39 @@ func handleGameInput(bs *battleState, ps *programState) {
 	//	return
 	//  }
 
-	handleCameraScroll(input, bs, ps)
+	handleCameraScroll(input, bState, ps)
 
 	if isMouseOverUI(ps, virtualMouse) {
 		if input.IsLeftMouseButtonPressed || input.IsRightMouseButtonPressed || input.IsLeftMouseButtonDown ||
 			input.IsLeftMouseButtonReleased {
-			if handleGameUIClicks(input, bs, ps) {
+			if handleGameUIClicks(input, bState, ps) {
 				return
 			}
 		}
 	} else {
-		handleGameShortcuts(bs)
-		handleBoardInteraction(input, bs, ps)
+		handleGameShortcuts(bState)
+		handleBoardInteraction(input, bState, ps)
 	}
 }
 
 // OBSŁUGA ZAZNACZANIA
 
-func clearSelection(bs *battleState) {
+func clearSelection(bState *battleState) {
 	log.Println("SELEKCJA: Rozpoczynam clearSelection.")
 
-	for _, unit := range bs.Units {
-		if unit.Exists && unit.IsSelected {
-			unit.IsSelected = false
+	for _, currentUnit := range bState.Units {
+		if currentUnit.Exists && currentUnit.IsSelected {
+			currentUnit.IsSelected = false
 		}
 	}
 
-	if bs.CurrentSelection.IsUnit || bs.CurrentSelection.BuildingID != 0 {
-		bs.CurrentSelection = selectionState{}
+	if bState.CurrentSelection.IsUnit || bState.CurrentSelection.BuildingID != 0 {
+		bState.CurrentSelection = selectionState{}
 	}
 }
 
-func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
-	currentTile := &bs.Board.Tiles[tileX][tileY]
+func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
+	currentTile := &bState.Board.Tiles[tileX][tileY]
 	currentUnit := currentTile.Unit
 	bld := currentTile.Building
 
@@ -898,7 +898,7 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 		for j := originalTileY - 1; j <= originalTileY+1; j++ {
 			for i := originalTileX - 1; i <= originalTileX+1; i++ {
 				if i < boardMaxX && j < boardMaxY {
-					nt := &bs.Board.Tiles[i][j]
+					nt := &bState.Board.Tiles[i][j]
 					if nt.Unit != nil || nt.Building != nil {
 						currentUnit = nt.Unit
 						bld = nt.Building
@@ -915,8 +915,8 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 		}
 
 		if !found {
-			clearSelection(bs)
-			bs.MouseCommandMode = 1
+			clearSelection(bState)
+			bState.MouseCommandMode = 1
 
 			return
 		}
@@ -927,29 +927,29 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 	if currentUnit != nil && currentUnit.Exists {
 		log.Printf("DBG_SELECTOBJECT: Znaleziono jednostkę ID %d.", currentUnit.ID)
 
-		if currentUnit.Owner != bs.PlayerID {
-			clearSelection(bs)
-			bs.CurrentSelection = selectionState{
+		if currentUnit.Owner != bState.PlayerID {
+			clearSelection(bState)
+			bState.CurrentSelection = selectionState{
 				OwnerID:    currentUnit.Owner,
 				IsUnit:     true,
 				UnitID:     currentUnit.ID,
 				BuildingID: 0,
 			}
-			bs.CurrentMessage.Text = fmt.Sprintf("Wroga jednostka: %v", currentUnit.Type)
-			bs.CurrentMessage.Duration = 20
-			bs.MouseCommandMode = 1
+			bState.CurrentMessage.Text = fmt.Sprintf("Wroga jednostka: %v", currentUnit.Type)
+			bState.CurrentMessage.Duration = 20
+			bState.MouseCommandMode = 1
 
 			return
 		}
 
 		if isShiftDown {
 			currentUnit.IsSelected = !currentUnit.IsSelected
-			if !currentUnit.IsSelected && bs.CurrentSelection.UnitID == currentUnit.ID {
+			if !currentUnit.IsSelected && bState.CurrentSelection.UnitID == currentUnit.ID {
 				foundNewPrimary := false
 
-				for _, u := range bs.Units {
-					if u.Exists && u.IsSelected && u.Owner == bs.PlayerID {
-						bs.CurrentSelection = selectionState{OwnerID: u.Owner, IsUnit: true, UnitID: u.ID}
+				for _, u := range bState.Units {
+					if u.Exists && u.IsSelected && u.Owner == bState.PlayerID {
+						bState.CurrentSelection = selectionState{OwnerID: u.Owner, IsUnit: true, UnitID: u.ID}
 						foundNewPrimary = true
 
 						break
@@ -957,16 +957,16 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 				}
 
 				if !foundNewPrimary {
-					bs.CurrentSelection = selectionState{}
+					bState.CurrentSelection = selectionState{}
 				}
-			} else if currentUnit.IsSelected && !bs.CurrentSelection.IsUnit {
-				bs.CurrentSelection = selectionState{OwnerID: currentUnit.Owner, IsUnit: true, UnitID: currentUnit.ID}
+			} else if currentUnit.IsSelected && !bState.CurrentSelection.IsUnit {
+				bState.CurrentSelection = selectionState{OwnerID: currentUnit.Owner, IsUnit: true, UnitID: currentUnit.ID}
 			}
 
 		} else {
-			clearSelection(bs)
+			clearSelection(bState)
 			currentUnit.IsSelected = true
-			bs.CurrentSelection = selectionState{
+			bState.CurrentSelection = selectionState{
 				OwnerID:    currentUnit.Owner,
 				IsUnit:     true,
 				UnitID:     currentUnit.ID,
@@ -974,48 +974,48 @@ func selectObjectByClick(tileX, tileY uint8, bs *battleState) {
 			}
 		}
 
-		if currentUnit.IsSelected && currentUnit.Owner == bs.PlayerID {
+		if currentUnit.IsSelected && currentUnit.Owner == bState.PlayerID {
 			switch currentUnit.Type {
 			case unitCow:
-				bs.CurrentMessage.Text = "Muuu ?"
+				bState.CurrentMessage.Text = "Muuu ?"
 			case unitAxeman:
-				bs.CurrentMessage.Text = "Tak ?"
+				bState.CurrentMessage.Text = "Tak ?"
 			default:
-				bs.CurrentMessage.Text = "Rozkaz?"
+				bState.CurrentMessage.Text = "Rozkaz?"
 			}
-			bs.CurrentMessage.Duration = 20
+			bState.CurrentMessage.Duration = 20
 		}
-		bs.MouseCommandMode = 1
+		bState.MouseCommandMode = 1
 
 	} else if bld != nil && bld.Exists {
 		log.Printf("DBG_SELECTOBJECT: Znaleziono budynek ID %d.", bld.ID)
 		if !isShiftDown {
-			clearSelection(bs)
+			clearSelection(bState)
 		}
 
-		bs.CurrentSelection = selectionState{
+		bState.CurrentSelection = selectionState{
 			OwnerID:    bld.Owner,
 			IsUnit:     false,
 			UnitID:     0,
 			BuildingID: bld.ID,
 		}
-		bs.MouseCommandMode = 1
+		bState.MouseCommandMode = 1
 
-		if bld.Owner == bs.PlayerID {
-			bs.CurrentMessage.Text = fmt.Sprintf("Moja budowla: %v", bld.Type)
+		if bld.Owner == bState.PlayerID {
+			bState.CurrentMessage.Text = fmt.Sprintf("Moja budowla: %v", bld.Type)
 		} else {
-			bs.CurrentMessage.Text = fmt.Sprintf("Wroga budowla: %v", bld.Type)
+			bState.CurrentMessage.Text = fmt.Sprintf("Wroga budowla: %v", bld.Type)
 		}
-		bs.CurrentMessage.Duration = 20
+		bState.CurrentMessage.Duration = 20
 	} else {
-		clearSelection(bs)
-		bs.MouseCommandMode = 1
+		clearSelection(bState)
+		bState.MouseCommandMode = 1
 	}
 }
 
-func performBoxSelection(bs *battleState, startPos, endPos rl.Vector2) {
-	worldStart := rl.GetScreenToWorld2D(startPos, bs.GameCamera)
-	worldEnd := rl.GetScreenToWorld2D(endPos, bs.GameCamera)
+func performBoxSelection(bState *battleState, startPos, endPos rl.Vector2) {
+	worldStart := rl.GetScreenToWorld2D(startPos, bState.GameCamera)
+	worldEnd := rl.GetScreenToWorld2D(endPos, bState.GameCamera)
 
 	minX := uint8(min(worldStart.X, worldEnd.X) / float32(tileWidth))
 	maxX := uint8(max(worldStart.X, worldEnd.X) / float32(tileWidth))
@@ -1024,50 +1024,50 @@ func performBoxSelection(bs *battleState, startPos, endPos rl.Vector2) {
 
 	isShiftDown := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift)
 	if !isShiftDown {
-		clearSelection(bs)
+		clearSelection(bState)
 	}
 
 	var selectedCount int
 
 	var firstSelectedUnit *unit
 
-	for _, unit := range bs.Units {
-		if unit.Exists && unit.Owner == bs.PlayerID {
-			if unit.X >= minX && unit.X <= maxX && unit.Y >= minY && unit.Y <= maxY {
+	for _, currentUnit := range bState.Units {
+		if currentUnit.Exists && currentUnit.Owner == bState.PlayerID {
+			if currentUnit.X >= minX && currentUnit.X <= maxX && currentUnit.Y >= minY && currentUnit.Y <= maxY {
 				if isShiftDown {
-					unit.IsSelected = !unit.IsSelected
+					currentUnit.IsSelected = !currentUnit.IsSelected
 				} else {
-					unit.IsSelected = true
+					currentUnit.IsSelected = true
 				}
 			} else {
-				if !isShiftDown && unit.IsSelected {
-					unit.IsSelected = false
+				if !isShiftDown && currentUnit.IsSelected {
+					currentUnit.IsSelected = false
 				}
 			}
 
-			if unit.IsSelected {
+			if currentUnit.IsSelected {
 				selectedCount++
 
 				if firstSelectedUnit == nil {
-					firstSelectedUnit = unit
+					firstSelectedUnit = currentUnit
 				}
 			}
 		}
 	}
 
 	if selectedCount > 0 {
-		bs.CurrentSelection = selectionState{
+		bState.CurrentSelection = selectionState{
 			OwnerID:    firstSelectedUnit.Owner,
 			IsUnit:     true,
 			UnitID:     firstSelectedUnit.ID,
 			BuildingID: 0,
 		}
 	} else {
-		clearSelection(bs)
+		clearSelection(bState)
 	}
 }
 
-func handleMinimapInteraction(input inputState, bs *battleState, ps *programState) bool {
+func handleMinimapInteraction(input inputState, bState *battleState, ps *programState) bool {
 	// Prostokąt minimapy obliczany dynamicznie!
 	// ps.GameViewWidth to początek panelu UI.
 	minimapRect := rl.NewRectangle(
@@ -1082,25 +1082,25 @@ func handleMinimapInteraction(input inputState, bs *battleState, ps *programStat
 		minimapRect,
 	)
 
-	if input.IsLeftMouseButtonReleased && bs.MapInitialClickPos.X != 0.0 {
-		bs.IsMapDragging = false
-		bs.MapInitialClickPos = rl.NewVector2(0.0, 0.0)
-		bs.CameraTargetOnDragStart = rl.NewVector2(0.0, 0.0)
+	if input.IsLeftMouseButtonReleased && bState.MapInitialClickPos.X != 0.0 {
+		bState.IsMapDragging = false
+		bState.MapInitialClickPos = rl.NewVector2(0.0, 0.0)
+		bState.CameraTargetOnDragStart = rl.NewVector2(0.0, 0.0)
 
 		return true
 	}
 
-	if !isMouseOverMinimap && !bs.IsMapDragging {
+	if !isMouseOverMinimap && !bState.IsMapDragging {
 		return false
 	}
 
 	// Przekazujemy ps do clamping
-	if handleMinimapLeftMouse(input, bs, minimapRect, ps) {
+	if handleMinimapLeftMouse(input, bState, minimapRect, ps) {
 		return true
 	}
 
 	if isMouseOverMinimap {
-		if handleMinimapRightMouse(input, bs, minimapRect) {
+		if handleMinimapRightMouse(input, bState, minimapRect) {
 			return true
 		}
 	}
@@ -1108,7 +1108,7 @@ func handleMinimapInteraction(input inputState, bs *battleState, ps *programStat
 	return false
 }
 
-func handleMinimapLeftMouse(input inputState, bs *battleState, minimapRect rl.Rectangle, ps *programState) bool {
+func handleMinimapLeftMouse(input inputState, bState *battleState, minimapRect rl.Rectangle, ps *programState) bool {
 	fullMapPixelWidth := float32(uint16(boardMaxX) * uint16(tileWidth))
 	fullMapPixelHeight := float32(uint16(boardMaxY) * uint16(tileHeight))
 	scaleX := fullMapPixelWidth / minimapDisplayWidth
@@ -1117,32 +1117,32 @@ func handleMinimapLeftMouse(input inputState, bs *battleState, minimapRect rl.Re
 	if input.IsLeftMouseButtonPressed {
 		clickedX := (input.MousePosition.X - minimapRect.X) * scaleX
 		clickedY := (input.MousePosition.Y - minimapRect.Y) * scaleY
-		bs.GameCamera.Target = rl.NewVector2(clickedX, clickedY)
+		bState.GameCamera.Target = rl.NewVector2(clickedX, clickedY)
 
 		// Clamping używa dynamicznych wymiarów
-		clampCameraTarget(&bs.GameCamera, fullMapPixelWidth, fullMapPixelHeight,
+		clampCameraTarget(&bState.GameCamera, fullMapPixelWidth, fullMapPixelHeight,
 			ps.GameViewWidth, ps.VirtualHeight)
 
-		bs.MapInitialClickPos = input.MousePosition
-		bs.CameraTargetOnDragStart = bs.GameCamera.Target
-		bs.IsMapDragging = false
+		bState.MapInitialClickPos = input.MousePosition
+		bState.CameraTargetOnDragStart = bState.GameCamera.Target
+		bState.IsMapDragging = false
 		return true
 	}
 
-	if input.IsLeftMouseButtonDown && bs.MapInitialClickPos.X != 0.0 {
-		if !bs.IsMapDragging &&
-			rl.Vector2Distance(bs.MapInitialClickPos, input.MousePosition) > minimapClickDragThreshold {
-			bs.IsMapDragging = true
+	if input.IsLeftMouseButtonDown && bState.MapInitialClickPos.X != 0.0 {
+		if !bState.IsMapDragging &&
+			rl.Vector2Distance(bState.MapInitialClickPos, input.MousePosition) > minimapClickDragThreshold {
+			bState.IsMapDragging = true
 		}
 
-		if bs.IsMapDragging {
-			deltaX := (input.MousePosition.X - bs.MapInitialClickPos.X) * scaleX
-			deltaY := (input.MousePosition.Y - bs.MapInitialClickPos.Y) * scaleY
-			bs.GameCamera.Target.X = bs.CameraTargetOnDragStart.X + deltaX
-			bs.GameCamera.Target.Y = bs.CameraTargetOnDragStart.Y + deltaY
+		if bState.IsMapDragging {
+			deltaX := (input.MousePosition.X - bState.MapInitialClickPos.X) * scaleX
+			deltaY := (input.MousePosition.Y - bState.MapInitialClickPos.Y) * scaleY
+			bState.GameCamera.Target.X = bState.CameraTargetOnDragStart.X + deltaX
+			bState.GameCamera.Target.Y = bState.CameraTargetOnDragStart.Y + deltaY
 
 			// Clamping używa dynamicznych wymiarów
-			clampCameraTarget(&bs.GameCamera, fullMapPixelWidth, fullMapPixelHeight,
+			clampCameraTarget(&bState.GameCamera, fullMapPixelWidth, fullMapPixelHeight,
 				ps.GameViewWidth, ps.VirtualHeight)
 
 			return true
@@ -1154,14 +1154,14 @@ func handleMinimapLeftMouse(input inputState, bs *battleState, minimapRect rl.Re
 
 func handleMinimapRightMouse(
 	input inputState,
-	bs *battleState,
+	bState *battleState,
 	minimapRect rl.Rectangle,
 ) bool {
 	if !input.IsRightMouseButtonPressed {
 		return false
 	}
 
-	selectedUnits := getSelectedUnits(bs)
+	selectedUnits := getSelectedUnits(bState)
 	if len(selectedUnits) == 0 {
 		return true
 	}
@@ -1174,31 +1174,31 @@ func handleMinimapRightMouse(
 	tileX := uint8(math.Min(math.Max(worldX/float64(tileWidth), 0), float64(boardMaxX-1)))
 	tileY := uint8(math.Min(math.Max(worldY/float64(tileHeight), 0), float64(boardMaxY-1)))
 
-	tile := &bs.Board.Tiles[tileX][tileY]
+	currentTile := &bState.Board.Tiles[tileX][tileY]
 	var targetID uint
 	var targetOwner uint8
 
-	if tile.Unit != nil {
-		targetID = tile.Unit.ID
-		targetOwner = tile.Unit.Owner
-	} else if tile.Building != nil {
-		targetID = tile.Building.ID
-		targetOwner = tile.Building.Owner
+	if currentTile.Unit != nil {
+		targetID = currentTile.Unit.ID
+		targetOwner = currentTile.Unit.Owner
+	} else if currentTile.Building != nil {
+		targetID = currentTile.Building.ID
+		targetOwner = currentTile.Building.Owner
 	}
 
 	cmd := cmdMove
 
-	if targetID != 0 && targetOwner != bs.PlayerID {
+	if targetID != 0 && targetOwner != bState.PlayerID {
 		cmd = cmdAttack
-	} else if !isWalkable(bs, tileX, tileY) {
-		bs.CurrentMessage.Text = "Nieprzechodnie!"
-		bs.CurrentMessage.Duration = 60
+	} else if !isWalkable(bState, tileX, tileY) {
+		bState.CurrentMessage.Text = "Nieprzechodnie!"
+		bState.CurrentMessage.Duration = 60
 
 		return true
 	}
 
-	sendUnitCommand(bs, selectedUnits, cmd, tileX, tileY, targetID, input.IsCtrlKeyDown)
-	bs.MouseCommandMode = 1
+	sendUnitCommand(bState, selectedUnits, cmd, tileX, tileY, targetID, input.IsCtrlKeyDown)
+	bState.MouseCommandMode = 1
 
 	return true
 }

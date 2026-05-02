@@ -138,34 +138,34 @@ func applyPalisadeProcessing(x, y uint8, board *boardData) {
 	board.Tiles[x][y].TextureID = newID
 }
 
-func processMapTiles(bs *battleState) {
+func processMapTiles(bState *battleState) {
 	// Tworzymy snapshot TextureID, aby uniknąć efektów ubocznych podczas iteracji
 	var snapshot [boardMaxX][boardMaxY]uint16
 
 	for x := uint8(0); x < boardMaxX; x++ {
 		for y := uint8(0); y < boardMaxY; y++ {
-			snapshot[x][y] = bs.Board.Tiles[x][y].TextureID
+			snapshot[x][y] = bState.Board.Tiles[x][y].TextureID
 		}
 	}
 
 	for y := uint8(0); y < boardMaxY; y++ {
 		for x := uint8(0); x < boardMaxX; x++ {
-			id := bs.Board.Tiles[x][y].TextureID
+			id := bState.Board.Tiles[x][y].TextureID
 
 			switch {
 			case isDirtRoad(id):
-				applyRoadProcessing(x, y, bs.Board)
+				applyRoadProcessing(x, y, bState.Board)
 			case isPalisade(id):
-				applyPalisadeProcessing(x, y, bs.Board)
+				applyPalisadeProcessing(x, y, bState.Board)
 			case isWaterTileOnly(id):
-				applyWaterProcessing(x, y, bs.Board, snapshot)
+				applyWaterProcessing(x, y, bState.Board, snapshot)
 			case isHealingShire(id):
-				bs.HealingShrines = append(bs.HealingShrines, point{X: x, Y: y})
+				bState.HealingShrines = append(bState.HealingShrines, point{X: x, Y: y})
 			}
 		}
 	}
 
-	makeGrassVariations(bs)
+	makeGrassVariations(bState)
 }
 
 func applyWaterProcessing(x, y uint8, board *boardData, snapshot [boardMaxX][boardMaxY]uint16) {
@@ -434,7 +434,7 @@ func (bld *building) occupiedTilesBounds() (minX, minY, maxX, maxY uint8) {
 	return minX, minY, maxX, maxY
 }
 
-func drawBuildingSelectionFrame(bld *building, bounds bounds, bs *battleState) {
+func drawBuildingSelectionFrame(bld *building, bounds bounds, bState *battleState) {
 	var cLen float32
 
 	if bld.Type != buildingPalisade {
@@ -443,7 +443,7 @@ func drawBuildingSelectionFrame(bld *building, bounds bounds, bs *battleState) {
 		cLen = cornerLenPalisade
 	}
 
-	if bld.Owner == bs.PlayerID {
+	if bld.Owner == bState.PlayerID {
 		drawFrameCorners(float32(bounds.X), float32(bounds.Y), bounds.WidthPx, bounds.HeightPx, cLen, friendlyFrameColor)
 	} else {
 		drawFrameCorners(float32(bounds.X), float32(bounds.Y), bounds.WidthPx, bounds.HeightPx, cLen, enemyFrameColor)
@@ -479,14 +479,14 @@ func drawBuildingHealthBar(bld *building, bounds bounds) {
 	rl.DrawRectangle(bounds.X, barY, fillWidth, healthBarHeight, rl.Green)
 }
 
-func drawBuildingInterface(bld *building, bs *battleState) {
+func drawBuildingInterface(bld *building, bState *battleState) {
 	buildingBounds := bld.bounds()
-	isBuildingSelected := bs.CurrentSelection.BuildingID == bld.ID
+	isBuildingSelected := bState.CurrentSelection.BuildingID == bld.ID
 
 	if isBuildingSelected {
-		drawBuildingSelectionFrame(bld, buildingBounds, bs)
+		drawBuildingSelectionFrame(bld, buildingBounds, bState)
 
-		if bld.Owner == bs.PlayerID && !bld.IsUnderConstruction {
+		if bld.Owner == bState.PlayerID && !bld.IsUnderConstruction {
 			drawBuildingCapacity(bld, buildingBounds)
 		}
 	}
@@ -497,13 +497,13 @@ func drawBuildingInterface(bld *building, bs *battleState) {
 	}
 }
 
-func drawBuildingsInterfaces(bs *battleState) {
-	for _, currentBuilding := range bs.Buildings {
+func drawBuildingsInterfaces(bState *battleState) {
+	for _, currentBuilding := range bState.Buildings {
 		if !currentBuilding.Exists || len(currentBuilding.OccupiedTiles) == 0 {
 			continue
 		}
 
-		drawBuildingInterface(currentBuilding, bs)
+		drawBuildingInterface(currentBuilding, bState)
 	}
 }
 
@@ -540,14 +540,14 @@ func calculateLegacyPhase(u *unit) uint8 {
 	return phase
 }
 
-func getRenderDirection(u *unit, bs *battleState) (int, int) {
+func getRenderDirection(u *unit, bState *battleState) (int, int) {
 	if u.AnimationType == "fight" {
 		var targetX, targetY uint8
 		foundTarget := false
 
 		// 1. Sprawdź, czy mamy cel ataku (Unit lub Building)
 		if u.TargetID != 0 {
-			targetUnit, targetBld := getObjectByID(u.TargetID, bs)
+			targetUnit, targetBld := getObjectByID(u.TargetID, bState)
 
 			if targetUnit != nil && targetUnit.Exists {
 				targetX = targetUnit.X
@@ -604,10 +604,10 @@ func getRenderDirection(u *unit, bs *battleState) (int, int) {
 	return dx, dy
 }
 
-func drawProjectiles(bs *battleState, ps *programState) {
-	for _, p := range bs.Projectiles {
+func drawProjectiles(bState *battleState, ps *programState) {
+	for _, p := range bState.Projectiles {
 		if p.Exists {
-			drawSingleProjectile(p, bs.GlobalFrameCounter, ps)
+			drawSingleProjectile(p, bState.GlobalFrameCounter, ps)
 		}
 	}
 }
@@ -712,11 +712,11 @@ func drawMilkBar(screenX, screenY int32, unit *unit) {
 	rl.DrawRectangle(barX, newY, barW, fillH, rl.White)
 }
 
-func drawUnitSelectionFrame(selectedUnit *unit, bs *battleState) {
+func drawUnitSelectionFrame(selectedUnit *unit, bState *battleState) {
 	x := float32(selectedUnit.X) * float32(tileWidth)
 	y := float32(selectedUnit.Y) * float32(tileHeight)
 
-	if selectedUnit.Owner == bs.PlayerID {
+	if selectedUnit.Owner == bState.PlayerID {
 		drawFrameCorners(x, y, float32(tileWidth), float32(tileHeight), cornerLenUnit, friendlyFrameColor)
 	} else {
 		drawFrameCorners(x, y, float32(tileWidth), float32(tileHeight), cornerLenUnit, enemyFrameColor)
@@ -724,26 +724,26 @@ func drawUnitSelectionFrame(selectedUnit *unit, bs *battleState) {
 }
 
 // Odpowiada za rysowanie nakładek (ramka, pasek życia itd.) jednostkom widocznym na ekranie.
-func drawUnitsInterfaces(startY, endY uint8, bs *battleState) {
+func drawUnitsInterfaces(startY, endY uint8, bState *battleState) {
 	for boardRow := startY; boardRow < endY; boardRow++ {
-		unitsInRow := bs.RenderUnitRows[boardRow]
+		unitsInRow := bState.RenderUnitRows[boardRow]
 
 		if len(unitsInRow) > 0 {
 			for _, renderUnit := range unitsInRow {
-				drawUnitInterface(renderUnit, bs)
+				drawUnitInterface(renderUnit, bState)
 			}
 		}
 	}
 }
 
-func drawUnitInterface(renderUnit *unit, bs *battleState) {
+func drawUnitInterface(renderUnit *unit, bState *battleState) {
 	screenX := int32(renderUnit.X) * int32(tileWidth)
 	screenY := int32(renderUnit.Y) * int32(tileHeight)
 
-	isUnitSected := bs.CurrentSelection.IsUnit && bs.CurrentSelection.UnitID == renderUnit.ID
+	isUnitSected := bState.CurrentSelection.IsUnit && bState.CurrentSelection.UnitID == renderUnit.ID
 
 	if isUnitSected {
-		drawUnitSelectionFrame(renderUnit, bs)
+		drawUnitSelectionFrame(renderUnit, bState)
 		drawUnitHealthBar(screenX, screenY, renderUnit)
 
 		if renderUnit.MaxMana > 0 {
@@ -758,8 +758,8 @@ func drawUnitInterface(renderUnit *unit, bs *battleState) {
 
 // === LOGIKA KAMERY I EKRANU ===
 
-func setupGameCamera(bs *battleState, ps *programState) {
-	bs.GameCamera = rl.NewCamera2D(
+func setupGameCamera(bState *battleState, ps *programState) {
+	bState.GameCamera = rl.NewCamera2D(
 		// Offset: środek widoku gry (DYNAMICZNY)
 		rl.NewVector2(
 			ps.GameViewWidth/2.0,
@@ -775,9 +775,9 @@ func setupGameCamera(bs *battleState, ps *programState) {
 	)
 }
 
-func drawBattleScene(bs *battleState) {
+func drawBattleScene(bState *battleState) {
 	rl.BeginScissorMode(0, 0, int32(gameViewVirtualWidth), int32(virtualScreenHeight))
-	rl.BeginMode2D(bs.GameCamera)
+	rl.BeginMode2D(bState.GameCamera)
 	rl.EndMode2D()
 	rl.EndScissorMode()
 }
@@ -827,10 +827,10 @@ func getCameraWorldViewRect(camera rl.Camera2D, virtualScreenWidth, virtualScree
 	return rl.NewRectangle(topLeftWorld.X, topLeftWorld.Y, worldWidth, worldHeight)
 }
 
-func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programState) {
+func drawSoil(startX, startY, endX, endY uint8, bState *battleState, ps *programState) {
 	for yAxis := startY; yAxis < endY; yAxis++ {
 		for xAxis := startX; xAxis < endX; xAxis++ {
-			currentTile := &bs.Board.Tiles[xAxis][yAxis]
+			currentTile := &bState.Board.Tiles[xAxis][yAxis]
 			texID := currentTile.TextureID
 			xPos := float32(xAxis) * float32(tileWidth)
 			yPos := float32(yAxis) * float32(tileHeight)
@@ -854,19 +854,19 @@ func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programStat
 			}
 
 			if isCompletedBridge(texID) || texID == spriteBridgeConstruction {
-				waterBaseID := calculateWaterTileID(xAxis, yAxis, bs.Board)
+				waterBaseID := calculateWaterTileID(xAxis, yAxis, bState.Board)
 
 				if waterBaseID == 999 {
 					waterBaseID = spriteWaterMiddle
 				}
 
-				animationOffset := bs.WaterAnimationFrame * 13
+				animationOffset := bState.WaterAnimationFrame * 13
 				drawSprite(ps.Assets, waterBaseID+animationOffset, xPos, yPos, colorNone)
 				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
 			}
 
 			if isWaterTileOnly(texID) {
-				animationOffset := bs.WaterAnimationFrame * 13
+				animationOffset := bState.WaterAnimationFrame * 13
 				drawSprite(ps.Assets, texID+animationOffset, xPos, yPos, colorNone)
 			}
 
@@ -877,19 +877,19 @@ func drawSoil(startX, startY, endX, endY uint8, bs *battleState, ps *programStat
 	}
 }
 
-func drawBuilding(startY, endY uint8, bs *battleState, ps *programState) {
+func drawBuilding(startY, endY uint8, bState *battleState, ps *programState) {
 	for yAxis := startY; yAxis < endY; yAxis++ {
-		for _, bld := range bs.RenderBuildingRows[yAxis] {
-			for _, tile := range bld.OccupiedTiles {
-				if tile.Y == yAxis {
-					id := bs.Board.Tiles[tile.X][yAxis].TextureID
+		for _, bld := range bState.RenderBuildingRows[yAxis] {
+			for _, currentTile := range bld.OccupiedTiles {
+				if currentTile.Y == yAxis {
+					id := bState.Board.Tiles[currentTile.X][yAxis].TextureID
 					if isBuildingTerrain(id) {
 						finalID := id
-						if flagID, ok := flagAnimationMap[uint8(id)]; ok && (bs.FireAnimationFrame+uint16(tile.X)+uint16(yAxis))%2 == 1 {
+						if flagID, ok := flagAnimationMap[uint8(id)]; ok && (bState.FireAnimationFrame+uint16(currentTile.X)+uint16(yAxis))%2 == 1 {
 							finalID = uint16(flagID)
 						}
 
-						drawSprite(ps.Assets, finalID, float32(tile.X)*float32(tileWidth), float32(yAxis)*float32(tileHeight), bld.Owner)
+						drawSprite(ps.Assets, finalID, float32(currentTile.X)*float32(tileWidth), float32(yAxis)*float32(tileHeight), bld.Owner)
 					}
 				}
 			}
@@ -897,66 +897,66 @@ func drawBuilding(startY, endY uint8, bs *battleState, ps *programState) {
 	}
 }
 
-func drawPalisade(startX, startY, endX, endY uint8, bs *battleState, ps *programState) {
+func drawPalisade(startX, startY, endX, endY uint8, bState *battleState, ps *programState) {
 	for yAxis := startY; yAxis < endY; yAxis++ {
 		for xAxis := startX; xAxis < endX; xAxis++ {
-			id := bs.Board.Tiles[xAxis][yAxis].TextureID
-			if isPalisade(id) {
-				drawSprite(ps.Assets, id, float32(xAxis)*float32(tileWidth), float32(yAxis)*float32(tileHeight), colorNone)
+			textureID := bState.Board.Tiles[xAxis][yAxis].TextureID
+			if isPalisade(textureID) {
+				drawSprite(ps.Assets, textureID, float32(xAxis)*float32(tileWidth), float32(yAxis)*float32(tileHeight), colorNone)
 			}
 		}
 	}
 }
 
-func drawDryEarth(startX, startY, endX, endY uint8, bs *battleState, ps *programState) {
+func drawDryEarth(startX, startY, endX, endY uint8, bState *battleState, ps *programState) {
 	for y := startY; y < endY; y++ {
 		for x := startX; x < endX; x++ {
-			id := bs.Board.Tiles[x][y].TextureID
-			if isDryEarth(id) {
-				drawSprite(ps.Assets, id, float32(x)*float32(tileWidth), float32(y)*float32(tileHeight), colorNone)
+			textureID := bState.Board.Tiles[x][y].TextureID
+			if isDryEarth(textureID) {
+				drawSprite(ps.Assets, textureID, float32(x)*float32(tileWidth), float32(y)*float32(tileHeight), colorNone)
 			}
 		}
 	}
 }
 
-func drawBuildings(startX, startY, endX, endY uint8, bs *battleState, ps *programState) {
-	drawBuilding(startY, endY, bs, ps)
-	drawPalisade(startX, startY, endX, endY, bs, ps)
-	drawDryEarth(startX, startY, endX, endY, bs, ps)
+func drawBuildings(startX, startY, endX, endY uint8, bState *battleState, ps *programState) {
+	drawBuilding(startY, endY, bState, ps)
+	drawPalisade(startX, startY, endX, endY, bState, ps)
+	drawDryEarth(startX, startY, endX, endY, bState, ps)
 }
 
-func drawCorpsesUnitsTrees(startX, startY, endX, endY uint8, bs *battleState, ps *programState) {
+func drawCorpsesUnitsTrees(startX, startY, endX, endY uint8, bState *battleState, ps *programState) {
 	for boardRow := startY; boardRow < endY; boardRow++ {
-		drawCorpses(boardRow, startX, endX, bs, ps)
+		drawCorpses(boardRow, startX, endX, bState, ps)
 	}
 
 	for boardRow := startY; boardRow < endY; boardRow++ {
-		drawUnits(boardRow, bs, ps)
-		drawTrees(boardRow, startX, endX, bs, ps)
+		drawUnits(boardRow, bState, ps)
+		drawTrees(boardRow, startX, endX, bState, ps)
 	}
 }
 
-func drawUnits(boardRow uint8, bs *battleState, ps *programState) {
-	rowUnits := bs.RenderUnitRows[boardRow]
+func drawUnits(boardRow uint8, bState *battleState, ps *programState) {
+	rowUnits := bState.RenderUnitRows[boardRow]
 	if len(rowUnits) > 0 {
 		sort.Slice(rowUnits, func(i, j int) bool { return rowUnits[i].X < rowUnits[j].X })
 
-		for _, unit := range rowUnits {
-			if unit.Owner == bs.PlayerID {
-				drawUnit(unit, bs, ps)
+		for _, currentUnit := range rowUnits {
+			if currentUnit.Owner == bState.PlayerID {
+				drawUnit(currentUnit, bState, ps)
 			}
 		}
 
-		for _, unit := range rowUnits {
-			if unit.Owner != bs.PlayerID {
-				drawUnit(unit, bs, ps)
+		for _, currentUnit := range rowUnits {
+			if currentUnit.Owner != bState.PlayerID {
+				drawUnit(currentUnit, bState, ps)
 			}
 		}
 	}
 }
 
-func drawCorpses(y, startX, endX uint8, bs *battleState, ps *programState) {
-	for _, currentCorpse := range bs.CorpsesList {
+func drawCorpses(y, startX, endX uint8, bState *battleState, ps *programState) {
+	for _, currentCorpse := range bState.CorpsesList {
 		if currentCorpse.Y == y && currentCorpse.X >= startX && currentCorpse.X < endX {
 			posX := float32(currentCorpse.X) * float32(tileWidth)
 			posY := float32(currentCorpse.Y) * float32(tileHeight)
@@ -980,9 +980,9 @@ func drawCorpses(y, startX, endX uint8, bs *battleState, ps *programState) {
 	}
 }
 
-func drawTrees(boardRow, startX, endX uint8, bs *battleState, ps *programState) {
+func drawTrees(boardRow, startX, endX uint8, bState *battleState, ps *programState) {
 	for boardColumn := startX; boardColumn < endX; boardColumn++ {
-		currentTile := &bs.Board.Tiles[boardColumn][boardRow]
+		currentTile := &bState.Board.Tiles[boardColumn][boardRow]
 
 		// jeśli nie jest drzewem to pomijamy
 		if currentTile.treeState == noTree {
@@ -993,7 +993,7 @@ func drawTrees(boardRow, startX, endX uint8, bs *battleState, ps *programState) 
 		case noTree:
 			continue
 		case treeStraight:
-			drawStandingTree(boardColumn, boardRow, currentTile, bs, ps)
+			drawStandingTree(boardColumn, boardRow, currentTile, bState, ps)
 		case treeLeaning:
 			drawLeaningTree(boardColumn, boardRow, currentTile, ps)
 		case treeFalling, treeImpact, treeFell:
@@ -1002,7 +1002,7 @@ func drawTrees(boardRow, startX, endX uint8, bs *battleState, ps *programState) 
 	}
 }
 
-func drawStandingTree(boardColumn, boardRow uint8, t *tile, bs *battleState, ps *programState) {
+func drawStandingTree(boardColumn, boardRow uint8, t *tile, bState *battleState, ps *programState) {
 	drawX := float32(boardColumn) * float32(tileWidth)
 	drawY := float32(boardRow) * float32(tileHeight)
 
@@ -1029,7 +1029,7 @@ func drawStandingTree(boardColumn, boardRow uint8, t *tile, bs *battleState, ps 
 
 		// 3. Uruchomienie ognia
 		if t.IsBurning {
-			frame := (bs.FireAnimationFrame + uint16(boardColumn+boardRow)) % 4
+			frame := (bState.FireAnimationFrame + uint16(boardColumn+boardRow)) % 4
 			drawSprite(ps.Assets, spriteFire00+frame, drawX+treeOffsetX, crownY, colorNone)
 		}
 	}
@@ -1080,11 +1080,11 @@ func drawFallingOrFallenTree(boardColumn, boardRow uint8, t *tile, ps *programSt
 }
 
 // @todo: porozbijać na podfunkcje! Inaczej nie rozprawię się z tym potworem.
-func drawWorldAndUnits(bs *battleState, ps *programState) {
+func drawWorldAndUnits(bState *battleState, ps *programState) {
 	// 1. Aktualizacja podręcznych
 	// @todo: Przydałoby się dokładniej opisać, co jest co, bo ciężko się rozeznać - 24.04.2026
-	bs.updateRenderCache()
-	cam := bs.GameCamera
+	bState.updateRenderCache()
+	cam := bState.GameCamera
 
 	// @todo: Sprawdź, czy mam rację: world… to część planszy, którą widzimy
 	worldLeft := cam.Target.X - (cam.Offset.X / cam.Zoom)
@@ -1123,23 +1123,23 @@ func drawWorldAndUnits(bs *battleState, ps *programState) {
 	endY := uint8(endYInt)
 
 	// Przebieg 1: „płaskie” rzeczy, jak trawa, woda, mosty, sucha ziemia
-	drawSoil(startX, startY, endX, endY, bs, ps)
+	drawSoil(startX, startY, endX, endY, bState, ps)
 	// Przebieg 2: budynki, sucha ziemia, palisady
-	drawBuildings(startX, startY, endX, endY, bs, ps)
+	drawBuildings(startX, startY, endX, endY, bState, ps)
 	// Przebieg 3: zwłoki, jednostki, drzewa
-	drawCorpsesUnitsTrees(startX, startY, endX, endY, bs, ps)
+	drawCorpsesUnitsTrees(startX, startY, endX, endY, bState, ps)
 
 	// Przebieg 4: efekty oraz nakładki
-	drawEffectsAndInterfaces(startY, endY, bs, ps)
+	drawEffectsAndInterfaces(startY, endY, bState, ps)
 
 	// @reminder: wydaje mi się, że pociski powinny być pod nakładkami.
 	// inaczej będą przesłaniać pasek życia.
-	drawProjectiles(bs, ps)
-	drawSelectionBox(bs, ps)
+	drawProjectiles(bState, ps)
+	drawSelectionBox(bState, ps)
 }
 
 // @todo: rozdziel logikę od rysowania, bo to zwyczajne pomieszanie z poplątaniem.
-func drawUnit(u *unit, bs *battleState, ps *programState) {
+func drawUnit(u *unit, bState *battleState, ps *programState) {
 	// 1. Bazowa pozycja to CEL (bo w units.go X,Y zmieniają się na początku kroku)
 	screenX := float32(u.X) * float32(tileWidth)
 	screenY := float32(u.Y) * float32(tileHeight)
@@ -1189,7 +1189,7 @@ func drawUnit(u *unit, bs *battleState, ps *programState) {
 
 	// 4. Kierunek duszka
 	// W ruchu wymuszamy patrzenie w kierunku idzenia (naprawia "moonwalk")
-	renderDx, renderDy := getRenderDirection(u, bs)
+	renderDx, renderDy := getRenderDirection(u, bState)
 	if u.State == stateMoving {
 		renderDx = int(u.Direction.X)
 		renderDy = int(u.Direction.Y)
@@ -1295,27 +1295,27 @@ func legacyDirToNewDir(dx, dy int) int {
 	return 4 // Domyślnie dół
 }
 
-func (bs *battleState) updateRenderCache() {
+func (bState *battleState) updateRenderCache() {
 	// @reminder Być może kiedyś okaże się, iż czyszczenie całości nie jest właściwe.
 	// Wtedy będę musiał zastanowić się, jak wywalać poszczególne jednostki i budynki.
 	// 1. Czyścimy jednostki oraz budynki po poprzedniej klatce
 	for y := range boardMaxY {
-		bs.RenderUnitRows[y] = bs.RenderUnitRows[y][:0]
-		bs.RenderBuildingRows[y] = bs.RenderBuildingRows[y][:0]
+		bState.RenderUnitRows[y] = bState.RenderUnitRows[y][:0]
+		bState.RenderBuildingRows[y] = bState.RenderBuildingRows[y][:0]
 	}
 	// 2. Dodajemy jednostki
-	for _, currentUnit := range bs.Units {
+	for _, currentUnit := range bState.Units {
 		// Uwzględniamy tylko żywe jednostki
 		// Nie da się mieć jednostki poza planszą, więc nie muszę sprawdzać
 		// MAX_X i MAX_Y, pewnie kiedyś tego pożałuję
 		// @check nie sprawdzam MAX_Y oraz MAX_Y, w razie problemów z rysowaniem
 		// tutaj może się kryć przyczyna. Na przyszłość: nie <= bo pierwszy index to 0
 		if currentUnit.Exists { // && unit.y >= 0 && unit.y < MAX_Y
-			bs.RenderUnitRows[currentUnit.Y] = append(bs.RenderUnitRows[currentUnit.Y], currentUnit)
+			bState.RenderUnitRows[currentUnit.Y] = append(bState.RenderUnitRows[currentUnit.Y], currentUnit)
 		}
 	}
 	// 3. Dodajemy budynki
-	for _, bld := range bs.Buildings {
+	for _, bld := range bState.Buildings {
 		// Pomijamy palisady i zniszczone
 		if !bld.Exists || bld.Type == buildingPalisade {
 			continue
@@ -1326,7 +1326,7 @@ func (bs *battleState) updateRenderCache() {
 		for _, currentTile := range bld.OccupiedTiles {
 			if currentTile.Y != lastY {
 				// if tile.y >= 0 && tile.y < MAX_Y // @reminder Nie sprawdzam legalności!
-				bs.RenderBuildingRows[currentTile.Y] = append(bs.RenderBuildingRows[currentTile.Y], bld)
+				bState.RenderBuildingRows[currentTile.Y] = append(bState.RenderBuildingRows[currentTile.Y], bld)
 			}
 
 			lastY = currentTile.Y
@@ -1335,8 +1335,8 @@ func (bs *battleState) updateRenderCache() {
 }
 
 // drawSelectionBox odpowiada za rysowanie prostokąta do zaznaczania jednostek.
-func drawSelectionBox(bs *battleState, ps *programState) {
-	if !bs.IsSelectingBox {
+func drawSelectionBox(bState *battleState, ps *programState) {
+	if !bState.IsSelectingBox {
 		return
 	}
 
@@ -1349,10 +1349,10 @@ func drawSelectionBox(bs *battleState, ps *programState) {
 	// Dzięki temu, że jesteśmy w BeginMode2D, rysujemy wprost na mapie.
 
 	// Start zaznaczania (zapamiętany w input.go jako wirtualny ekran) → Świat
-	worldStart := rl.GetScreenToWorld2D(bs.SelectionStart, bs.GameCamera)
+	worldStart := rl.GetScreenToWorld2D(bState.SelectionStart, bState.GameCamera)
 
 	// Obecna mysz (wirtualny ekran) → Świat
-	worldEnd := rl.GetScreenToWorld2D(currentVirtualMouse, bs.GameCamera)
+	worldEnd := rl.GetScreenToWorld2D(currentVirtualMouse, bState.GameCamera)
 
 	// 3. Obliczamy wymiary w Świecie Gry
 	x := float32(math.Min(float64(worldStart.X), float64(worldEnd.X)))
@@ -1365,7 +1365,7 @@ func drawSelectionBox(bs *battleState, ps *programState) {
 	// Linia musi mieć grubość niezależną od przybliżenia, inaczej może stać się niewidoczna
 	const minScreenThicknessPixels = 1.5
 
-	requiredWorldThickness := minScreenThicknessPixels / bs.GameCamera.Zoom
+	requiredWorldThickness := minScreenThicknessPixels / bState.GameCamera.Zoom
 
 	finalThickness := float32(math.Max(1.0, float64(requiredWorldThickness)))
 
@@ -1373,41 +1373,41 @@ func drawSelectionBox(bs *battleState, ps *programState) {
 	rl.DrawRectangleLinesEx(rect, finalThickness, rl.White) // Zielona ramka, klasyk RTS
 }
 
-func drawEffectsAndInterfaces(startY, endY uint8, bs *battleState, ps *programState) {
-	drawEffects(bs, ps)
-	drawBuildingsInterfaces(bs)
-	drawUnitsInterfaces(startY, endY, bs)
+func drawEffectsAndInterfaces(startY, endY uint8, bState *battleState, ps *programState) {
+	drawEffects(bState, ps)
+	drawBuildingsInterfaces(bState)
+	drawUnitsInterfaces(startY, endY, bState)
 }
 
 // @reminder: Chodzenie po całej planszy i sprawdzanie dwukrotnie, czy mamy jakiś efekt do narysowania jest bardzo
 // niewydajny! Powinienem mieć jakąś podręczną listę na stałe efekty, jak święte miejsce oraz
 // na tymczasowe. Coś, jak ze zwłokami, poręczne szybkie i w ogóle.
 // @todo: zmień tak, żeby nie sprawdzać każdego kafelka. Efekty nie są niewiadomą.
-func drawEffects(bs *battleState, ps *programState) {
+func drawEffects(bState *battleState, ps *programState) {
 	// Czemu y jest zewnętrzną pętlą?!
 	for y := range boardMaxY {
 		for x := range boardMaxX {
-			affectedTile := &bs.Board.Tiles[x][y]
+			affectedTile := &bState.Board.Tiles[x][y]
 
 			xPos := float32(x) * float32(tileWidth)
 			yPos := float32(y) * float32(tileHeight)
 
 			// Stałe, u dołu
-			permanentEffects(affectedTile, x, y, xPos, yPos, bs, ps)
+			permanentEffects(affectedTile, x, y, xPos, yPos, bState, ps)
 
 			// Tymczasowe, na wierzchu
-			temporaryEffects(affectedTile, x, y, xPos, yPos, bs, ps)
+			temporaryEffects(affectedTile, x, y, xPos, yPos, bState, ps)
 		}
 	}
 }
 
-func permanentEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *battleState, ps *programState) {
+func permanentEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bState *battleState, ps *programState) {
 	textureID := affectedTile.TextureID
 
 	switch {
 	// A. Kapliczka leczenia (stare 282/283)
 	case textureID == spriteEffectHeal00 || textureID == spriteEffectHeal01:
-		frame := (bs.WaterAnimationFrame + uint16(x+y)) % 2
+		frame := (bState.WaterAnimationFrame + uint16(x+y)) % 2
 		animID := spriteEffectHeal00 + frame
 
 		// Logika przeźroczystości (Duch)
@@ -1421,13 +1421,13 @@ func permanentEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *ba
 
 	// B. Małe ognisko (stare 68 -> SPRITE_GADGET_14)
 	case textureID == spriteGadget14:
-		frame := (bs.FireAnimationFrame + uint16(x+y)) % 4
+		frame := (bState.FireAnimationFrame + uint16(x+y)) % 4
 		drawSprite(ps.Assets, spriteGadget14, xPos, yPos, colorNone)
 		drawSprite(ps.Assets, spriteFire08+frame, xPos, yPos, colorNone)
 
 	// C. Duże ognisko (stare 69 -> SPRITE_GADGET_15)
 	case textureID == spriteGadget15:
-		frame := (bs.FireAnimationFrame + uint16(x+y)) % 4
+		frame := (bState.FireAnimationFrame + uint16(x+y)) % 4
 		drawSprite(ps.Assets, spriteGadget14, xPos, yPos, colorNone)
 		drawSprite(ps.Assets, spriteFire04+frame, xPos, yPos, colorNone)
 
@@ -1435,12 +1435,12 @@ func permanentEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *ba
 	// @reminder: tekstura spriteVictoryPoint się nie rysuje 22.04.202
 	case textureID == spriteVictoryPoint:
 		// Animacja punktu zwycięstwa (zakładamy 4 klatki animacji w atlasie)
-		frame := (bs.FireAnimationFrame) % 4
+		frame := (bState.FireAnimationFrame) % 4
 		drawSprite(ps.Assets, spriteVictoryPoint+frame, xPos, yPos, colorNone)
 	}
 }
 
-func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *battleState, ps *programState) {
+func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bState *battleState, ps *programState) {
 	// 1. Popiół
 	if affectedTile.hasAsh && affectedTile.AshIntensity > 0.01 {
 		alphaFactor := affectedTile.AshIntensity
@@ -1451,7 +1451,7 @@ func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *ba
 
 	// 2. Płonące kafelki
 	if affectedTile.IsBurning {
-		frame := (bs.FireAnimationFrame + uint16(x+y)) % 4
+		frame := (bState.FireAnimationFrame + uint16(x+y)) % 4
 		drawSprite(ps.Assets, affectedTile.BurnOverlayID+frame, xPos, yPos, colorNone)
 	}
 
@@ -1460,18 +1460,18 @@ func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bs *ba
 		phase1 := float64(x)*31 + float64(y)*17
 		phase2 := float64(x)*43 + float64(y)*59
 
-		drawGhostlySprite(spriteMissileGhostAttack, xPos, yPos, phase1, phase2, bs.GlobalFrameCounter, ps)
+		drawGhostlySprite(spriteMissileGhostAttack, xPos, yPos, phase1, phase2, bState.GlobalFrameCounter, ps)
 	}
 }
 
-func drawGhost(xPos, yPos float32, bs *battleState, ps *programState) {
+func drawGhost(xPos, yPos float32, bState *battleState, ps *programState) {
 	// Wyliczenia pod wodotryski.
 	// @reminder: Te gołe liczby, to składowe do efektu, który jest wykorzystywany tylko
 	// w tym miejscu. Nie jest to błąd i nie ma sensu robić z tego stałych.
-	pulse := float32(0.9 + 0.4*(0.5+0.5*math.Sin(float64(bs.GlobalFrameCounter)*0.3)))            //nolint:mnd
-	wobbleX := float32(1.5 * math.Sin(float64(bs.GlobalFrameCounter)*0.3))                        //nolint:mnd
-	wobbleY := float32(1.5 * math.Cos(float64(bs.GlobalFrameCounter)*0.3))                        //nolint:mnd
-	ghostTint := rl.Fade(rl.White, 0.9+0.1*float32(math.Sin(float64(bs.GlobalFrameCounter)*0.2))) //nolint:mnd
+	pulse := float32(0.9 + 0.4*(0.5+0.5*math.Sin(float64(bState.GlobalFrameCounter)*0.3)))            //nolint:mnd
+	wobbleX := float32(1.5 * math.Sin(float64(bState.GlobalFrameCounter)*0.3))                        //nolint:mnd
+	wobbleY := float32(1.5 * math.Cos(float64(bState.GlobalFrameCounter)*0.3))                        //nolint:mnd
+	ghostTint := rl.Fade(rl.White, 0.9+0.1*float32(math.Sin(float64(bState.GlobalFrameCounter)*0.2))) //nolint:mnd
 
 	// Bierzemy odpowiedni atlas
 	def := spriteRegistry[spriteMissileGhostAttack]
@@ -1496,17 +1496,17 @@ func drawGhost(xPos, yPos float32, bs *battleState, ps *programState) {
 // @reminder: muszę się zastanowić, czy nie przenieść tego poniżej do osobnego pliku, bo
 // tutaj już jest strasznie zagracone.
 
-func drawGameCursorOnRealScreen(bs *battleState, ps *programState, scale float32) {
+func drawGameCursorOnRealScreen(bState *battleState, ps *programState, scale float32) {
 	rl.HideCursor()
 
 	realMousePos := rl.GetMousePosition()
 
 	// 1. Wywołujemy otulinę, która zdecyduje jaki ID kursora zwrócić
-	cursorID := getCursorIDFromContext(bs, ps, realMousePos, scale)
+	cursorID := getCursorIDFromContext(bState, ps, realMousePos, scale)
 
 	// 2. Animacja i rysowanie (to dzieje się niezależnie od tego, skąd wzięliśmy ID)
 	cursorID = animateCursorID(cursorID)
-	drawCursorSprite(ps, cursorID, realMousePos, 3*bs.GameCamera.Zoom/scale)
+	drawCursorSprite(ps, cursorID, realMousePos, 3*bState.GameCamera.Zoom/scale)
 }
 
 func drawCursorSprite(ps *programState, cursorID uint16, pos rl.Vector2, scale float32) {
@@ -1546,14 +1546,14 @@ func drawCursorSprite(ps *programState, cursorID uint16, pos rl.Vector2, scale f
 	rl.DrawTexturePro(tex, srcRect, ps.RenderDestRect, ps.RenderOrigin, 0, rl.White)
 }
 
-func drawMilkBarVisualizer(bs *battleState, ps *programState) {
+func drawMilkBarVisualizer(bState *battleState, ps *programState) {
 	anchorX := ps.GameViewWidth
 	barX := anchorX + milkBarOffsetX
 	barY := milkBarY
 	barWidth := milkBarWidth
 	barHeight := milkBarHeight
 
-	currentMilk := float32(bs.HumanPlayerState.Milk)
+	currentMilk := float32(bState.HumanPlayerState.Milk)
 
 	fillRatio := currentMilk / maxMilk
 
@@ -1566,7 +1566,7 @@ func drawMilkBarVisualizer(bs *battleState, ps *programState) {
 
 	rl.DrawRectangle(int32(barX), int32(fillY), int32(barWidth), int32(filledHeight), rl.White)
 
-	capacityLineRation := float32(bs.HumanPlayerState.MaxMilk) / maxMilk
+	capacityLineRation := float32(bState.HumanPlayerState.MaxMilk) / maxMilk
 	if capacityLineRation > 1.0 {
 		capacityLineRation = 1.0
 	}
@@ -1581,7 +1581,7 @@ func drawMilkBarVisualizer(bs *battleState, ps *programState) {
 	)
 }
 
-func drawGameUI(bs *battleState, ps *programState) {
+func drawGameUI(bState *battleState, ps *programState) {
 	anchorX := ps.GameViewWidth
 
 	// 1. Rysowanie TŁA (Drewniany panel)
@@ -1599,24 +1599,24 @@ func drawGameUI(bs *battleState, ps *programState) {
 	}
 
 	// 2. Przyciski, pasek z mlekiem
-	drawMilkBarVisualizer(bs, ps)
-	drawButtons(bs, ps)
+	drawMilkBarVisualizer(bState, ps)
+	drawButtons(bState, ps)
 
 	// 3. Mapa
 	minimapX := anchorX + minimapOffsetX
 	minimapY := float32(0) + minimapOffsetY
-	drawMinimapUnits(bs, minimapX, minimapY, minimapDisplayWidth, minimapDisplayHeight, ps.GameViewWidth)
+	drawMinimapUnits(bState, minimapX, minimapY, minimapDisplayWidth, minimapDisplayHeight, ps.GameViewWidth)
 }
 
 // @todo: funkcja łamie zasadę rozdzielenia Dane-Logika-Rysowanie!
-func drawButtons(bs *battleState, ps *programState) {
+func drawButtons(bState *battleState, ps *programState) {
 	// Punkt zaczepienia panelu (prawa strona ekranu)
 	anchorX := ps.GameViewWidth
 
 	// Pętla po 5 slotach przycisków
 	for actionIndex := range uiActionMaxButtons {
 		// 1. Pobieramy dane z battleState
-		action := bs.UI.CurrentActions[actionIndex]
+		action := bState.UI.CurrentActions[actionIndex]
 
 		// Jak nieaktywny, to nie rysujemy i nie klikamy
 		if !action.IsActive {
@@ -1629,7 +1629,7 @@ func drawButtons(bs *battleState, ps *programState) {
 		rect := rl.NewRectangle(buttonX, buttonY, btnWidth, btnHeight)
 
 		// Zapisujemy prostokąt do battleState (dla input.go)
-		bs.UI.ActionButtons[actionIndex] = rect
+		bState.UI.ActionButtons[actionIndex] = rect
 
 		// @reminder: chwilowo wyłączyłem, ale myślę, że rozjaśnienie ikonki przycisku nad którym
 		// się znajduje mysz będzie przydatny, powinno się to też powiązać ze wskazaniem ile miar
@@ -1667,7 +1667,7 @@ func drawButtons(bs *battleState, ps *programState) {
 
 		switch action.Cmd.ActionType {
 		case cmdProduce:
-			tex = ps.Assets.getAtlas(def.atlasID, bs.PlayerID)
+			tex = ps.Assets.getAtlas(def.atlasID, bState.PlayerID)
 			iconScale = 0.8
 		case cmdBuildStructure, cmdStop, cmdMagicShield, cmdMagicSight, cmdRepairStructure:
 			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
@@ -1741,7 +1741,7 @@ func drawTripleIcon(tex rl.Texture2D, btnRect rl.Rectangle) {
 		rl.Vector2{}, 0, rl.White)
 }
 
-func drawMinimapUnits(bs *battleState, minimapX, minimapY, minimapWidth, minimapHeight, actualGameViewWidth float32) {
+func drawMinimapUnits(bState *battleState, minimapX, minimapY, minimapWidth, minimapHeight, actualGameViewWidth float32) {
 	const tileWidthF = float32(tileWidth)
 
 	const tileHeightF = float32(tileHeight)
@@ -1772,7 +1772,7 @@ func drawMinimapUnits(bs *battleState, minimapX, minimapY, minimapWidth, minimap
 	// 1. Kafelki Terenu
 	for x := range boardMaxX {
 		for y := range boardMaxY {
-			tileID := bs.Board.Tiles[x][y].TextureID
+			tileID := bState.Board.Tiles[x][y].TextureID
 			col := getMapColor(tileID)
 			w := xGridLines[x+1] - xGridLines[x]
 			h := yGridLines[y+1] - yGridLines[y]
@@ -1781,7 +1781,7 @@ func drawMinimapUnits(bs *battleState, minimapX, minimapY, minimapWidth, minimap
 	}
 
 	// 2. Budynki
-	for _, bld := range bs.Buildings {
+	for _, bld := range bState.Buildings {
 		if !bld.Exists {
 			continue
 		}
@@ -1793,7 +1793,7 @@ func drawMinimapUnits(bs *battleState, minimapX, minimapY, minimapWidth, minimap
 
 		var bldColor rl.Color
 
-		if bld.Owner == bs.PlayerID {
+		if bld.Owner == bState.PlayerID {
 			bldColor = rl.White
 		} else {
 			bldColor = rl.Red
@@ -1810,12 +1810,12 @@ func drawMinimapUnits(bs *battleState, minimapX, minimapY, minimapWidth, minimap
 	}
 
 	// 3. Jednostki
-	for _, unit := range bs.Units {
+	for _, unit := range bState.Units {
 		if !unit.Exists {
 			continue
 		}
 		var unitColor rl.Color
-		if unit.Owner == bs.PlayerID {
+		if unit.Owner == bState.PlayerID {
 			unitColor = rl.White
 		} else {
 			unitColor = rl.Red
@@ -1831,7 +1831,7 @@ func drawMinimapUnits(bs *battleState, minimapX, minimapY, minimapWidth, minimap
 	}
 
 	// 4. Ramka Kamery
-	camWorldView := getCameraWorldViewRect(bs.GameCamera, actualGameViewWidth, float32(virtualScreenHeight))
+	camWorldView := getCameraWorldViewRect(bState.GameCamera, actualGameViewWidth, float32(virtualScreenHeight))
 	scaleFactorX := minimapWidth / worldMapFullPixelWidth
 	scaleFactorY := minimapHeight / worldMapFullPixelHeight
 
@@ -1860,8 +1860,8 @@ func drawMinimapUnits(bs *battleState, minimapX, minimapY, minimapWidth, minimap
 
 // ========= DEBUGOWANIE ZASADZANIA BUDOWLI
 
-func drawConstructionValidationBox(bs *battleState, ps *programState) {
-	if bs.MouseCommandMode != cmdBuildStructure {
+func drawConstructionValidationBox(bState *battleState, ps *programState) {
+	if bState.MouseCommandMode != cmdBuildStructure {
 		return
 	}
 
@@ -1872,12 +1872,12 @@ func drawConstructionValidationBox(bs *battleState, ps *programState) {
 		return
 	}
 
-	worldMousePos := rl.GetScreenToWorld2D(virtualMouse, bs.GameCamera)
+	worldMousePos := rl.GetScreenToWorld2D(virtualMouse, bState.GameCamera)
 
 	startX := uint8(worldMousePos.X / float32(tileWidth))
 	startY := uint8(worldMousePos.Y / float32(tileHeight))
 
-	size := buildingDefs[bs.PendingBuildingType].Width
+	size := buildingDefs[bState.PendingBuildingType].Width
 
 	var tileStates [3][3]uint8
 	var hasRoadAccessAnywhere bool
@@ -1887,7 +1887,7 @@ func drawConstructionValidationBox(bs *battleState, ps *programState) {
 			cx := startX + dx
 			cy := startY + dy
 
-			rawColor := validationBoxColor(cx, cy, bs)
+			rawColor := validationBoxColor(cx, cy, bState)
 
 			var state uint8
 
@@ -1932,21 +1932,21 @@ func drawConstructionValidationBox(bs *battleState, ps *programState) {
 	}
 }
 
-func validationBoxColor(tileX, tileY uint8, bs *battleState) rl.Color {
+func validationBoxColor(tileX, tileY uint8, bState *battleState) rl.Color {
 	// 1. Walidacja specyficzna dla typu budynku
 	var isValid bool
 
-	switch bs.PendingBuildingType {
+	switch bState.PendingBuildingType {
 	case buildingBridge:
-		isValid = isWithinBoard(tileX, tileY, bs) &&
-			isWaterTileOnly(bs.Board.Tiles[tileX][tileY].TextureID)
+		isValid = isWithinBoard(tileX, tileY, bState) &&
+			isWaterTileOnly(bState.Board.Tiles[tileX][tileY].TextureID)
 
 	case buildingRoad:
-		isValid = !isPath(bs.Board.Tiles[tileX][tileY].TextureID) &&
-			canFitBuilding(tileX, tileY, smallBuildingSize, smallBuildingSize, bs)
+		isValid = !isPath(bState.Board.Tiles[tileX][tileY].TextureID) &&
+			canFitBuilding(tileX, tileY, smallBuildingSize, smallBuildingSize, bState)
 
 	default:
-		isValid = canFitBuilding(tileX, tileY, smallBuildingSize, smallBuildingSize, bs)
+		isValid = canFitBuilding(tileX, tileY, smallBuildingSize, smallBuildingSize, bState)
 	}
 
 	// 2. Jeśli miejsce jest nieważne, od razu zwracamy czerwień
@@ -1955,12 +1955,12 @@ func validationBoxColor(tileX, tileY uint8, bs *battleState) rl.Color {
 	}
 
 	// 3. Palisada nie wymaga dostępu do drogi, więc od razu jest zielona
-	if bs.PendingBuildingType == buildingPalisade {
+	if bState.PendingBuildingType == buildingPalisade {
 		return rl.DarkGreen
 	}
 
 	// 4. Budynki wymagają drogi
-	if hasRoadAccess(tileX, tileY, smallBuildingSize, bs) {
+	if hasRoadAccess(tileX, tileY, smallBuildingSize, bState) {
 		return rl.DarkGreen
 	}
 

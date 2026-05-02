@@ -249,7 +249,7 @@ func initTerrainSprites() {
 	currentRockID := spriteRockStart
 
 	for i := 0; i <= 12; i++ {
-		if i == 8 {
+		if i == 8 { //nolint:mnd
 			continue
 		}
 		setUI(currentRockID, uint16(11+(i*16)), 92) //nolint:mnd
@@ -262,7 +262,7 @@ func initTerrainSprites() {
 			spriteRegistry[id] = spriteDef{
 				atlasID: atlasUI,
 				x:       x, y: y,
-				w: 22, h: 18, // Szersza i wyższa //nolint:mnd
+				w: 22, h: 18, //nolint:mnd
 				offX: -3, offY: -2, // Przesunięcie w lewo i do góry, żeby wyśrodkować
 			}
 		}
@@ -426,7 +426,7 @@ func initUISprites() {
 	setUI(spriteBtnBuildAcademy, 219, 21, 16, 14)   //nolint:mnd
 
 	// Czary @todo: ogarnij potrójne ikonki dla przycisku. Gdzieś jest już gotowa funkcja do tego
-	setUI(spriteBtnSpellVision, 235, 8, 16, 14) // spell_vision
+	setUI(spriteBtnSpellVision, 235, 8, 16, 14) //nolint:mnd
 
 	spriteRegistry[609] = spriteDef{atlasID: atlasUnits1, x: 303, y: 112, w: 16, h: 14}
 
@@ -617,8 +617,8 @@ func initUnitSprites() {
 				atlasID: cfg.Atlas,
 				x:       x40,
 				y:       y40,
-				w:       16,
-				h:       14,
+				w:       16, //nolint:mnd
+				h:       14, //nolint:mnd
 				flipX:   false,
 				offX:    0,
 				offY:    0,
@@ -631,8 +631,8 @@ func initUnitSprites() {
 				atlasID: cfg.Atlas,
 				x:       x41,
 				y:       y41,
-				w:       16,
-				h:       14,
+				w:       16, //nolint:mnd
+				h:       14, //nolint:mnd
 				flipX:   false,
 				offX:    0,
 				offY:    0,
@@ -801,61 +801,61 @@ func generateMeleeAttackFrames(baseUnitID int, frame int, atlas battleAtlasID, u
 func initBuildingSprites() {
 	assetID := atlasBuildings
 
-	setBuilding := func(id int, x, y, w, h uint16) {
+	setBuilding := func(id int, x, y uint16) {
 		if id < maxSpriteID {
 			spriteRegistry[id] = spriteDef{
 				atlasID: assetID,
 				x:       x, y: y,
-				w: w, h: h,
+				w: 16, h: 14, //nolint:mnd
 				offX: 0, offY: 0,
 			}
 		}
 	}
 	// Budowa → y:168
 	for i := 127; i <= 135; i++ {
-		setBuilding(i, uint16((i-127)*16), 168, 16, 14) //nolint:mnd
+		setBuilding(i, uint16((i-127)*16), 168) //nolint:mnd
 	}
 
 	// Zgliszcza → y:182
 	for i := 257; i <= 265; i++ {
-		setBuilding(i, uint16((i-257)*16), 182, 16, 14) //nolint:mnd
+		setBuilding(i, uint16((i-257)*16), 182) //nolint:mnd
 	}
 
 	// Budynek główny
 	// ID 137-155 → y:84
 	for i := 137; i <= 155; i++ {
-		setBuilding(i, uint16((i-137)*16), 84, 16, 14) //nolint:mnd
+		setBuilding(i, uint16((i-137)*16), 84) //nolint:mnd
 	}
 	// ID 156 Most
-	setBuilding(156, 304, 84, 16, 14) //nolint:mnd
+	setBuilding(156, 304, 84) //nolint:mnd
 
 	// Obora
 	// ID 157-175 → y:98
 	for i := 157; i <= 175; i++ {
-		setBuilding(i, uint16((i-157)*16), 98, 16, 14) //nolint:mnd
+		setBuilding(i, uint16((i-157)*16), 98) //nolint:mnd
 	}
 	// Chata drwali
 	// ID 177-195 → y:112
 	for i := 177; i <= 195; i++ {
-		setBuilding(i, uint16((i-177)*16), 112, 16, 14) //nolint:mnd
+		setBuilding(i, uint16((i-177)*16), 112) //nolint:mnd
 	}
 	// Świątynia
 	// ID 197-215 → y:126
 	for i := 197; i <= 215; i++ {
-		setBuilding(i, uint16((i-197)*16), 126, 16, 14) //nolint:mnd
+		setBuilding(i, uint16((i-197)*16), 126) //nolint:mnd
 	}
 	// Chata wojów
 	// ID 217-235 → y:140
 	for i := 217; i <= 235; i++ {
-		setBuilding(i, uint16((i-217)*16), 140, 16, 14) //nolint:mnd
+		setBuilding(i, uint16((i-217)*16), 140) //nolint:mnd
 	}
 	// Dwór
 	// ID 237-255 → y:154
 	for i := 237; i <= 255; i++ {
-		setBuilding(i, uint16((i-237)*16), 154, 16, 14) //nolint:mnd
+		setBuilding(i, uint16((i-237)*16), 154) //nolint:mnd
 	}
 
-	setBuilding(int(spriteBridgeConstruction), 304, 84, 16, 14) //nolint:mnd
+	setBuilding(int(spriteBridgeConstruction), 304, 84) //nolint:mnd
 }
 
 func initProjectileSprites() {

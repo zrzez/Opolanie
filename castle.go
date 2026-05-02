@@ -20,16 +20,16 @@ func (playerS *playerState) init(factionID uint8, maxMilk uint16) {
 
 // setCommand przetwarza rozkaz (np. wytwarzania, ruchu, ataku) dla gracza.
 // Dzieli logikę na podfunkcje dla lepszej czytelności i utrzymania zasady jednej odpowiedzialności.
-func (playerS *playerState) setCommand(cmd *command, bs *battleState) {
+func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 	if cmd == nil {
 		return
 	}
 
 	switch cmd.CommandCategory {
 	case 0: // Rozkaz dla budynku
-		playerS.handleBuildingCommand(cmd, bs)
+		playerS.handleBuildingCommand(cmd, bState)
 	case 1: // Komenda dla jednostki
-		playerS.handleUnitCommand(cmd, bs)
+		playerS.handleUnitCommand(cmd, bState)
 	default:
 		log.Printf("setCommand: Nieznany TargetObject w komendzie: %d", cmd.CommandCategory)
 	}
@@ -37,8 +37,8 @@ func (playerS *playerState) setCommand(cmd *command, bs *battleState) {
 
 // handleBuildingCommand przetwarza rozkazy dotyczące budynków.
 // Obsługuje np. produkcję jednostek.
-func (playerS *playerState) handleBuildingCommand(cmd *command, bs *battleState) {
-	targetBuilding, ok := getBuildingByID(cmd.InteractionTargetID, bs)
+func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleState) {
+	targetBuilding, ok := getBuildingByID(cmd.InteractionTargetID, bState)
 
 	if !ok || !targetBuilding.Exists || targetBuilding.IsUnderConstruction {
 		log.Printf("handleBuildingCommand: Nie znaleziono ID %d, nie istnieje lub w budowie.", cmd.InteractionTargetID)
@@ -55,7 +55,7 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bs *battleState)
 
 	switch cmd.ActionType {
 	case cmdProduce:
-		targetBuilding.produceUnit(cmd.ProduceType, bs)
+		targetBuilding.produceUnit(cmd.ProduceType, bState)
 	default:
 		log.Printf("handleBuildingCommand: Niezaimplementowany ActionType %d dla budynku %d.",
 			cmd.ActionType, targetBuilding.ID)
@@ -64,8 +64,8 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bs *battleState)
 
 // handleUnitCommand przetwarza rozkazy dotyczące jednostek.
 // Obsługuje np. ruch, atak, stop, magię.
-func (playerS *playerState) handleUnitCommand(cmd *command, bs *battleState) {
-	targetUnit, ok := getUnitByID(cmd.ExecutorID, bs)
+func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState) {
+	targetUnit, ok := getUnitByID(cmd.ExecutorID, bState)
 	if !ok || !targetUnit.Exists {
 		log.Printf("handleUnitCommand: Nie znaleziono jednostki ID %d lub nie istnieje.", cmd.ExecutorID)
 
@@ -82,7 +82,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bs *battleState) {
 	switch cmd.ActionType {
 	case cmdMove:
 		log.Printf("INFO: castle.go wydano cmdMove.")
-		playerS.handleMoveCommand(cmd, targetUnit, bs)
+		playerS.handleMoveCommand(cmd, targetUnit, bState)
 	case cmdAttack, cmdStop, cmdMagicFire, cmdMagicLightning, cmdMagicSight:
 		// @todo: tutaj chyba jest poważny błąd w logice, bo jednostka zdaje się atakować samą siebie, ale…
 		// w grze działa prawidłowo muszę się przyjrzeć i ogarnąć, co się odjaniepawla.
@@ -93,7 +93,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bs *battleState) {
 			cmd.TargetX,
 			cmd.TargetY,
 			cmd.ExecutorID,
-			bs,
+			bState,
 		)
 		log.Printf(
 			"handleUnitCommand: Jednostka %d otrzymała komendę %d do (%d,%d).",
@@ -108,7 +108,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bs *battleState) {
 			cmd.TargetX,
 			cmd.TargetY,
 			cmd.InteractionTargetID,
-			bs,
+			bState,
 		)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
@@ -122,7 +122,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bs *battleState) {
 			cmd.TargetX,
 			cmd.TargetY,
 			cmd.ExecutorID,
-			bs,
+			bState,
 		)
 	default:
 		log.Printf("handleUnitCommand: Nieznany ActionType %d dla jednostki %d.",
@@ -132,16 +132,16 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bs *battleState) {
 
 // handleMoveCommand obsługuje logikę rozkazu ruchu dla jednostki.
 // Sprawdza dostępność celu i wyznacza ścieżkę.
-func (playerS *playerState) handleMoveCommand(cmd *command, unit *unit, bs *battleState) {
+func (playerS *playerState) handleMoveCommand(cmd *command, unit *unit, bState *battleState) {
 	log.Printf("DEBUG: handleMoveCommand: Rozkaz ruchu dla jednostki ID %d do (%d,%d).",
 		unit.ID, cmd.TargetX, cmd.TargetY)
 
 	// 1. Sprawdzenie czy kafelek jest przechodni (używamy isWalkable)
-	if !isWalkable(bs, cmd.TargetX, cmd.TargetY) {
+	if !isWalkable(bState, cmd.TargetX, cmd.TargetY) {
 		// Pobieramy ID tekstury z nowej struktury Tiles
 		var terrainID uint16
 		if cmd.TargetX < boardMaxX && cmd.TargetY < boardMaxY {
-			terrainID = bs.Board.Tiles[cmd.TargetX][cmd.TargetY].TextureID
+			terrainID = bState.Board.Tiles[cmd.TargetX][cmd.TargetY].TextureID
 		}
 
 		log.Printf(
@@ -153,7 +153,7 @@ func (playerS *playerState) handleMoveCommand(cmd *command, unit *unit, bs *batt
 	}
 
 	path := findPath(
-		bs,
+		bState,
 		unit.ID,
 		unit.X,
 		unit.Y,
@@ -182,8 +182,8 @@ func (playerS *playerState) handleMoveCommand(cmd *command, unit *unit, bs *batt
 }
 
 // szuka budynku w battleState.Buildings.
-func getBuildingByID(bldID uint, bs *battleState) (*building, bool) {
-	for _, bld := range bs.Buildings {
+func getBuildingByID(bldID uint, bState *battleState) (*building, bool) {
+	for _, bld := range bState.Buildings {
 		if bld.ID == bldID {
 			return bld, true
 		}
@@ -193,23 +193,23 @@ func getBuildingByID(bldID uint, bs *battleState) (*building, bool) {
 }
 
 // szuka jednostki w battleState.Units.
-func getUnitByID(unitID uint, bs *battleState) (*unit, bool) {
-	for _, unit := range bs.Units {
-		if unit.ID == unitID {
-			return unit, true
+func getUnitByID(unitID uint, bState *battleState) (*unit, bool) {
+	for _, currentUnit := range bState.Units {
+		if currentUnit.ID == unitID {
+			return currentUnit, true
 		}
 	}
 
 	return nil, false
 }
 
-func getObjectByID(objectID uint, bs *battleState) (*unit, *building) {
-	if unit, ok := getUnitByID(objectID, bs); ok {
-		return unit, nil
+func getObjectByID(objectID uint, bState *battleState) (*unit, *building) {
+	if currentUnit, ok := getUnitByID(objectID, bState); ok {
+		return currentUnit, nil
 	}
 
-	if bld, ok := getBuildingByID(objectID, bs); ok {
-		return nil, bld
+	if currentBuilding, ok := getBuildingByID(objectID, bState); ok {
+		return nil, currentBuilding
 	}
 
 	return nil, nil
