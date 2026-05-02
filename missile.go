@@ -8,8 +8,8 @@ import (
 
 // missile.go
 
-// Rodzaje pocisków
 const (
+	// Rodzaje pocisków.
 	missileArrow uint8 = iota
 	missileBolt
 	missileFire
@@ -55,11 +55,12 @@ func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, 
 	p.Exists = true
 
 	// Przeliczenie kafelków na piksele (środek kafelka)
-	p.X = float32(startX*uint16(tileWidth)) + float32(tileWidth)/2
-	p.Y = float32(startY*uint16(tileHeight)) + float32(tileHeight)/2
+	// Połowa oczywiście wymaga dzielenia przez dwa… Uciszyć linter!
+	p.X = float32(startX*uint16(tileWidth)) + float32(tileWidth)/2   //nolint:mnd
+	p.Y = float32(startY*uint16(tileHeight)) + float32(tileHeight)/2 //nolint:mnd
 
-	destPixelX := float32(targetX*uint16(tileWidth)) + float32(tileWidth)/2
-	destPixelY := float32(targetY*uint16(tileHeight)) + float32(tileHeight)/2
+	destPixelX := float32(targetX*uint16(tileWidth)) + float32(tileWidth)/2   //nolint:mnd
+	destPixelY := float32(targetY*uint16(tileHeight)) + float32(tileHeight)/2 //nolint:mnd
 
 	// Obliczenie wektora różnicy
 	diffX := destPixelX - p.X
@@ -74,8 +75,9 @@ func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, 
 
 	// Duchy będą się bardzo dziwnie zachowywać w locie
 	if kind == missileGhost {
-		p.Phase1 = rand.Float64() * 2 * math.Pi
-		p.Phase2 = rand.Float64() * 2 * math.Pi
+		// Fałszywy pozytyw. math/rand/v2 w zupełności wystarczy.
+		p.Phase1 = rand.Float64() * 2 * math.Pi //nolint:mnd,gosec
+		p.Phase2 = rand.Float64() * 2 * math.Pi //nolint:mnd,gosec
 	}
 
 	distance := float32(math.Sqrt(float64(diffX*diffX + diffY*diffY)))
@@ -84,6 +86,8 @@ func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, 
 		p.DX = (diffX / distance) * speed
 		p.DY = (diffY / distance) * speed
 		// Czas trwania to czas potrzebny na dolot
+		// @todo: 2.05.2026 nie chce mi się dzisiaj sprawdzać czemu to jest
+		// zawsze dobrze. Zrób to innym razem.
 		p.Lifetime = uint(int(distance / speed))
 	} else {
 		p.Exists = false // Cel tożsamy ze startem
@@ -93,7 +97,7 @@ func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, 
 }
 
 // updateProjectile aktualizuje pozycję pocisku.
-func (p *projectile) updateProjectile(bs *battleState) {
+func (p *projectile) updateProjectile(bState *battleState) {
 	if !p.Exists {
 		return
 	}
@@ -105,23 +109,23 @@ func (p *projectile) updateProjectile(bs *battleState) {
 
 	// Sprawdzenie trafienia (gdy czas się skończył)
 	if p.Lifetime <= 0 {
-		p.hit(bs)
+		p.hit(bState)
 	}
 }
 
 // hit zadaje obrażenia w punkcie docelowym.
-func (p *projectile) hit(bs *battleState) {
+func (p *projectile) hit(bState *battleState) {
 	if p.TargetX >= uint16(boardMaxX) || p.TargetY >= uint16(boardMaxY) {
 		p.Exists = false
 
 		return
 	}
 
-	targetTile := &bs.Board.Tiles[p.TargetX][p.TargetY]
+	targetTile := &bState.Board.Tiles[p.TargetX][p.TargetY]
 
 	// 1. Trafienie jednostki
 	if targetTile.Unit != nil && targetTile.Unit.Exists && targetTile.Unit.Owner != p.Owner {
-		targetTile.Unit.takeDamage(p.Damage, bs) // @todo: czemu jednostka ma argument bs, a budynek nie?
+		targetTile.Unit.takeDamage(p.Damage, bState) // @todo: czemu jednostka ma argument bs, a budynek nie?
 	}
 
 	// 2. Trafienie budynku
@@ -133,20 +137,20 @@ func (p *projectile) hit(bs *battleState) {
 	// @todo: sprawdź, czy dobrze rozumiem, że wywołując efekt specjalny po zadaniu obrażeń
 	// uniemożliwiam prawidłowe zadanie obrażeń odpryskami ognia?
 	// @todo: dodaj przekazywanie obrażeń, jako argumentu ponieważ potrzebuję tego do ducha.
-	p.specialProjectiles(targetTile, bs)
+	p.specialProjectiles(targetTile, bState)
 
 	// @reminder: to się gryzie z duchem, który musi przetrwać uderzenie i dusić cel
 	p.Exists = false
 }
 
-func (p *projectile) specialProjectiles(targetTile *tile, bs *battleState) {
+func (p *projectile) specialProjectiles(targetTile *tile, bState *battleState) {
 	// 1. Jeśli to duch (pocisk maga) to zostań widoczny na jednostce
 	// @todo: teraz się tym zajmuję 28.04.2026
 	// @todo: potrzebuję przekazać tutaj doświadczenie i właściciela maga, żeby poprawnie wyliczyć
 	// dodatek do obrażeń.
 	if p.Kind == missileGhost {
 		p.Sprite = spriteMissileGhostAttack
-		p.mageGhost(targetTile, p.Damage, bs)
+		p.mageGhost(targetTile, p.Damage, bState)
 
 		return
 	}
@@ -154,11 +158,11 @@ func (p *projectile) specialProjectiles(targetTile *tile, bs *battleState) {
 	// 2. Ogień musi palić się przez jakiś czas
 	// @todo: czy można uwspólnić logikę ognia i ducha?
 	if p.Kind == missileFire {
-		p.priestFireball(targetTile, bs)
+		p.priestFireball(targetTile, bState)
 	}
 }
 
-func (p *projectile) spriteToDirection() (dirX int16, dirY int16) {
+func (p *projectile) spriteToDirection() (int16, int16) {
 	switch p.Sprite {
 	case spriteMissileArrowUp, spriteMissileBoltUp, spriteMissileFireUp,
 		spriteMissileLightningUp, spriteMissileSpearUp, spriteMissileGhostUp:
@@ -191,7 +195,9 @@ func (p *projectile) spriteToDirection() (dirX int16, dirY int16) {
 }
 
 func unitTypeToMissileType(unitType unitType) uint8 {
-	switch unitType {
+	// Niektóre rodzaje jednostek strzelają, reszta nie powinna być
+	// tutaj obsługiwana!
+	switch unitType { //nolint:exhaustive
 	case unitArcher:
 		return missileArrow
 	case unitSpearman:
@@ -233,7 +239,8 @@ func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
 	// Określenie kierunku
 	dirX := 0
 
-	if dx > 0.5 {
+	// @todo: @reminder: przypomnij sobie czemu tutaj musi być połówka!
+	if dx > 0.5 { //nolint:mnd
 		dirX = 1
 	} else if dx < -0.5 {
 		dirX = -1
@@ -241,7 +248,8 @@ func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
 
 	dirY := 0
 
-	if dy > 0.5 {
+	// @todo: @reminder: przypomnij sobie czemu tutaj musi być połówka!
+	if dy > 0.5 { //nolint:mnd
 		dirY = 1
 	} else if dy < -0.5 {
 		dirY = -1
@@ -273,8 +281,10 @@ func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
 	return baseSprite + offset
 }
 
-// @todo: sprawdź, czy odpryski rzeczywiście zadają obrażenia, które powinny
-func (p *projectile) priestFireball(affedtedTile *tile, bs *battleState) {
+// @todo: sprawdź, czy odpryski rzeczywiście zadają obrażenia, które powinny.
+func (p *projectile) priestFireball(affedtedTile *tile, bState *battleState) {
+	// @todo: @reminder: ciężko sobie wyobrazić lepszą nazwę na te zmienne.
+	// Jeśli coś mi przyjdzie do głowy, to zmienię, do tego czasu wyciszam.
 	dx, dy := p.spriteToDirection()
 
 	// @reminder: szkoda, że nie zapisałem dokładnie czemu wyciszyłem tutaj lintera
@@ -287,16 +297,16 @@ func (p *projectile) priestFireball(affedtedTile *tile, bs *battleState) {
 
 	var splash2 *tile
 
-	affedtedTile.setOnFire(bigBurn, bs)
+	affedtedTile.setOnFire(bigBurn, bState)
 
 	if splash1X >= 0 && splash1X < int16(boardMaxX) && splash1Y >= 0 && splash1Y < int16(boardMaxY) {
-		splash1 = &bs.Board.Tiles[splash1X][splash1Y]
-		splash1.setOnFire(midBurn, bs)
+		splash1 = &bState.Board.Tiles[splash1X][splash1Y]
+		splash1.setOnFire(midBurn, bState)
 	}
 
 	if splash2X >= 0 && splash2X < int16(boardMaxX) && splash2Y >= 0 && splash2Y < int16(boardMaxY) {
-		splash2 = &bs.Board.Tiles[splash2X][splash2Y]
-		splash2.setOnFire(minBurn, bs)
+		splash2 = &bState.Board.Tiles[splash2X][splash2Y]
+		splash2.setOnFire(minBurn, bState)
 	}
 
 	// 0. efekt to
@@ -313,14 +323,14 @@ func (p *projectile) priestFireball(affedtedTile *tile, bs *battleState) {
 // @reminder: funkcja da efekt każdemu zaatakowanemu kafelkowi, ale bezpiecznik musi być
 // w wydawaniu rozkazu, a nie tutaj. Tak aby unitMage nie mógł dostać rozkazu atakuj budynek
 // reszta logiki w effects.go będzie działać tylko na jednostkach.
-func (p *projectile) mageGhost(targetTile *tile, damage uint16, bs *battleState) {
+func (p *projectile) mageGhost(targetTile *tile, damage uint16, bState *battleState) {
 	// @reminder: obrażenia zadajemy przed wejściem do tej funkcji, trzeba to zmienić!
 	// KOSZT 20 many
 	ownerBonus := uint16(0)
-	if p.Owner == bs.AIPlayerID {
+	if p.Owner == bState.AIPlayerID {
 		ownerBonus += 20
 	}
 
 	totalDamage := damage + ownerBonus
-	targetTile.ghost(totalDamage, bs)
+	targetTile.ghost(totalDamage, bState)
 }
