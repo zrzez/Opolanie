@@ -2,6 +2,10 @@ package main
 
 import "log"
 
+/*
+Plik jest pełen zaczarodziejskich liczb i jest tak powinno być. Wyciszam linter, żeby nie zawracał mi głowy o to.
+*/
+
 // Zestawienie wszystkich składowych.
 var spriteRegistry [maxSpriteID]spriteDef
 
@@ -168,7 +172,7 @@ func initTerrainSprites() {
 			spriteRegistry[id] = spriteDef{
 				atlasID: atlasUI,
 				x:       x, y: y,
-				w: 16, h: 14,
+				w: 16, h: 14, //nolint:mnd
 				offX: 0, offY: 0,
 			}
 		}
@@ -180,7 +184,7 @@ func initTerrainSprites() {
 			spriteRegistry[id] = spriteDef{
 				atlasID: atlasUnits1,
 				x:       x, y: y,
-				w: 16, h: 14,
+				w: 16, h: 14, //nolint:mnd
 				offX: 0, offY: 0,
 			}
 		}
@@ -203,29 +207,29 @@ func initTerrainSprites() {
 			spriteRegistry[id] = spriteDef{
 				atlasID: atlasUI,
 				x:       x, y: y,
-				w: 16, h: 14,
+				w: 16, h: 14, //nolint:mnd
 				offX: offX, offY: offY,
 			}
 		}
 	}
 
 	// 1. Trawa
-	setUI(spriteGrassStubbed, 11, 36)
-	setUI(spriteGrassGrazed, 27, 36)
+	setUI(spriteGrassStubbed, 11, 36) //nolint:mnd
+	setUI(spriteGrassGrazed, 27, 36)  //nolint:mnd
 
 	// A. Tekstury z atlasu UI
-	setUI(spriteGrass00, 43, 36)
-	setUI(spriteGrass01, 139, 134)
+	setUI(spriteGrass00, 43, 36)   //nolint:mnd
+	setUI(spriteGrass01, 139, 134) //nolint:mnd
 
 	// B. Tekstury z atlasu Units1
-	setUnit1(spriteEffectHeal00, 303, 0)
-	setUnit1(spriteEffectHeal01, 303, 14)
-	setUnit1(spriteGrass02, 303, 28)
-	setUnit1(spriteGrass03, 303, 42)
-	setUnit1(spriteGrass04, 303, 56)
-	setUnit1(spriteGrass05, 303, 70)
-	setUnit1(spriteGrass06, 303, 84)
-	setUnit1(spriteGrass07, 303, 98)
+	setUnit1(spriteEffectHeal00, 303, 0)  //nolint:mnd
+	setUnit1(spriteEffectHeal01, 303, 14) //nolint:mnd
+	setUnit1(spriteGrass02, 303, 28)      //nolint:mnd
+	setUnit1(spriteGrass03, 303, 42)      //nolint:mnd
+	setUnit1(spriteGrass04, 303, 56)      //nolint:mnd
+	setUnit1(spriteGrass05, 303, 70)      //nolint:mnd
+	setUnit1(spriteGrass06, 303, 84)      //nolint:mnd
+	setUnit1(spriteGrass07, 303, 98)      //nolint:mnd
 
 	// C. Mieszanie
 	spriteRegistry[spriteGrass08] = spriteRegistry[spriteGrass02]
@@ -240,7 +244,7 @@ func initTerrainSprites() {
 	// 2. Reszta terenu
 
 	// Skały
-	setUI(spriteRockEnd, 11+(8*16), 92)
+	setUI(spriteRockEnd, 11+(8*16), 92) //nolint:mnd
 
 	currentRockID := spriteRockStart
 
@@ -248,7 +252,7 @@ func initTerrainSprites() {
 		if i == 8 {
 			continue
 		}
-		setUI(currentRockID, uint16(11+(i*16)), 92)
+		setUI(currentRockID, uint16(11+(i*16)), 92) //nolint:mnd
 		currentRockID++
 	}
 
@@ -258,53 +262,53 @@ func initTerrainSprites() {
 			spriteRegistry[id] = spriteDef{
 				atlasID: atlasUI,
 				x:       x, y: y,
-				w: 22, h: 18, // Szersza i wyższa
+				w: 22, h: 18, // Szersza i wyższa //nolint:mnd
 				offX: -3, offY: -2, // Przesunięcie w lewo i do góry, żeby wyśrodkować
 			}
 		}
 	}
 
-	setDryEarth(spriteDryEarth01, 235, 134)
-	setDryEarth(spriteDryEarth02, 235, 153)
-	setDryEarth(spriteDryEarth03, 235, 172)
+	setDryEarth(spriteDryEarth01, 235, 134) //nolint:mnd
+	setDryEarth(spriteDryEarth02, 235, 153) //nolint:mnd
+	setDryEarth(spriteDryEarth03, 235, 172) //nolint:mnd
 
 	// Drogi
 	for i := uint16(0); i < 5; i++ {
-		setUI(spriteRoadStart+i, 59+(i*16), 134)
+		setUI(spriteRoadStart+i, 59+(i*16), 134) //nolint:mnd
 	}
 
-	setUI(spriteRoadStart+5, 139, 134)
+	setUI(spriteRoadStart+5, 139, 134) //nolint:mnd
 
 	for i := uint16(0); i < 4; i++ {
-		setUI(spriteRoadStart+6+i, 155+(i*16), 134)
+		setUI(spriteRoadStart+6+i, 155+(i*16), 134) //nolint:mnd
 	}
 
 	for i := uint16(0); i < 11; i++ {
-		setUI(spriteRoadStart+10+i, 11+(i*16), 148)
+		setUI(spriteRoadStart+10+i, 11+(i*16), 148) //nolint:mnd
 	}
 
 	// Mosty
 	for i := uint16(0); i <= (spriteBridgeEnd - spriteBridgeStart); i++ {
-		setUI(spriteBridgeStart+i, 11+(i*16), 162)
+		setUI(spriteBridgeStart+i, 11+(i*16), 162) //nolint:mnd
 	}
 
 	// Woda
 	for i := uint16(0); i <= 12; i++ {
-		setUI(spriteWaterStart+i, 11+(i*16), 50)
+		setUI(spriteWaterStart+i, 11+(i*16), 50) //nolint:mnd
 	}
 	for i := uint16(0); i <= 12; i++ {
-		setUI(spriteWaterStart+13+i, 11+(i*16), 64)
+		setUI(spriteWaterStart+13+i, 11+(i*16), 64) //nolint:mnd
 	}
 	for i := uint16(0); i <= 12; i++ {
-		setUI(spriteWaterStart+26+i, 11+(i*16), 78)
+		setUI(spriteWaterStart+26+i, 11+(i*16), 78) //nolint:mnd
 	}
 
 	// Drzewa
 	for i := uint16(0); i <= 6; i++ {
-		setSpecial(spriteTreeStumpStart+i, 11+(i*32), 120, 32, 14)
+		setSpecial(spriteTreeStumpStart+i, 11+(i*32), 120, 32, 14) //nolint:mnd
 	}
 	for i := uint16(0); i <= 6; i++ {
-		setSpecial(spriteTreeTopStart+i, 11+(i*32), 106, 32, 14)
+		setSpecial(spriteTreeTopStart+i, 11+(i*32), 106, 32, 14) //nolint:mnd
 	}
 
 	// Palisady
@@ -312,9 +316,9 @@ func initTerrainSprites() {
 		id := spritePalisadeStart + i
 		spriteRegistry[id] = spriteDef{
 			atlasID: atlasUnits1,
-			x:       287,
-			y:       i * 14,
-			w:       16, h: 14,
+			x:       287,       //nolint:mnd
+			y:       i * 14,    //nolint:mnd
+			w:       16, h: 14, //nolint:mnd
 			offX: 0, offY: 0,
 		}
 	}
@@ -322,52 +326,52 @@ func initTerrainSprites() {
 	// Pierdoły
 
 	for i := uint16(0); i <= 10; i++ {
-		setUI(spriteGadgetStart+i, 59+(i*16), 36)
+		setUI(spriteGadgetStart+i, 59+(i*16), 36) //nolint:mnd
 	}
 
 	for i := uint16(0); i <= 2; i++ {
-		setUI(spriteGadgetStart+11+i, 187+(i*16), 148)
+		setUI(spriteGadgetStart+11+i, 187+(i*16), 148) //nolint:mnd
 	}
 
 	for i := uint16(0); i <= 5; i++ {
-		setUI(spriteGadgetStart+14+i, 139+(i*16), 162)
+		setUI(spriteGadgetStart+14+i, 139+(i*16), 162) //nolint:mnd
 	}
 
 	// Rany
-	setUI(spriteEffectHit00, 203, 8)
-	setUI(spriteEffectHit01, 219, 8)
+	setUI(spriteEffectHit00, 203, 8) //nolint:mnd
+	setUI(spriteEffectHit01, 219, 8) //nolint:mnd
 
 	// Spalone drzewa
 	// @reminder: to może się nie zapisywać w przyszłości przez level.go, bo nie jest dodane w idRegistry 22.04.2026
 	// przy rysowaniu działa poprawnie.
-	setUI(spriteTreeBurntStump00, 187, 162)
-	setUI(spriteTreeBurntStump01, 219, 162)
-	setUI(spriteTreeBurntTop00, 171, 162)
-	setUI(spriteTreeBurntTop01, 203, 162)
+	setUI(spriteTreeBurntStump00, 187, 162) //nolint:mnd
+	setUI(spriteTreeBurntStump01, 219, 162) //nolint:mnd
+	setUI(spriteTreeBurntTop00, 171, 162)   //nolint:mnd
+	setUI(spriteTreeBurntTop01, 203, 162)   //nolint:mnd
 
 	// Upadające suche drzewa
 	// Obalone
-	setFallingTree(spriteDryFallenTreeTop, 235, 22, -16, 0)
-	setFallingTree(spriteDryFallenTreeStump, 251, 22, 0, 0)
+	setFallingTree(spriteDryFallenTreeTop, 235, 22, -16, 0) //nolint:mnd
+	setFallingTree(spriteDryFallenTreeStump, 251, 22, 0, 0) //nolint:mnd
 	// Upadające
-	setFallingTree(spriteDryFallingTreeTop, 235, 36, -16, 0)
-	setFallingTree(spriteDryFallingStump, 251, 36, 0, 0)
+	setFallingTree(spriteDryFallingTreeTop, 235, 36, -16, 0) //nolint:mnd
+	setFallingTree(spriteDryFallingStump, 251, 36, 0, 0)     //nolint:mnd
 	// Przechylające się
-	setFallingTree(spriteDryLeaningTreeCrownLeft, 235, 50, -16, -14)
-	setFallingTree(spriteDryLeaningTreeTop, 251, 50, 0, -14)
-	setFallingTree(spriteDryLeaningTreeStump, 251, 64, 0, 0)
+	setFallingTree(spriteDryLeaningTreeCrownLeft, 235, 50, -16, -14) //nolint:mnd
+	setFallingTree(spriteDryLeaningTreeTop, 251, 50, 0, -14)         //nolint:mnd
+	setFallingTree(spriteDryLeaningTreeStump, 251, 64, 0, 0)         //nolint:mnd
 
 	// Upadające zwęglone drzewa
 	// Obalone
-	setFallingTree(spriteBurntFallenTreeCrown, 235, 78, -16, 0)
-	setFallingTree(spriteBurntFallenTreeStump, 251, 78, 0, 0)
+	setFallingTree(spriteBurntFallenTreeCrown, 235, 78, -16, 0) //nolint:mnd
+	setFallingTree(spriteBurntFallenTreeStump, 251, 78, 0, 0)   //nolint:mnd
 	// Upadające
-	setFallingTree(spriteBurntFallingTreeCrown, 235, 92, -16, 0)
-	setFallingTree(spriteBurntFallingTreeStump, 251, 92, 0, 0)
+	setFallingTree(spriteBurntFallingTreeCrown, 235, 92, -16, 0) //nolint:mnd
+	setFallingTree(spriteBurntFallingTreeStump, 251, 92, 0, 0)   //nolint:mnd
 	// Przechylające się
-	setFallingTree(spriteBurntLeaningTreeCrownLeft, 235, 106, -16, -14)
-	setFallingTree(spriteBurntLeaningTreeCrown, 251, 106, 0, -14)
-	setFallingTree(spriteBurntLeaningTreeStump, 251, 120, 0, 0)
+	setFallingTree(spriteBurntLeaningTreeCrownLeft, 235, 106, -16, -14) //nolint:mnd
+	setFallingTree(spriteBurntLeaningTreeCrown, 251, 106, 0, -14)       //nolint:mnd
+	setFallingTree(spriteBurntLeaningTreeStump, 251, 120, 0, 0)         //nolint:mnd
 }
 
 // Nakładka.
@@ -394,32 +398,32 @@ func initUISprites() {
 	}
 
 	// Kursory
-	setUI(spriteCursorDefaultBig, 11, 8, 16, 14)
-	setCenterUI(spriteCursorCrossWhite, 27, 8, 16, 14)
-	setCenterUI(spriteCursorCrossRed, 43, 8, 16, 14)
-	setCenterUI(spriteCursorSmallWhite, 59, 8, 16, 14)
-	setCenterUI(spriteCursorFrameRed, 75, 8, 16, 14)
-	setCenterUI(spriteCursorCrossMedRed, 91, 8, 16, 14)
-	setCenterUI(spriteCursorCrossMedWhite, 107, 8, 16, 14)
-	setCenterUI(spriteCursorArrowUp, 123, 8, 16, 14)
-	setCenterUI(spriteCursorArrowDown, 139, 8, 16, 14)
-	setCenterUI(spriteCursorArrowLeft, 155, 8, 16, 14)
-	setCenterUI(spriteCursorArrowRight, 171, 8, 16, 14)
-	setCenterUI(spriteCursorStop, 187, 8, 16, 14)
-	setUI(spriteCursorDefaultSmall, 91, 22, 16, 14)
-	setUI(spriteCursorPointer, 107, 22, 16, 14)
-	setCenterUI(spriteCursorFrameWhite, 75, 8, 16, 14)
+	setUI(spriteCursorDefaultBig, 11, 8, 16, 14)           //nolint:mnd
+	setCenterUI(spriteCursorCrossWhite, 27, 8, 16, 14)     //nolint:mnd
+	setCenterUI(spriteCursorCrossRed, 43, 8, 16, 14)       //nolint:mnd
+	setCenterUI(spriteCursorSmallWhite, 59, 8, 16, 14)     //nolint:mnd
+	setCenterUI(spriteCursorFrameRed, 75, 8, 16, 14)       //nolint:mnd
+	setCenterUI(spriteCursorCrossMedRed, 91, 8, 16, 14)    //nolint:mnd
+	setCenterUI(spriteCursorCrossMedWhite, 107, 8, 16, 14) //nolint:mnd
+	setCenterUI(spriteCursorArrowUp, 123, 8, 16, 14)       //nolint:mnd
+	setCenterUI(spriteCursorArrowDown, 139, 8, 16, 14)     //nolint:mnd
+	setCenterUI(spriteCursorArrowLeft, 155, 8, 16, 14)     //nolint:mnd
+	setCenterUI(spriteCursorArrowRight, 171, 8, 16, 14)    //nolint:mnd
+	setCenterUI(spriteCursorStop, 187, 8, 16, 14)          //nolint:mnd
+	setUI(spriteCursorDefaultSmall, 91, 22, 16, 14)        //nolint:mnd
+	setUI(spriteCursorPointer, 107, 22, 16, 14)            //nolint:mnd
+	setCenterUI(spriteCursorFrameWhite, 75, 8, 16, 14)     //nolint:mnd
 
 	// Przyciski
-	setUI(spriteBtnBuildPalisade, 251, 8, 16, 14)
-	setUI(spriteBtnShield, 11, 22, 16, 14)
+	setUI(spriteBtnBuildPalisade, 251, 8, 16, 14) //nolint:mnd
+	setUI(spriteBtnShield, 11, 22, 16, 14)        //nolint:mnd
 	// setUI(SPRITE_BTN_, 123, 22, 16, 14) // btn_map @todo: pewnie można usunąć, bo nie używam
-	setUI(spriteBtnRepair, 139, 22, 16, 13)
-	setUI(spriteBtnBuildBarn, 155, 21, 16, 14)
-	setUI(spriteBtnBuildBarracks, 171, 21, 16, 14)
-	setUI(spriteBtnBuildTemple, 187, 21, 16, 14)
-	setUI(spriteBtnBuildBarracks2, 203, 21, 16, 14)
-	setUI(spriteBtnBuildAcademy, 219, 21, 16, 14)
+	setUI(spriteBtnRepair, 139, 22, 16, 13)         //nolint:mnd
+	setUI(spriteBtnBuildBarn, 155, 21, 16, 14)      //nolint:mnd
+	setUI(spriteBtnBuildBarracks, 171, 21, 16, 14)  //nolint:mnd
+	setUI(spriteBtnBuildTemple, 187, 21, 16, 14)    //nolint:mnd
+	setUI(spriteBtnBuildBarracks2, 203, 21, 16, 14) //nolint:mnd
+	setUI(spriteBtnBuildAcademy, 219, 21, 16, 14)   //nolint:mnd
 
 	// Czary @todo: ogarnij potrójne ikonki dla przycisku. Gdzieś jest już gotowa funkcja do tego
 	setUI(spriteBtnSpellVision, 235, 8, 16, 14) // spell_vision
@@ -432,13 +436,13 @@ func initUISprites() {
 
 	// Zwłoki
 	// @todo: kompletnie porąbane nazwy!
-	setUI(spriteeffectskeleton00, 219, 50, 16, 14) // dead_0
-	setUI(spriteeffectskeleton01, 219, 64, 16, 14) // dead_1
-	setUI(spriteeffectskeleton02, 219, 78, 16, 14) // dead_2
+	setUI(spriteeffectskeleton00, 219, 50, 16, 14) //nolint:mnd
+	setUI(spriteeffectskeleton01, 219, 64, 16, 14) //nolint:mnd
+	setUI(spriteeffectskeleton02, 219, 78, 16, 14) //nolint:mnd
 
 	// Rany
-	setUI(615, 219, 8, 16, 14) // hit_0
-	setUI(616, 203, 8, 16, 14) // hit_1
+	setUI(spriteEffectHit00, 219, 8, 16, 14) //nolint:mnd
+	setUI(spriteEffectHit01, 203, 8, 16, 14) //nolint:mnd
 
 	// Ogień
 	for i := uint16(0); i <= 13; i++ {
@@ -446,9 +450,9 @@ func initUISprites() {
 		if id < maxSpriteID {
 			spriteRegistry[id] = spriteDef{
 				atlasID: atlasUI,
-				x:       11 + (i * 16),
-				y:       176,
-				w:       16, h: 14,
+				x:       11 + (i * 16), //nolint:mnd
+				y:       176,           //nolint:mnd
+				w:       16, h: 14,     //nolint:mnd
 			}
 		}
 	}
@@ -457,7 +461,7 @@ func initUISprites() {
 // Jednostki
 // ID: 700 + (unitType * 200) + (Frame * 8) + Direction
 // Frame 0: Idle, Frame 1: Walk1, Frame 2: Walk2, Frame 3: Attack1, Frame 4: Attack2.
-// Dodatkowo: offset 40 = świeżo zabity, offset 41 = początek rozkładu
+// Dodatkowo: offset 40 = świeżo zabity, offset 41 = początek rozkładu.
 func initUnitSprites() {
 	type unitCfg struct {
 		Atlas battleAtlasID
@@ -481,8 +485,11 @@ func initUnitSprites() {
 		12: {Atlas: atlasBuildings, BaseX: 224, BaseY: 0, Melee: false}, // CROSSBOW
 	}
 
-	const StartID = 700
-	const StepID = 200
+	const (
+		StartID = 700
+
+		StepID = 200
+	)
 
 	for uType := 0; uType <= 12; uType++ {
 		cfg, exists := configs[uType]
@@ -495,10 +502,11 @@ func initUnitSprites() {
 		for frame := range 5 {
 			if cfg.Melee && (frame == 3 || frame == 4) {
 				generateMeleeAttackFrames(baseID, frame, cfg.Atlas, cfg.BaseY)
+
 				continue
 			}
 
-			colX := cfg.BaseX + uint16(frame*32)
+			colX := cfg.BaseX + uint16(frame*32) //nolint:mnd
 
 			if uType == 12 && frame > 0 {
 				switch frame {
@@ -517,13 +525,13 @@ func initUnitSprites() {
 				var flip bool
 
 				y0 := cfg.BaseY
-				y1 := cfg.BaseY + 14
-				y2 := cfg.BaseY + 28
+				y1 := cfg.BaseY + 14 //nolint:mnd
+				y2 := cfg.BaseY + 28 //nolint:mnd
 
 				switch dir {
 				case 0:
 					y = y0
-					x = colX + 16
+					x = colX + 16 //nolint:mnd
 					flip = false
 				case 1:
 					y = y0
@@ -805,49 +813,49 @@ func initBuildingSprites() {
 	}
 	// Budowa → y:168
 	for i := 127; i <= 135; i++ {
-		setBuilding(i, uint16((i-127)*16), 168, 16, 14)
+		setBuilding(i, uint16((i-127)*16), 168, 16, 14) //nolint:mnd
 	}
 
 	// Zgliszcza → y:182
 	for i := 257; i <= 265; i++ {
-		setBuilding(i, uint16((i-257)*16), 182, 16, 14)
+		setBuilding(i, uint16((i-257)*16), 182, 16, 14) //nolint:mnd
 	}
 
 	// Budynek główny
 	// ID 137-155 → y:84
 	for i := 137; i <= 155; i++ {
-		setBuilding(i, uint16((i-137)*16), 84, 16, 14)
+		setBuilding(i, uint16((i-137)*16), 84, 16, 14) //nolint:mnd
 	}
 	// ID 156 Most
-	setBuilding(156, 304, 84, 16, 14)
+	setBuilding(156, 304, 84, 16, 14) //nolint:mnd
 
 	// Obora
 	// ID 157-175 → y:98
 	for i := 157; i <= 175; i++ {
-		setBuilding(i, uint16((i-157)*16), 98, 16, 14)
+		setBuilding(i, uint16((i-157)*16), 98, 16, 14) //nolint:mnd
 	}
 	// Chata drwali
 	// ID 177-195 → y:112
 	for i := 177; i <= 195; i++ {
-		setBuilding(i, uint16((i-177)*16), 112, 16, 14)
+		setBuilding(i, uint16((i-177)*16), 112, 16, 14) //nolint:mnd
 	}
 	// Świątynia
 	// ID 197-215 → y:126
 	for i := 197; i <= 215; i++ {
-		setBuilding(i, uint16((i-197)*16), 126, 16, 14)
+		setBuilding(i, uint16((i-197)*16), 126, 16, 14) //nolint:mnd
 	}
 	// Chata wojów
 	// ID 217-235 → y:140
 	for i := 217; i <= 235; i++ {
-		setBuilding(i, uint16((i-217)*16), 140, 16, 14)
+		setBuilding(i, uint16((i-217)*16), 140, 16, 14) //nolint:mnd
 	}
 	// Dwór
 	// ID 237-255 → y:154
 	for i := 237; i <= 255; i++ {
-		setBuilding(i, uint16((i-237)*16), 154, 16, 14)
+		setBuilding(i, uint16((i-237)*16), 154, 16, 14) //nolint:mnd
 	}
 
-	setBuilding(int(spriteBridgeConstruction), 304, 84, 16, 14)
+	setBuilding(int(spriteBridgeConstruction), 304, 84, 16, 14) //nolint:mnd
 }
 
 func initProjectileSprites() {
@@ -856,7 +864,7 @@ func initProjectileSprites() {
 			spriteRegistry[id] = spriteDef{
 				atlasID: atlasUnits2,
 				x:       x, y: y,
-				w: 16, h: 14,
+				w: 16, h: 14, //nolint:mnd
 				offX: offX, offY: offY,
 				flipX: flip,
 			}
@@ -866,65 +874,65 @@ func initProjectileSprites() {
 	offX := int8(-8)
 	offY := int8(-7)
 	// === STRZAŁA ===
-	setProjectile(spriteMissileArrowUp, 256, 0, offX, offY, false)
-	setProjectile(spriteMissileArrowUpLeft, 240, 0, offX, offY, false)
-	setProjectile(spriteMissileArrowLeft, 240, 14, offX, offY, false)
-	setProjectile(spriteMissileArrowDownLeft, 240, 28, offX, offY, false)
-	setProjectile(spriteMissileArrowDown, 256, 28, offX, offY, false)
-	setProjectile(spriteMissileArrowUpRight, 240, 0, offX, offY, true)
-	setProjectile(spriteMissileArrowRight, 240, 14, offX, offY, true)
-	setProjectile(spriteMissileArrowDownRight, 240, 28, offX, offY, true)
+	setProjectile(spriteMissileArrowUp, 256, 0, offX, offY, false)        //nolint:mnd
+	setProjectile(spriteMissileArrowUpLeft, 240, 0, offX, offY, false)    //nolint:mnd
+	setProjectile(spriteMissileArrowLeft, 240, 14, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileArrowDownLeft, 240, 28, offX, offY, false) //nolint:mnd
+	setProjectile(spriteMissileArrowDown, 256, 28, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileArrowUpRight, 240, 0, offX, offY, true)    //nolint:mnd
+	setProjectile(spriteMissileArrowRight, 240, 14, offX, offY, true)     //nolint:mnd
+	setProjectile(spriteMissileArrowDownRight, 240, 28, offX, offY, true) //nolint:mnd
 
 	// === PIORUN ===
-	setProjectile(spriteMissileLightningUp, 258, 42, offX, offY, false)
-	setProjectile(spriteMissileLightningUpLeft, 242, 40, offX, offY, false)
-	setProjectile(spriteMissileLightningLeft, 242, 54, offX, offY, false)
-	setProjectile(spriteMissileLightningDownLeft, 242, 68, offX, offY, false)
-	setProjectile(spriteMissileLightningDown, 258, 69, offX, offY, false)
-	setProjectile(spriteMissileLightningUpRight, 242, 40, offX, offY, true)
-	setProjectile(spriteMissileLightningRight, 242, 54, offX, offY, true)
-	setProjectile(spriteMissileLightningDownRight, 242, 68, offX, offY, true)
+	setProjectile(spriteMissileLightningUp, 258, 42, offX, offY, false)       //nolint:mnd
+	setProjectile(spriteMissileLightningUpLeft, 242, 40, offX, offY, false)   //nolint:mnd
+	setProjectile(spriteMissileLightningLeft, 242, 54, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileLightningDownLeft, 242, 68, offX, offY, false) //nolint:mnd
+	setProjectile(spriteMissileLightningDown, 258, 69, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileLightningUpRight, 242, 40, offX, offY, true)   //nolint:mnd
+	setProjectile(spriteMissileLightningRight, 242, 54, offX, offY, true)     //nolint:mnd
+	setProjectile(spriteMissileLightningDownRight, 242, 68, offX, offY, true) //nolint:mnd
 
 	// === OGIEŃ ===
-	setProjectile(spriteMissileFireUp, 255, 84, offX, offY, false)
-	setProjectile(spriteMissileFireUpLeft, 241, 83, offX, offY, false)
-	setProjectile(spriteMissileFireLeft, 241, 97, offX, offY, false)
-	setProjectile(spriteMissileFireDownLeft, 241, 110, offX, offY, false)
-	setProjectile(spriteMissileFireDown, 255, 111, offX, offY, false)
-	setProjectile(spriteMissileFireUpRight, 241, 83, offX, offY, true)
-	setProjectile(spriteMissileFireRight, 241, 97, offX, offY, true)
-	setProjectile(spriteMissileFireDownRight, 241, 110, offX, offY, true)
+	setProjectile(spriteMissileFireUp, 255, 84, offX, offY, false)        //nolint:mnd
+	setProjectile(spriteMissileFireUpLeft, 241, 83, offX, offY, false)    //nolint:mnd
+	setProjectile(spriteMissileFireLeft, 241, 97, offX, offY, false)      //nolint:mnd
+	setProjectile(spriteMissileFireDownLeft, 241, 110, offX, offY, false) //nolint:mnd
+	setProjectile(spriteMissileFireDown, 255, 111, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileFireUpRight, 241, 83, offX, offY, true)    //nolint:mnd
+	setProjectile(spriteMissileFireRight, 241, 97, offX, offY, true)      //nolint:mnd
+	setProjectile(spriteMissileFireDownRight, 241, 110, offX, offY, true) //nolint:mnd
 
 	// === WŁÓCZNIA ===
-	setProjectile(spriteMissileSpearUp, 255, 126, offX, offY, false)
-	setProjectile(spriteMissileSpearUpLeft, 239, 125, offX, offY, false)
-	setProjectile(spriteMissileSpearLeft, 239, 139, offX, offY, false)
-	setProjectile(spriteMissileSpearDownLeft, 239, 154, offX, offY, false)
-	setProjectile(spriteMissileSpearDown, 255, 154, offX, offY, false)
-	setProjectile(spriteMissileSpearUpRight, 239, 125, offX, offY, true)
-	setProjectile(spriteMissileSpearRight, 239, 139, offX, offY, true)
-	setProjectile(spriteMissileSpearDownRight, 239, 154, offX, offY, true)
+	setProjectile(spriteMissileSpearUp, 255, 126, offX, offY, false)       //nolint:mnd
+	setProjectile(spriteMissileSpearUpLeft, 239, 125, offX, offY, false)   //nolint:mnd
+	setProjectile(spriteMissileSpearLeft, 239, 139, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileSpearDownLeft, 239, 154, offX, offY, false) //nolint:mnd
+	setProjectile(spriteMissileSpearDown, 255, 154, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileSpearUpRight, 239, 125, offX, offY, true)   //nolint:mnd
+	setProjectile(spriteMissileSpearRight, 239, 139, offX, offY, true)     //nolint:mnd
+	setProjectile(spriteMissileSpearDownRight, 239, 154, offX, offY, true) //nolint:mnd
 
 	// === DUCH ===
-	setProjectile(spriteMissileGhostUp, 288, 0, offX, offY, false)
-	setProjectile(spriteMissileGhostUpLeft, 272, 0, offX, offY, false)
-	setProjectile(spriteMissileGhostLeft, 272, 14, offX, offY, false)
-	setProjectile(spriteMissileGhostDownLeft, 272, 28, offX, offY, false)
-	setProjectile(spriteMissileGhostDown, 288, 28, offX, offY, false)
-	setProjectile(spriteMissileGhostUpRight, 272, 0, offX, offY, true)
-	setProjectile(spriteMissileGhostRight, 272, 14, offX, offY, true)
-	setProjectile(spriteMissileGhostDownRight, 272, 28, offX, offY, true)
-	setProjectile(spriteMissileGhostAttack, 288, 14, 0, 0, false)
+	setProjectile(spriteMissileGhostUp, 288, 0, offX, offY, false)        //nolint:mnd
+	setProjectile(spriteMissileGhostUpLeft, 272, 0, offX, offY, false)    //nolint:mnd
+	setProjectile(spriteMissileGhostLeft, 272, 14, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileGhostDownLeft, 272, 28, offX, offY, false) //nolint:mnd
+	setProjectile(spriteMissileGhostDown, 288, 28, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileGhostUpRight, 272, 0, offX, offY, true)    //nolint:mnd
+	setProjectile(spriteMissileGhostRight, 272, 14, offX, offY, true)     //nolint:mnd
+	setProjectile(spriteMissileGhostDownRight, 272, 28, offX, offY, true) //nolint:mnd
+	setProjectile(spriteMissileGhostAttack, 288, 14, 0, 0, false)         //nolint:mnd
 
 	// === BEŁT ===
-	setProjectile(spriteMissileBoltUp, 288, 42, offX, offY, false)
-	setProjectile(spriteMissileBoltUpLeft, 272, 42, offX, offY, false)
-	setProjectile(spriteMissileBoltLeft, 272, 56, offX, offY, false)
-	setProjectile(spriteMissileBoltDownLeft, 272, 70, offX, offY, false)
-	setProjectile(spriteMissileBoltDown, 288, 70, offX, offY, false)
-	setProjectile(spriteMissileBoltUpRight, 272, 42, offX, offY, true)
-	setProjectile(spriteMissileBoltRight, 272, 56, offX, offY, true)
-	setProjectile(spriteMissileBoltDownRight, 272, 70, offX, offY, true)
+	setProjectile(spriteMissileBoltUp, 288, 42, offX, offY, false)       //nolint:mnd
+	setProjectile(spriteMissileBoltUpLeft, 272, 42, offX, offY, false)   //nolint:mnd
+	setProjectile(spriteMissileBoltLeft, 272, 56, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileBoltDownLeft, 272, 70, offX, offY, false) //nolint:mnd
+	setProjectile(spriteMissileBoltDown, 288, 70, offX, offY, false)     //nolint:mnd
+	setProjectile(spriteMissileBoltUpRight, 272, 42, offX, offY, true)   //nolint:mnd
+	setProjectile(spriteMissileBoltRight, 272, 56, offX, offY, true)     //nolint:mnd
+	setProjectile(spriteMissileBoltDownRight, 272, 70, offX, offY, true) //nolint:mnd
 }
 
 // Mapowanie battleAtlasID → rawAssetDef {TopChunk, BotChunk, PaletteID}.
