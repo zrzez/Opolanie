@@ -7,7 +7,7 @@ import rl "github.com/gen2brain/raylib-go/raylib"
 // === Typy podstawowe i struktury ===
 
 // inputState przechowuje, co jest na wejściu
-// Obecnie tylko mysz
+// Obecnie tylko mysz.
 type inputState struct {
 	MousePosition              rl.Vector2 // Położenie myszy
 	IsLeftMouseButtonDown      bool       // Czy lewy przycisk myszy jest wciśnięty
@@ -15,11 +15,11 @@ type inputState struct {
 	IsLeftMouseButtonReleased  bool       // Czy lewy przycisk myszy został zwolniony
 	IsRightMouseButtonDown     bool       // Czy prawy przycisk myszy jest wciśnięty
 	IsRightMouseButtonPressed  bool       // Czy prawy przycisk myszy został przyciśnięty
-	IsRightMouseButtonReleased bool       // Czy prawy przycisk myszy został zwolniony
+	IsRightMouseButtonReleased bool       // Czy prawy przycisk myszy został zwolniony
 	IsCtrlKeyDown              bool
 }
 
-// unitState opisuje usposobienie jednostki
+// unitState opisuje usposobienie jednostki.
 type unitState int
 
 // unitType opisuje rodzaj jednostki (drwal, krowa itd.)
@@ -127,7 +127,7 @@ type unit struct {
 	NoMoveTicks           int   // liczymy ticki bez zmiany pozycji
 }
 
-// Do trzymania wiedzy o odniesionych ranach
+// Do trzymania wiedzy o odniesionych ranach.
 type wound struct {
 	Timer    uint    // Jak długo będzie widoczna
 	OffsetX  float32 // Przesunięcie w poziomie
@@ -137,7 +137,7 @@ type wound struct {
 	Rotation float32 // kąt pod którym narysujemy ranę
 }
 
-// Do trzymania wiedzy o zwłokach
+// Do trzymania wiedzy o zwłokach.
 type corpse struct {
 	X, Y         uint8    // gdzie poległa jednostka
 	UnitType     unitType // jaka to jednostka, ważne dla 2 pierwszych faz rozkładu
@@ -149,7 +149,7 @@ type corpse struct {
 	Owner        uint8
 }
 
-// struktura do przedstawiania celu bojowego
+// struktura do przedstawiania celu bojowego.
 type combatTarget struct {
 	Unit     *unit
 	Building *building
@@ -208,7 +208,7 @@ type playerState struct {
 	// Brakuje określenia górnych granic liczby budynków tudzież jednostek
 }
 
-// command przechowuje rozkazy dla jednostki lub budynku
+// command przechowuje rozkazy dla jednostki lub budynku.
 type command struct {
 	// === KTO? (Adresat rozkazu) ===
 	// 0 = Wykonawcą jest Budynek (np. produkcja) → idzie do handleBuildingCommand
@@ -236,7 +236,7 @@ type command struct {
 	ProduceType unitType // Tylko dla cmdProduce: co chcemy stworzyć
 }
 
-// aiState przechowuje usposobienie SI
+// aiState przechowuje usposobienie SI.
 type aiState struct {
 	// CurrentPhase        int // Bieżące usposobienie SI
 	// BuildingIndex       int // Identyfikator budynku jako podmiotu podejmowania decyzji
@@ -252,7 +252,7 @@ type aiState struct {
 	// TargetEnemyX        int // Współrzędna x przedmiotu napadu SI
 	// TargetEnemyY        int // Współrzędna y przedmiotu napadu SI
 
-	// Nowe podejście do SI
+	// Coś tam do SI.
 	CurrentGoals    []aiGoal
 	EconomyManager  *economyAI
 	MilitaryManager *militaryAI
@@ -275,7 +275,7 @@ const (
 	goalExpandEconomy
 )
 
-// message opisuje wiadomości
+// message opisuje wiadomości.
 type message struct {
 	Text      string // Treść wiadomości
 	Duration  int    // Licznik czasu wyświetlania wiadomości
@@ -492,12 +492,12 @@ type buildingAction struct {
 
 // === RZECZY ZWIĄZANE Z ŁADOWANIEM MAP ===
 
-// JSON - ładowanie mapy
+// JSON - ładowanie mapy.
 type jsonLevelLoader struct {
 	drivePath string
 }
 
-// Struktury JSON
+// Struktury JSON.
 type jsonLevel struct {
 	Metadata         jsonLevelMetadata    `json:"metadata"`
 	AISettings       jsonAISettings       `json:"aiSettings"`
@@ -557,7 +557,7 @@ type jsonPoint struct {
 
 // === NAKŁADKA DLA UŻYTKOWNIKA
 
-// uiAssets przechowuje tekstury i przyciski związane z nakładką
+// uiAssets przechowuje tekstury i przyciski związane z nakładką.
 type uiAssets struct {
 	// Zdefiniowanie 5 fizycznych przycisków na nakładce
 	ActionButtons [5]rl.Rectangle
@@ -581,14 +581,7 @@ type button struct {
 	DebugLabel string       // @reminder tymczasowe rozwiązanie, aby móc debugować!
 }
 
-// === Rysowanie na planszy.
-type renderOp struct {
-	SortY    float32
-	Priority uint8
-	Draw     func()
-}
-
-// === Nakładka dla budynków
+// Nakładka dla budynków.
 type bounds struct {
 	X, Y              int32 // lewy górny róg w pikselach
 	Width, Height     int32
