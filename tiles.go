@@ -1,5 +1,7 @@
 package main
 
+import "slices"
+
 // tiles.go
 
 // Pomagierzy do sprawdzania rodzaju tekstury kafelka.
@@ -141,8 +143,8 @@ func (t *tile) isBurntTree() bool {
 
 // Płomienie
 
-// @todo: odsiej kafelki, które nie powinny się palić: np. woda
-func (t *tile) setOnFire(fireSize uint16, bs *battleState) {
+// @todo: odsiej kafelki, które nie powinny się palić: np. woda.
+func (t *tile) setOnFire(fireSize uint16, bState *battleState) {
 	t.IsBurning = true
 	t.BurnElapsed = fireSize - bigBurn
 
@@ -150,7 +152,7 @@ func (t *tile) setOnFire(fireSize uint16, bs *battleState) {
 		t.hasAsh = true
 	}
 
-	bs.BurningTilesList = append(bs.BurningTilesList, t)
+	bState.BurningTilesList = append(bState.BurningTilesList, t)
 }
 
 func (t *tile) processNormalFire() {
@@ -225,7 +227,7 @@ func (t *tile) processAshDecay() {
 // @todo: z moich obserwacji wynika, że drzewo podpalone odpryskiem szybciej się spala.
 // jest to niewłaściwe zachowanie, powinno albo spalić się w tym samym czasie lub później
 // ze względu na mniejszy początkowy ogień!
-func (t *tile) processTreeFire(bs *battleState) {
+func (t *tile) processTreeFire(bState *battleState) {
 	// Właściwe płonięcie
 	t.BurnElapsed++
 
@@ -247,7 +249,7 @@ func (t *tile) processTreeFire(bs *battleState) {
 	default:
 		// czy mogę tego jeszcze nie zmieniać na FAŁSZ?
 		t.IsBurning = false
-		t.processBurntTree(bs)
+		t.processBurntTree(bState)
 
 		return
 	}
@@ -255,7 +257,7 @@ func (t *tile) processTreeFire(bs *battleState) {
 	t.BurnOverlayID = currentFireSprite
 }
 
-func (t *tile) processBurntTree(bs *battleState) {
+func (t *tile) processBurntTree(bState *battleState) {
 	// Ustalamy tekstury odpowiadające spalonym drzewom.
 	if t.TextureID < spriteTreeStump03 {
 		t.TextureID = spriteTreeBurntStump00
@@ -265,17 +267,17 @@ func (t *tile) processBurntTree(bs *battleState) {
 
 	// Obalamy spalone drzewo
 	t.IsBurnt = true
-	t.treeFall(bs)
+	t.treeFall(bState)
 }
 
 // Odpowiada za zadanie obrażeń jednostce lub budynkowi, który się znajduje na danym kafelku.
-func (t *tile) applyFireDamage(bs *battleState) {
+func (t *tile) applyFireDamage(bState *battleState) {
 	if !t.IsBurning {
 		return
 	}
 
 	if t.Unit != nil && t.Unit.Exists {
-		t.Unit.takeDamage(burnDamage, bs)
+		t.Unit.takeDamage(burnDamage, bState)
 	}
 
 	if t.Building != nil && t.Building.Exists {
@@ -303,17 +305,15 @@ func (t *tile) accumulateTreeCuts(bs *battleState) {
 }
 
 // Odpowiada za rozpoczęcie całego procesu upadania drzewa.
-func (t *tile) treeFall(bs *battleState) {
+func (t *tile) treeFall(bState *battleState) {
 	// Drzewa, które już upadają nie są obsługiwane!
 	if t.treeState != treeStraight {
 		return
 	}
 
 	// Nie pozwalamy na duplikaty!
-	for _, existing := range bs.FallingTreesList {
-		if existing == t {
-			return
-		}
+	if slices.Contains(bState.FallingTreesList, t) {
+		return
 	}
 
 	// 1. Ustawiamy stopień upadku drzewa
@@ -322,10 +322,10 @@ func (t *tile) treeFall(bs *battleState) {
 	t.treeCuts = 0
 
 	// 2. Dodajemy kafelkek do listy obsługiwanej centralnie
-	bs.FallingTreesList = append(bs.FallingTreesList, t)
+	bState.FallingTreesList = append(bState.FallingTreesList, t)
 }
 
-func (t *tile) ghost(ghostDamage uint16, bs *battleState) {
+func (t *tile) ghost(ghostDamage uint16, bState *battleState) {
 	// 1. Ustawiamy wszystkie parametry dla kafelka z duchem
 	t.GhostEffect = true
 	t.GhostEffectCounter = 40
@@ -333,5 +333,5 @@ func (t *tile) ghost(ghostDamage uint16, bs *battleState) {
 
 	// 2. Dodajemy ducha do listy
 	// w effects.go będzie osobna funkcja z logiką efektu ducha
-	bs.GhostsList = append(bs.GhostsList, t)
+	bState.GhostsList = append(bState.GhostsList, t)
 }
