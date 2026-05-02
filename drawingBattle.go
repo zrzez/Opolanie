@@ -717,9 +717,9 @@ func drawUnitSelectionFrame(selectedUnit *unit, bs *battleState) {
 	y := float32(selectedUnit.Y) * float32(tileHeight)
 
 	if selectedUnit.Owner == bs.PlayerID {
-		drawFrameCorners(x, y, float32(tileWidth), float32(tileHeight), cornerLenPalisade, friendlyFrameColor)
+		drawFrameCorners(x, y, float32(tileWidth), float32(tileHeight), cornerLenUnit, friendlyFrameColor)
 	} else {
-		drawFrameCorners(x, y, float32(tileWidth), float32(tileHeight), cornerLenPalisade, enemyFrameColor)
+		drawFrameCorners(x, y, float32(tileWidth), float32(tileHeight), cornerLenUnit, enemyFrameColor)
 	}
 }
 
