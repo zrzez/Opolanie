@@ -529,15 +529,6 @@ func initUISprites() {
 
 type unitFrame uint8
 
-const (
-	frameIdle unitFrame = iota
-	frameWalk1
-	frameWalk2
-	frameAttack1
-	frameAttack2
-	frameCount
-)
-
 // Jednostki
 // ID: 700 + (unitType * 200) + (Frame * 8) + Direction.
 // Frame 0: Idle, Frame 1: Walk1, Frame 2: Walk2, Frame 3: Attack1, Frame 4: Attack2.
@@ -593,7 +584,7 @@ func initUnitSprites() {
 			if currentUnitType == unitCrossbowman && frame > 0 {
 				// @reminder kusznik jest jednym z najgorszych przypadków, który wymaga osobnego
 				// podejścia. Tutaj jest tylko częściowo ogarnięty.
-				switch frame { //nolint:exhaustive
+				switch frame {
 				case frameWalk1:
 					colX = 240
 				case frameWalk2:
@@ -614,6 +605,8 @@ func initUnitSprites() {
 				atlasY1 := cfg.BaseY + 14 //nolint:mnd
 				atlasY2 := cfg.BaseY + 28 //nolint:mnd
 
+				// @reminder: tutaj obsługujemy wszystkie możliwości.
+				// „brakująca” to directionCount.
 				switch direction {
 				case directionUp:
 					sourceY = atlasY0
@@ -749,6 +742,8 @@ func generateMeleeAttackFrames(unitBaseID uint16, frame unitFrame, atlas battleA
 
 		// === FAZA 1 ATAKU ===
 		if frame == frameAttack1 {
+			// @reminder: tutaj obsługujemy wszystkie możliwości.
+			// „brakująca” to directionCount.
 			switch direction {
 			case directionUp: // Góra (Wąska 16x21)
 				cropX = 120
@@ -772,7 +767,7 @@ func generateMeleeAttackFrames(unitBaseID uint16, frame unitFrame, atlas battleA
 				cropWidth = 24
 				cropHeight = 14
 				flip = true
-				offX = -4 // Poszerzenie //nolint:mnd //nolint:mnd
+				offX = -4 //nolint:mnd //nolint:mnd
 			case directionDownRight: // Dół-Prawo (Szeroka 24x21) - Bridge: Col 3 (AbsX 152, RelY 0 ??)
 				// Bridge Row 3 Col 3: AbsX 152, RelY 0.
 				cropX = 152
@@ -816,6 +811,8 @@ func generateMeleeAttackFrames(unitBaseID uint16, frame unitFrame, atlas battleA
 		} else { // === FAZA 2 ATAKU (Frame 4) ===
 			// frameAttack2
 			switch direction {
+			// @reminder: tutaj obsługujemy wszystkie możliwości.
+			// „brakująca” to directionCount.
 			case directionUp: // Góra
 				cropX = 200
 				cropY = unitBaseY + 7 //nolint:mnd
@@ -890,7 +887,7 @@ func generateMeleeAttackFrames(unitBaseID uint16, frame unitFrame, atlas battleA
 	}
 }
 
-// @todo: wiele tych liczb można zamienić stałymi sprite…
+// @todo: wiele tych liczb można zamienić stałymi sprite….
 func initBuildingSprites() {
 	assetID := atlasBuildings
 
@@ -905,47 +902,40 @@ func initBuildingSprites() {
 			}
 		}
 	}
-	// Budowa → y:168
-	for i := uint16(127); i <= 135; i++ { //nolint:mnd
+
+	for i := spriteConstructionStart; i <= spriteConstructionEnd; i++ {
 		setBuilding(i, (i-127)*16, 168) //nolint:mnd
 	}
 
-	// Zgliszcza → y:182
-	for i := uint16(257); i <= 265; i++ { //nolint:mnd
+	for i := spriteRuinStart; i <= spriteRuinEnd; i++ {
 		setBuilding(i, (i-257)*16, 182) //nolint:mnd
 	}
 
 	// Budynek główny
-	// ID 137-155 → y:84
-	for i := uint16(137); i <= 155; i++ { //nolint:mnd
+	for i := spriteBuildingMainBase; i <= 155; i++ {
 		setBuilding(i, (i-137)*16, 84) //nolint:mnd
 	}
-	// ID 156 Most
+	// ID 156 Most //@todo: czemu to nie ma zdefiniowanego spriteID, ale działa?!
 	setBuilding(156, 304, 84) //nolint:mnd
 
 	// Obora
-	// ID 157-175 → y:98
-	for i := uint16(157); i <= 175; i++ { //nolint:mnd
+	for i := spriteBuildingBarnBase; i <= 175; i++ {
 		setBuilding(i, (i-157)*16, 98) //nolint:mnd
 	}
 	// Chata drwali
-	// ID 177-195 → y:112
-	for i := uint16(177); i <= 195; i++ { //nolint:mnd
+	for i := spriteBuildingBarracksBase; i <= 195; i++ {
 		setBuilding(i, (i-177)*16, 112) //nolint:mnd
 	}
 	// Świątynia
-	// ID 197-215 → y:126
-	for i := uint16(197); i <= 215; i++ { //nolint:mnd
+	for i := spriteBuildingTempleBase; i <= 215; i++ {
 		setBuilding(i, (i-197)*16, 126) //nolint:mnd
 	}
 	// Chata wojów
-	// ID 217-235 → y:140
-	for i := uint16(217); i <= 235; i++ { //nolint:mnd
+	for i := spriteBuildingBarracks2Base; i <= 235; i++ {
 		setBuilding(i, (i-217)*16, 140) //nolint:mnd
 	}
 	// Dwór
-	// ID 237-255 → y:154
-	for i := uint16(237); i <= 255; i++ { //nolint:mnd
+	for i := spriteBuildingAcademyBase; i <= spriteBuildingEnd; i++ {
 		setBuilding(i, (i-237)*16, 154) //nolint:mnd
 	}
 

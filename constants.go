@@ -1013,6 +1013,7 @@ const (
 	decayStartSpriteOffset  = 41
 )
 
+// == Rzeczy dla assets_db.go
 const (
 	directionUp uint8 = iota
 	directionUpRight
@@ -1023,4 +1024,13 @@ const (
 	directionLeft
 	directionUpLeft
 	directionCount
+)
+
+const (
+	frameIdle unitFrame = iota
+	frameWalk1
+	frameWalk2
+	frameAttack1
+	frameAttack2
+	frameCount
 )
