@@ -145,13 +145,13 @@ var specialAssetsDB = [specialCount]rawAssetDef{
 }
 
 // Zwraca ID dla nazwy. Domyślnie trawa.
-func getID(name string) uint16 {
-	if val, ok := idRegistry[name]; ok {
+func getID(spriteName string) uint16 {
+	if val, ok := idRegistry[spriteName]; ok {
 		return val
 	}
 	// Bezpiecznik dla pustych łańcuchów, które mogły zostać z przenosin jako "" dla starych ID lub błędnych nazw.
-	if name != "" {
-		log.Printf("OSTRZEŻENIE: Brak ID dla '%s'. Używam trawy.", name)
+	if spriteName != "" {
+		log.Printf("OSTRZEŻENIE: Brak ID dla '%s'. Używam trawy.", spriteName)
 	}
 
 	return spriteGrassStart
@@ -165,50 +165,80 @@ func init() {
 	initProjectileSprites()
 }
 
+/*
+Kod poniżej wycina i przygotowuje do rysowania „duszki” (ang. sprite).
+Całość jest bardzo prosta:
+- mamy duży zbiór obrazków, zwany atlasem.
+- wycinamy z niego mały prostokąt („duszek”) z wyglądem tego co chcemy (np. studnia)
+
+Aby móc to zrobić potrzebujemy kilku informacji:
+- atlasu z którego chcemy coś wyciąć; dlatego potrzebujemy atlasUI.
+- nazwę wycinanego duszka; dlatego potrzebujemy spriteID.
+- punkt początkowy do wycięcia duszka; dlatego potrzebujemy cropX, cropY.
+- wysokość i szerokość duszka; dlatego potrzebujemy cropWidth, cropHeight, które zazwyczaj mają wymiary 16x14.
+- poprawki przy rysowaniu, przydaje się np. przy drzewach; dlatego potrzebujemy drawOffsetX, drawOffsetY.
+- czy chcemy lustrzane odbicie duszka. Szczególnie przydatne przy duszkach ponieważ dla oszczędności miejsca wiele
+duszków to właśnie lustrzane odbicie; dlatego potrzebujemy flipX.
+
+W przypadku jednostek sprawa się komplikuje z kilku powodów:
+- niektóre jednostki, np. drwal (unitAxeman) walczą wręcz, a to oznacza, że duszki mają różne wymiary. Jeśli stoją, to
+są to zwyczajne 16x14. Jednak przy ataku, który wizualnie zachodzi na atakowany kafelkek, wymiary te ulegają zmianie.
+Pole na planszy zajmowane przez atakowaną wrogą jednostkę lub budynek też musi mieć częściowo duszka atakującego.
+- jednostki są w różnych atlasach
+- jednostki dodane w wersji na CD, tj. pastuch, kusznik, mag mają swój własny rozkład duszków.
+Przez to potrzebują osobnego podejścia do załadowania wszystkich potrzebnych duszków.
+- wszystkie duszki są przygotowane w barwach gracza (czerwień) i przy ładowaniu mapy przebarwiane. Odbywa się to
+w innym miejscu.
+*/
+
 func initTerrainSprites() {
 	// Pomagier do nakładki (16x14)
-	setUI := func(id, x, y uint16) {
-		if id < maxSpriteID {
-			spriteRegistry[id] = spriteDef{
+	setUI := func(spriteID, cropX, cropY uint16) {
+		if spriteID < maxSpriteID {
+			spriteRegistry[spriteID] = spriteDef{
 				atlasID: atlasUI,
-				x:       x, y: y,
-				w: 16, h: 14, //nolint:mnd
+				cropX:   cropX, cropY: cropY,
+				cropWidth: tileWidth, cropHeight: tileHeight,
 				offX: 0, offY: 0,
+				flipX: false,
 			}
 		}
 	}
 
 	// Pomagier do Units1 (16x14)
-	setUnit1 := func(id, x, y uint16) {
-		if id < maxSpriteID {
-			spriteRegistry[id] = spriteDef{
+	setUnit1 := func(spriteID, cropY uint16) {
+		if spriteID < maxSpriteID {
+			spriteRegistry[spriteID] = spriteDef{
 				atlasID: atlasUnits1,
-				x:       x, y: y,
-				w: 16, h: 14, //nolint:mnd
+				cropX:   303, cropY: cropY, //nolint:mnd
+				cropWidth: tileWidth, cropHeight: tileHeight,
 				offX: 0, offY: 0,
+				flipX: false,
 			}
 		}
 	}
 
 	// Pomagier do gabarytów
-	setSpecial := func(id, x, y, w, h uint16) {
-		if id < maxSpriteID {
-			spriteRegistry[id] = spriteDef{
+	setSpecial := func(spriteID, cropX, cropY uint16, cropWidth, cropHeight uint8) {
+		if spriteID < maxSpriteID {
+			spriteRegistry[spriteID] = spriteDef{
 				atlasID: atlasUI,
-				x:       x, y: y,
-				w: w, h: h,
+				cropX:   cropX, cropY: cropY,
+				cropWidth: cropWidth, cropHeight: cropHeight,
 				offX: 0, offY: 0,
+				flipX: false,
 			}
 		}
 	}
 
-	setFallingTree := func(id, x, y uint16, offX, offY int8) {
-		if id < maxSpriteID {
-			spriteRegistry[id] = spriteDef{
+	setFallingTree := func(spriteID, cropX, cropY uint16, offX, offY int8) {
+		if spriteID < maxSpriteID {
+			spriteRegistry[spriteID] = spriteDef{
 				atlasID: atlasUI,
-				x:       x, y: y,
-				w: 16, h: 14, //nolint:mnd
+				cropX:   cropX, cropY: cropY,
+				cropWidth: tileWidth, cropHeight: tileHeight,
 				offX: offX, offY: offY,
+				flipX: false,
 			}
 		}
 	}
@@ -222,14 +252,14 @@ func initTerrainSprites() {
 	setUI(spriteGrass01, 139, 134) //nolint:mnd
 
 	// B. Tekstury z atlasu Units1
-	setUnit1(spriteEffectHeal00, 303, 0)  //nolint:mnd
-	setUnit1(spriteEffectHeal01, 303, 14) //nolint:mnd
-	setUnit1(spriteGrass02, 303, 28)      //nolint:mnd
-	setUnit1(spriteGrass03, 303, 42)      //nolint:mnd
-	setUnit1(spriteGrass04, 303, 56)      //nolint:mnd
-	setUnit1(spriteGrass05, 303, 70)      //nolint:mnd
-	setUnit1(spriteGrass06, 303, 84)      //nolint:mnd
-	setUnit1(spriteGrass07, 303, 98)      //nolint:mnd
+	setUnit1(spriteEffectHeal00, 0)  //nolint:nolintlint,mnd
+	setUnit1(spriteEffectHeal01, 14) //nolint:mnd
+	setUnit1(spriteGrass02, 28)      //nolint:mnd
+	setUnit1(spriteGrass03, 42)      //nolint:mnd
+	setUnit1(spriteGrass04, 56)      //nolint:mnd
+	setUnit1(spriteGrass05, 70)      //nolint:mnd
+	setUnit1(spriteGrass06, 84)      //nolint:mnd
+	setUnit1(spriteGrass07, 98)      //nolint:mnd
 
 	// C. Mieszanie
 	spriteRegistry[spriteGrass08] = spriteRegistry[spriteGrass02]
@@ -248,22 +278,24 @@ func initTerrainSprites() {
 
 	currentRockID := spriteRockStart
 
-	for i := 0; i <= 12; i++ {
+	for i := range 13 {
 		if i == 8 { //nolint:mnd
 			continue
 		}
+
 		setUI(currentRockID, uint16(11+(i*16)), 92) //nolint:mnd
 		currentRockID++
 	}
 
 	// Sucha ziemia
-	setDryEarth := func(id, x, y uint16) {
-		if id < maxSpriteID {
-			spriteRegistry[id] = spriteDef{
+	setDryEarth := func(spriteID, cropX, cropY uint16) {
+		if spriteID < maxSpriteID {
+			spriteRegistry[spriteID] = spriteDef{
 				atlasID: atlasUI,
-				x:       x, y: y,
-				w: 22, h: 18, //nolint:mnd
-				offX: -3, offY: -2, // Przesunięcie w lewo i do góry, żeby wyśrodkować
+				cropX:   cropX, cropY: cropY,
+				cropWidth: 22, cropHeight: 18, //nolint:mnd
+				offX: -3, offY: -2, //nolint:nolintlint
+				flipX: false,
 			}
 		}
 	}
@@ -273,17 +305,17 @@ func initTerrainSprites() {
 	setDryEarth(spriteDryEarth03, 235, 172) //nolint:mnd
 
 	// Drogi
-	for i := uint16(0); i < 5; i++ {
+	for i := range uint16(5) { //nolint:mnd
 		setUI(spriteRoadStart+i, 59+(i*16), 134) //nolint:mnd
 	}
 
 	setUI(spriteRoadStart+5, 139, 134) //nolint:mnd
 
-	for i := uint16(0); i < 4; i++ {
+	for i := range uint16(4) { //nolint:mnd
 		setUI(spriteRoadStart+6+i, 155+(i*16), 134) //nolint:mnd
 	}
 
-	for i := uint16(0); i < 11; i++ {
+	for i := range uint16(11) { //nolint:mnd
 		setUI(spriteRoadStart+10+i, 11+(i*16), 148) //nolint:mnd
 	}
 
@@ -293,47 +325,51 @@ func initTerrainSprites() {
 	}
 
 	// Woda
-	for i := uint16(0); i <= 12; i++ {
+	for i := range uint16(13) { //nolint:mnd
 		setUI(spriteWaterStart+i, 11+(i*16), 50) //nolint:mnd
 	}
-	for i := uint16(0); i <= 12; i++ {
+
+	for i := range uint16(13) { //nolint:mnd
 		setUI(spriteWaterStart+13+i, 11+(i*16), 64) //nolint:mnd
 	}
-	for i := uint16(0); i <= 12; i++ {
+
+	for i := range uint16(13) { //nolint:mnd
 		setUI(spriteWaterStart+26+i, 11+(i*16), 78) //nolint:mnd
 	}
 
 	// Drzewa
-	for i := uint16(0); i <= 6; i++ {
+	for i := range uint16(7) { //nolint:mnd
 		setSpecial(spriteTreeStumpStart+i, 11+(i*32), 120, 32, 14) //nolint:mnd
 	}
-	for i := uint16(0); i <= 6; i++ {
+
+	for i := range uint16(7) { //nolint:mnd
 		setSpecial(spriteTreeTopStart+i, 11+(i*32), 106, 32, 14) //nolint:mnd
 	}
 
 	// Palisady
 	for i := uint16(0); i <= (spritePalisadeEnd - spritePalisadeStart); i++ {
-		id := spritePalisadeStart + i
-		spriteRegistry[id] = spriteDef{
-			atlasID: atlasUnits1,
-			x:       287,       //nolint:mnd
-			y:       i * 14,    //nolint:mnd
-			w:       16, h: 14, //nolint:mnd
+		spriteID := spritePalisadeStart + i
+		spriteRegistry[spriteID] = spriteDef{
+			atlasID:   atlasUnits1,
+			cropX:     287,    //nolint:mnd
+			cropY:     i * 14, //nolint:mnd
+			cropWidth: tileWidth, cropHeight: tileHeight,
 			offX: 0, offY: 0,
+			flipX: false,
 		}
 	}
 
 	// Pierdoły
 
-	for i := uint16(0); i <= 10; i++ {
+	for i := range uint16(11) { //nolint:mnd
 		setUI(spriteGadgetStart+i, 59+(i*16), 36) //nolint:mnd
 	}
 
-	for i := uint16(0); i <= 2; i++ {
+	for i := range uint16(3) { //nolint:mnd
 		setUI(spriteGadgetStart+11+i, 187+(i*16), 148) //nolint:mnd
 	}
 
-	for i := uint16(0); i <= 5; i++ {
+	for i := range uint16(6) { //nolint:mnd
 		setUI(spriteGadgetStart+14+i, 139+(i*16), 162) //nolint:mnd
 	}
 
@@ -376,92 +412,135 @@ func initTerrainSprites() {
 
 // Nakładka.
 func initUISprites() {
-	setUI := func(id, x, y, w, h uint16) {
-		if id < maxSpriteID {
-			spriteRegistry[id] = spriteDef{
+	setUI := func(spriteID, cropX, cropY uint16) {
+		if spriteID < maxSpriteID {
+			spriteRegistry[spriteID] = spriteDef{
 				atlasID: atlasUI,
-				x:       x, y: y,
-				w: w, h: h,
+				cropX:   cropX, cropY: cropY,
+				cropWidth: tileWidth, cropHeight: tileHeight,
 				offX: 0, offY: 0,
+				flipX: false,
 			}
 		}
 	}
 
-	setCenterUI := func(id, x, y, w, h uint16) {
-		if id < maxSpriteID {
-			spriteRegistry[id] = spriteDef{
+	setCenterUI := func(spriteID, cropX uint16) {
+		if spriteID < maxSpriteID {
+			spriteRegistry[spriteID] = spriteDef{
 				atlasID: atlasUI,
-				x:       x, y: y, w: w, h: h,
+				cropX:   cropX, cropY: 8, //nolint:mnd
+				cropWidth: tileWidth, cropHeight: tileHeight,
 				offX: -8, offY: -7,
+				flipX: false,
+			}
+		}
+	}
+
+	setUIRepairBtn := func(spriteID, cropX, cropY uint16, cropHeight uint8) {
+		if spriteID < maxSpriteID {
+			spriteRegistry[spriteID] = spriteDef{
+				atlasID: atlasUI,
+				cropX:   cropX, cropY: cropY,
+				cropWidth: tileWidth, cropHeight: cropHeight,
+				offX: 0, offY: 0,
+				flipX: false,
 			}
 		}
 	}
 
 	// Kursory
-	setUI(spriteCursorDefaultBig, 11, 8, 16, 14)           //nolint:mnd
-	setCenterUI(spriteCursorCrossWhite, 27, 8, 16, 14)     //nolint:mnd
-	setCenterUI(spriteCursorCrossRed, 43, 8, 16, 14)       //nolint:mnd
-	setCenterUI(spriteCursorSmallWhite, 59, 8, 16, 14)     //nolint:mnd
-	setCenterUI(spriteCursorFrameRed, 75, 8, 16, 14)       //nolint:mnd
-	setCenterUI(spriteCursorCrossMedRed, 91, 8, 16, 14)    //nolint:mnd
-	setCenterUI(spriteCursorCrossMedWhite, 107, 8, 16, 14) //nolint:mnd
-	setCenterUI(spriteCursorArrowUp, 123, 8, 16, 14)       //nolint:mnd
-	setCenterUI(spriteCursorArrowDown, 139, 8, 16, 14)     //nolint:mnd
-	setCenterUI(spriteCursorArrowLeft, 155, 8, 16, 14)     //nolint:mnd
-	setCenterUI(spriteCursorArrowRight, 171, 8, 16, 14)    //nolint:mnd
-	setCenterUI(spriteCursorStop, 187, 8, 16, 14)          //nolint:mnd
-	setUI(spriteCursorDefaultSmall, 91, 22, 16, 14)        //nolint:mnd
-	setUI(spriteCursorPointer, 107, 22, 16, 14)            //nolint:mnd
-	setCenterUI(spriteCursorFrameWhite, 75, 8, 16, 14)     //nolint:mnd
+	setCenterUI(spriteCursorCrossWhite, 27)     //nolint:mnd
+	setCenterUI(spriteCursorCrossRed, 43)       //nolint:mnd
+	setCenterUI(spriteCursorSmallWhite, 59)     //nolint:mnd
+	setCenterUI(spriteCursorFrameRed, 75)       //nolint:mnd
+	setCenterUI(spriteCursorCrossMedRed, 91)    //nolint:mnd
+	setCenterUI(spriteCursorCrossMedWhite, 107) //nolint:mnd
+	setCenterUI(spriteCursorArrowUp, 123)       //nolint:mnd
+	setCenterUI(spriteCursorArrowDown, 139)     //nolint:mnd
+	setCenterUI(spriteCursorArrowLeft, 155)     //nolint:mnd
+	setCenterUI(spriteCursorArrowRight, 171)    //nolint:mnd
+	setCenterUI(spriteCursorStop, 187)          //nolint:mnd
+	setCenterUI(spriteCursorFrameWhite, 75)     //nolint:mnd
+
+	setUI(spriteCursorDefaultBig, 11, 8)    //nolint:mnd
+	setUI(spriteCursorDefaultSmall, 91, 22) //nolint:mnd
+	setUI(spriteCursorPointer, 107, 22)     //nolint:mnd
 
 	// Przyciski
-	setUI(spriteBtnBuildPalisade, 251, 8, 16, 14) //nolint:mnd
-	setUI(spriteBtnShield, 11, 22, 16, 14)        //nolint:mnd
+	setUI(spriteBtnBuildPalisade, 251, 8)   //nolint:mnd
+	setUI(spriteBtnShield, 11, 22)          //nolint:mnd
+	setUI(spriteBtnBuildBarn, 155, 21)      //nolint:mnd
+	setUI(spriteBtnBuildBarracks, 171, 21)  //nolint:mnd
+	setUI(spriteBtnBuildTemple, 187, 21)    //nolint:mnd
+	setUI(spriteBtnBuildBarracks2, 203, 21) //nolint:mnd
+	setUI(spriteBtnBuildAcademy, 219, 21)   //nolint:mnd
 	// setUI(SPRITE_BTN_, 123, 22, 16, 14) // btn_map @todo: pewnie można usunąć, bo nie używam
-	setUI(spriteBtnRepair, 139, 22, 16, 13)         //nolint:mnd
-	setUI(spriteBtnBuildBarn, 155, 21, 16, 14)      //nolint:mnd
-	setUI(spriteBtnBuildBarracks, 171, 21, 16, 14)  //nolint:mnd
-	setUI(spriteBtnBuildTemple, 187, 21, 16, 14)    //nolint:mnd
-	setUI(spriteBtnBuildBarracks2, 203, 21, 16, 14) //nolint:mnd
-	setUI(spriteBtnBuildAcademy, 219, 21, 16, 14)   //nolint:mnd
+	setUIRepairBtn(spriteBtnRepair, 139, 22, 13) //nolint:mnd
 
 	// Czary @todo: ogarnij potrójne ikonki dla przycisku. Gdzieś jest już gotowa funkcja do tego
-	setUI(spriteBtnSpellVision, 235, 8, 16, 14) //nolint:mnd
+	setUI(spriteBtnSpellVision, 235, 8) //nolint:mnd
 
-	spriteRegistry[609] = spriteDef{atlasID: atlasUnits1, x: 303, y: 112, w: 16, h: 14}
+	//goland:noinspection GoLinter
+	spriteRegistry[spriteBtnSpellMagicShield] = spriteDef{
+		atlasID: atlasUnits1, cropX: 303, cropY: 112, //nolint:mnd
+		cropWidth: 16, cropHeight: 14, offX: 0, offY: 0, flipX: false, //nolint:mnd
+	}
 
-	spriteRegistry[610] = spriteDef{atlasID: atlasUnits2, x: 258, y: 69, w: 16, h: 14}
-
-	spriteRegistry[611] = spriteDef{atlasID: atlasUnits2, x: 255, y: 111, w: 16, h: 14}
+	// @todo: @reminder: ikonki te wymagają specjalnej funkcji do „podrójnego” rysowania.
+	// Gromobicie.
+	//goland:noinspection GoLinter
+	spriteRegistry[spriteBtnSpellMagicLighting] = spriteDef{
+		atlasID: atlasUnits2, cropX: 258, cropY: 69, //nolint:mnd
+		cropWidth: 16, cropHeight: 14, offX: 0, offY: 0, flipX: false, //nolint:mnd
+	}
+	// Deszcz ognia.
+	//goland:noinspection GoLinter
+	spriteRegistry[spriteBtnSpellMagicFire] = spriteDef{
+		atlasID: atlasUnits2, cropX: 255, cropY: 111, //nolint:mnd
+		cropWidth: 16, cropHeight: 14, offX: 0, offY: 0, flipX: false,
+	}
 
 	// Zwłoki
 	// @todo: kompletnie porąbane nazwy!
-	setUI(spriteeffectskeleton00, 219, 50, 16, 14) //nolint:mnd
-	setUI(spriteeffectskeleton01, 219, 64, 16, 14) //nolint:mnd
-	setUI(spriteeffectskeleton02, 219, 78, 16, 14) //nolint:mnd
+	setUI(spriteeffectskeleton00, 219, 50) //nolint:mnd
+	setUI(spriteeffectskeleton01, 219, 64) //nolint:mnd
+	setUI(spriteeffectskeleton02, 219, 78) //nolint:mnd
 
 	// Rany
-	setUI(spriteEffectHit00, 219, 8, 16, 14) //nolint:mnd
-	setUI(spriteEffectHit01, 203, 8, 16, 14) //nolint:mnd
+	setUI(spriteEffectHit00, 219, 8) //nolint:mnd
+	setUI(spriteEffectHit01, 203, 8) //nolint:mnd
 
 	// Ogień
-	for i := uint16(0); i <= 13; i++ {
-		id := spriteFireStart + i
-		if id < maxSpriteID {
-			spriteRegistry[id] = spriteDef{
-				atlasID: atlasUI,
-				x:       11 + (i * 16), //nolint:mnd
-				y:       176,           //nolint:mnd
-				w:       16, h: 14,     //nolint:mnd
+	//nolint:mnd
+	for i := range uint16(14) {
+		spriteID := spriteFireStart + i
+		if spriteID < maxSpriteID {
+			spriteRegistry[spriteID] = spriteDef{
+				atlasID:   atlasUI,
+				cropX:     11 + (i * 16), //nolint:mnd
+				cropY:     176,           //nolint:mnd
+				cropWidth: tileWidth, cropHeight: tileHeight,
+				offX: 0, offY: 0,
+				flipX: false,
 			}
 		}
 	}
 }
 
+type unitFrame uint8
+
+const (
+	frameIdle unitFrame = iota
+	frameWalk1
+	frameWalk2
+	frameAttack1
+	frameAttack2
+	frameCount
+)
+
 // Jednostki
-// ID: 700 + (unitType * 200) + (Frame * 8) + Direction
+// ID: 700 + (unitType * 200) + (Frame * 8) + Direction.
 // Frame 0: Idle, Frame 1: Walk1, Frame 2: Walk2, Frame 3: Attack1, Frame 4: Attack2.
-// Dodatkowo: offset 40 = świeżo zabity, offset 41 = początek rozkładu.
 func initUnitSprites() {
 	type unitCfg struct {
 		Atlas battleAtlasID
@@ -469,328 +548,341 @@ func initUnitSprites() {
 		BaseY uint16
 		Melee bool
 	}
-	configs := map[int]unitCfg{
-		0:  {Atlas: atlasUnits1, BaseX: 0, BaseY: 0, Melee: false},      // COW
-		1:  {Atlas: atlasUnits1, BaseX: 0, BaseY: 42, Melee: true},      // AXEMAN
-		2:  {Atlas: atlasUnits1, BaseX: 0, BaseY: 84, Melee: false},     // ARCHER
-		3:  {Atlas: atlasUnits1, BaseX: 0, BaseY: 126, Melee: false},    // PRIESTESS
-		4:  {Atlas: atlasUnits2, BaseX: 0, BaseY: 0, Melee: false},      // PRIEST
-		5:  {Atlas: atlasUnits2, BaseX: 0, BaseY: 42, Melee: true},      // SWORDSMAN
-		6:  {Atlas: atlasUnits2, BaseX: 0, BaseY: 84, Melee: false},     // SPEARMAN
-		7:  {Atlas: atlasUnits2, BaseX: 0, BaseY: 126, Melee: true},     // COMMANDER
-		8:  {Atlas: atlasBuildings, BaseX: 0, BaseY: 0, Melee: true},    // BEAR
-		9:  {Atlas: atlasBuildings, BaseX: 0, BaseY: 42, Melee: true},   // STRZYGA
-		10: {Atlas: atlasUnits1, BaseX: 160, BaseY: 0, Melee: false},    // SHEPHERD
-		11: {Atlas: atlasUnits1, BaseX: 160, BaseY: 126, Melee: false},  // MAGE
-		12: {Atlas: atlasBuildings, BaseX: 224, BaseY: 0, Melee: false}, // CROSSBOW
+
+	//goland:noinspection GoLinter
+	configs := map[unitType]unitCfg{
+		unitCow:         {Atlas: atlasUnits1, BaseX: 0, BaseY: 0, Melee: false},
+		unitAxeman:      {Atlas: atlasUnits1, BaseX: 0, BaseY: 42, Melee: true},   //nolint:mnd
+		unitArcher:      {Atlas: atlasUnits1, BaseX: 0, BaseY: 84, Melee: false},  //nolint:mnd
+		unitPriestess:   {Atlas: atlasUnits1, BaseX: 0, BaseY: 126, Melee: false}, //nolint:mnd
+		unitPriest:      {Atlas: atlasUnits2, BaseX: 0, BaseY: 0, Melee: false},
+		unitSwordsman:   {Atlas: atlasUnits2, BaseX: 0, BaseY: 42, Melee: true},  //nolint:mnd
+		unitSpearman:    {Atlas: atlasUnits2, BaseX: 0, BaseY: 84, Melee: false}, //nolint:mnd
+		unitCommander:   {Atlas: atlasUnits2, BaseX: 0, BaseY: 126, Melee: true}, //nolint:mnd
+		unitBear:        {Atlas: atlasBuildings, BaseX: 0, BaseY: 0, Melee: true},
+		unitUnknown:     {Atlas: atlasBuildings, BaseX: 0, BaseY: 42, Melee: true},   //nolint:mnd
+		unitShepherd:    {Atlas: atlasUnits1, BaseX: 160, BaseY: 0, Melee: false},    //nolint:mnd
+		unitMage:        {Atlas: atlasUnits1, BaseX: 160, BaseY: 126, Melee: false},  //nolint:mnd
+		unitCrossbowman: {Atlas: atlasBuildings, BaseX: 224, BaseY: 0, Melee: false}, //nolint:mnd
 	}
 
 	const (
-		StartID = 700
-
-		StepID = 200
+		StartID uint16 = 700
+		StepID  uint16 = 200
 	)
 
-	for uType := 0; uType <= 12; uType++ {
-		cfg, exists := configs[uType]
+	for unitIndex := range uint16(unitTypeCount) {
+		currentUnitType := unitType(unitIndex)
+
+		cfg, exists := configs[currentUnitType]
 		if !exists {
 			continue
 		}
 
-		baseID := StartID + (uType * StepID)
+		spriteBaseID := StartID + (unitIndex * StepID)
 
-		for frame := range 5 {
-			if cfg.Melee && (frame == 3 || frame == 4) {
-				generateMeleeAttackFrames(baseID, frame, cfg.Atlas, cfg.BaseY)
+		for frame := range frameCount {
+			if cfg.Melee && (frame == frameAttack1 || frame == frameAttack2) {
+				generateMeleeAttackFrames(spriteBaseID, frame, cfg.Atlas, cfg.BaseY)
 
 				continue
 			}
 
 			colX := cfg.BaseX + uint16(frame*32) //nolint:mnd
 
-			if uType == 12 && frame > 0 {
-				switch frame {
-				case 1:
+			if currentUnitType == unitCrossbowman && frame > 0 {
+				// @reminder kusznik jest jednym z najgorszych przypadków, który wymaga osobnego
+				// podejścia. Tutaj jest tylko częściowo ogarnięty.
+				switch frame { //nolint:exhaustive
+				case frameWalk1:
 					colX = 240
-				case 2:
+				case frameWalk2:
 					colX = 256
-				case 3:
+				case frameAttack1:
 					colX = 272
 				}
 			}
 
-			for dir := 0; dir < 8; dir++ {
-				var x, y uint16
-				var w, h uint16 = 16, 14
+			for direction := range directionCount {
+				var sourceX, sourceY uint16
+
 				var flip bool
 
-				y0 := cfg.BaseY
-				y1 := cfg.BaseY + 14 //nolint:mnd
-				y2 := cfg.BaseY + 28 //nolint:mnd
+				var cropWidth, cropHeight uint8 = 16, 14
 
-				switch dir {
-				case 0:
-					y = y0
-					x = colX + 16 //nolint:mnd
+				atlasY0 := cfg.BaseY
+				atlasY1 := cfg.BaseY + 14 //nolint:mnd
+				atlasY2 := cfg.BaseY + 28 //nolint:mnd
+
+				switch direction {
+				case directionUp:
+					sourceY = atlasY0
+					sourceX = colX + 16 //nolint:mnd
 					flip = false
-				case 1:
-					y = y0
-					x = colX
+				case directionUpRight:
+					sourceY = atlasY0
+					sourceX = colX
 					flip = true
-				case 2:
-					y = y1
-					x = colX
+				case directionRight:
+					sourceY = atlasY1
+					sourceX = colX
 					flip = true
-				case 3:
-					y = y2
-					x = colX
+				case directionDownRight:
+					sourceY = atlasY2
+					sourceX = colX
 					flip = true
-				case 4:
-					y = y2
-					x = colX + 16
+				case directionDown:
+					sourceY = atlasY2
+					sourceX = colX + 16 //nolint:mnd
 					flip = false
-				case 5:
-					y = y2
-					x = colX
+				case directionDownLeft:
+					sourceY = atlasY2
+					sourceX = colX
 					flip = false
-				case 6:
-					y = y1
-					x = colX
+				case directionLeft:
+					sourceY = atlasY1
+					sourceX = colX
 					flip = false
-				case 7:
-					y = y0
-					x = colX + 16
+				case directionUpLeft:
+					sourceY = atlasY0
+					sourceX = colX + 16 //nolint:mnd
 					flip = false
 				}
 
-				finalID := baseID + (frame * 8) + dir
+				finalID := spriteBaseID + (uint16(frame) * 8) + uint16(direction) //nolint:mnd
+
 				if finalID < maxSpriteID {
 					spriteRegistry[finalID] = spriteDef{
-						atlasID: cfg.Atlas,
-						x:       x,
-						y:       y,
-						w:       w,
-						h:       h,
-						flipX:   flip,
-						offX:    0,
-						offY:    0,
+						atlasID:    cfg.Atlas,
+						cropX:      sourceX,
+						cropY:      sourceY,
+						cropWidth:  cropWidth,
+						cropHeight: cropHeight,
+						flipX:      flip,
+						offX:       0,
+						offY:       0,
 					}
 				}
 			}
 		}
 
-		var x40, y40, x41, y41 uint16
-		switch uType {
-		case 0: // Cow
-			x40, y40, x41, y41 = 112, 14, 144, 14
-		case 1: // Axeman
-			x40, y40, x41, y41 = 120, 70, 200, 70
-		case 2: // Archer
-			x40, y40, x41, y41 = 112, 98, 144, 98
-		case 3: // Priestess
-			x40, y40, x41, y41 = 111, 140, 143, 140
-		case 4: // Priest
-			x40, y40, x41, y41 = 112, 14, 144, 14
-		case 5: // Swordsman
-			x40, y40, x41, y41 = 120, 70, 200, 70
-		case 6: // Spearman
-			x40, y40, x41, y41 = 112, 98, 144, 98
-		case 7: // Commander
-			x40, y40, x41, y41 = 120, 154, 200, 154
-		case 8: // Bear
-			x40, y40, x41, y41 = 120, 28, 200, 28
-		case 9: // Strzyga
-			x40, y40, x41, y41 = 120, 70, 200, 70
-		case 10: // Shepherd
-			x40, y40, x41, y41 = 160, 98, 192, 98
-		case 11: // Mage
-			x40, y40, x41, y41 = 224, 98, 256, 98
-		case 12: // Crossbow
-			x40, y40, x41, y41 = 239, 56, 271, 56
+		var freshDeadX, freshDeadY, decayStartX, decayStartY uint16
+
+		// unitNone nie istnieje, jest chwilowym zapychaczem. Dlatego go tutaj nie ma.
+		switch currentUnitType { //nolint:exhaustive
+		case unitCow: // Cow
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 112, 14, 144, 14
+		case unitAxeman: // Axeman
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 120, 70, 200, 70
+		case unitArcher: // Archer
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 112, 98, 144, 98
+		case unitPriestess: // Priestess
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 111, 140, 143, 140
+		case unitPriest: // Priest
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 112, 14, 144, 14
+		case unitSwordsman: // Swordsman
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 120, 70, 200, 70
+		case unitSpearman: // Spearman
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 112, 98, 144, 98
+		case unitCommander: // Commander
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 120, 154, 200, 154
+		case unitBear: // Bear
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 120, 28, 200, 28
+		case unitUnknown: // Strzyga
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 120, 70, 200, 70
+		case unitShepherd: // Shepherd
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 160, 98, 192, 98
+		case unitMage: // Mage
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 224, 98, 256, 98
+		case unitCrossbowman: // Crossbow
+			freshDeadX, freshDeadY, decayStartX, decayStartY = 239, 56, 271, 56
 		default:
 			continue
 		}
 
-		id40 := baseID + 40
-		if id40 < maxSpriteID {
-			spriteRegistry[id40] = spriteDef{
-				atlasID: cfg.Atlas,
-				x:       x40,
-				y:       y40,
-				w:       16, //nolint:mnd
-				h:       14, //nolint:mnd
-				flipX:   false,
-				offX:    0,
-				offY:    0,
+		freshDeadSpriteID := spriteBaseID + freshlyDeadSpriteOffset
+		if freshDeadSpriteID < maxSpriteID {
+			spriteRegistry[freshDeadSpriteID] = spriteDef{
+				atlasID:    cfg.Atlas,
+				cropX:      freshDeadX,
+				cropY:      freshDeadY,
+				cropWidth:  tileWidth,
+				cropHeight: tileHeight,
+				flipX:      false,
+				offX:       0,
+				offY:       0,
 			}
 		}
 
-		id41 := baseID + 41
-		if id41 < maxSpriteID {
-			spriteRegistry[id41] = spriteDef{
-				atlasID: cfg.Atlas,
-				x:       x41,
-				y:       y41,
-				w:       16, //nolint:mnd
-				h:       14, //nolint:mnd
-				flipX:   false,
-				offX:    0,
-				offY:    0,
+		decayStartSpriteID := spriteBaseID + decayStartSpriteOffset
+		if decayStartSpriteID < maxSpriteID {
+			spriteRegistry[decayStartSpriteID] = spriteDef{
+				atlasID:    cfg.Atlas,
+				cropX:      decayStartX,
+				cropY:      decayStartY,
+				cropWidth:  tileWidth,
+				cropHeight: tileHeight,
+				flipX:      false,
+				offX:       0,
+				offY:       0,
 			}
 		}
 	}
 }
 
-// Specjalna logika dla walczących wręcz.
-// Odwzorowuje logikę z TEMP_bridge.go, walczące wręcz powinny działać.
-func generateMeleeAttackFrames(baseUnitID int, frame int, atlas battleAtlasID, unitBaseY uint16) {
+func generateMeleeAttackFrames(unitBaseID uint16, frame unitFrame, atlas battleAtlasID, unitBaseY uint16) {
 	// Współrzędne x w atlasie dla poszczególnych faz (hardcoded z bridge)
 	// Bridge Col 0 (Diag), Col 1 (Up), Col 2 (Side), Col 3 (DownDiag), Col 4 (Down)
 
-	for dir := range 8 {
-		var x, y uint16
-		var w, h uint16
+	for direction := range directionCount { //nolint:nolintlint,mnd
+		var cropX, cropY uint16
+
+		var cropWidth, cropHeight uint8
 
 		var offX, offY int8
 
 		var flip bool
 
 		// Domyślne wartości (żeby nie było zer)
-		w = 16
-		h = 14
+		cropWidth = tileWidth
+		cropHeight = tileHeight
 
-		if frame == 3 { // === FAZA 1 ATAKU ===
-			switch dir {
-			case 0: // Góra (Wąska 16x21)
-				x = 120
-				y = unitBaseY + 7
-				w = 16
-				h = 21
+		// === FAZA 1 ATAKU ===
+		if frame == frameAttack1 {
+			switch direction {
+			case directionUp: // Góra (Wąska 16x21)
+				cropX = 120
+				cropY = unitBaseY + 7 //nolint:mnd
+				cropWidth = 16
+				cropHeight = 21
 				flip = false
-				offY = -7 // Korekta wysokości
-			case 1: // Góra-Prawo (Szeroka 24x21)
-				x = 96
-				y = unitBaseY + 7
-				w = 24
-				h = 21
+				// Korekta wysokości
+				offY = -7 //nolint:mnd
+			case directionUpRight: // Góra-Prawo (Szeroka 24x21)
+				cropX = 96
+				cropY = unitBaseY + 7 //nolint:mnd
+				cropWidth = 24
+				cropHeight = 21
 				flip = true
-				offX = -4
-				offY = -7
-			case 2: // Prawo (Wąska 24x14? Bridge mówi 24x14)
-				x = 96
-				y = unitBaseY + 28
-				w = 24
-				h = 14
+				offX = -4 //nolint:mnd
+				offY = -7 //nolint:mnd
+			case directionRight: // Prawo (Wąska 24x14? Bridge mówi 24x14)
+				cropX = 96
+				cropY = unitBaseY + 28 //nolint:mnd
+				cropWidth = 24
+				cropHeight = 14
 				flip = true
-				offX = -4 // Poszerzenie
-			case 3: // Dół-Prawo (Szeroka 24x21) - Bridge: Col 3 (AbsX 152, RelY 0 ??)
+				offX = -4 // Poszerzenie //nolint:mnd //nolint:mnd
+			case directionDownRight: // Dół-Prawo (Szeroka 24x21) - Bridge: Col 3 (AbsX 152, RelY 0 ??)
 				// Bridge Row 3 Col 3: AbsX 152, RelY 0.
-				x = 152
-				y = unitBaseY
-				w = 24
-				h = 21
+				cropX = 152
+				cropY = unitBaseY
+				cropWidth = 24
+				cropHeight = 21
 				flip = true
-				offX = -4
-				offY = -7
-			case 4: // Dół (Wąska 16x21) - Bridge: Col 4 (AbsX 136, RelY 0)
-				x = 136
-				y = unitBaseY
-				w = 16
-				h = 21
+				offX = -4 //nolint:mnd
+				offY = -7 //nolint:mnd
+			case directionDown: // Dół (Wąska 16x21) - Bridge: Col 4 (AbsX 136, RelY 0)
+				cropX = 136
+				cropY = unitBaseY
+				cropWidth = 16
+				cropHeight = 21
 				flip = false
-				offY = -7
-			case 5: // Dół-Lewo (Flip DP)
-				x = 152
-				y = unitBaseY
-				w = 24
-				h = 21
+				offY = -7 //nolint:mnd
+			case directionDownLeft: // Dół-Lewo (Flip DP)
+				cropX = 152
+				cropY = unitBaseY
+				cropWidth = 24
+				cropHeight = 21
 				flip = false
-				offX = -4
-				offY = -7
-			case 6: // Lewo (Flip P)
-				x = 96
-				y = unitBaseY + 28
-				w = 24
-				h = 14
+				offX = -4 //nolint:mnd
+				offY = -7 //nolint:mnd
+			case directionLeft: // Lewo (Flip P)
+				cropX = 96
+				cropY = unitBaseY + 28 //nolint:mnd
+				cropWidth = 24
+				cropHeight = 14
 				flip = false
-				offX = -4
-			case 7: // Góra-Lewo (Flip GP)
-				x = 96
-				y = unitBaseY + 7
-				w = 24
-				h = 21
+				offX = -4 //nolint:mnd
+			case directionUpLeft: // Góra-Lewo (Flip GP)
+				cropX = 96
+				cropY = unitBaseY + 7 //nolint:mnd
+				cropWidth = 24
+				cropHeight = 21
 				flip = false
-				offX = -4
-				offY = -7
+				offX = -4 //nolint:mnd
+				offY = -7 //nolint:mnd
 			}
 		} else { // === FAZA 2 ATAKU (Frame 4) ===
-			switch dir {
-			case 0: // Góra
-				x = 200
-				y = unitBaseY + 7
-				w = 16
-				h = 21
+			// frameAttack2
+			switch direction {
+			case directionUp: // Góra
+				cropX = 200
+				cropY = unitBaseY + 7 //nolint:mnd
+				cropWidth = 16
+				cropHeight = 21
 				flip = false
-				offY = -7
-			case 1: // GP
-				x = 176
-				y = unitBaseY + 7
-				w = 24
-				h = 21
+				offY = -7 //nolint:mnd
+			case directionUpRight: // GP
+				cropX = 176
+				cropY = unitBaseY + 7 //nolint:mnd
+				cropWidth = 24
+				cropHeight = 21
 				flip = true
-				offX = -4
-				offY = -7
-			case 2: // P
-				x = 200
-				y = unitBaseY + 28
-				w = 16
-				h = 14
+				offX = -4 //nolint:mnd
+				offY = -7 //nolint:mnd
+			case directionRight: // P
+				cropX = 200
+				cropY = unitBaseY + 28 //nolint:mnd
+				cropWidth = 16
+				cropHeight = 14
 				flip = true
-			case 3: // DP
-				x = 152
-				y = unitBaseY + 21
-				w = 24
-				h = 21
+			case directionDownRight: // DP
+				cropX = 152
+				cropY = unitBaseY + 21 //nolint:mnd
+				cropWidth = 24
+				cropHeight = 21
 				flip = true
-				offX = -4
-				offY = -7
-			case 4: // D
-				x = 136
-				y = unitBaseY + 21
-				w = 16
-				h = 21
+				offX = -4 //nolint:mnd
+				offY = -7 //nolint:mnd
+			case directionDown: // D
+				cropX = 136
+				cropY = unitBaseY + 21 //nolint:mnd
+				cropWidth = 16
+				cropHeight = 21
 				flip = false
-				offY = -7
-			case 5: // DL
-				x = 152
-				y = unitBaseY + 21
-				w = 24
-				h = 21
+				offY = -7 //nolint:mnd
+			case directionDownLeft: // DL
+				cropX = 152
+				cropY = unitBaseY + 21 //nolint:mnd
+				cropWidth = 24
+				cropHeight = 21
 				flip = false
-				offX = -4
-				offY = -7
-			case 6: // L
-				x = 200
-				y = unitBaseY + 28
-				w = 16
-				h = 14
+				offX = -4 //nolint:mnd
+				offY = -7 //nolint:mnd
+			case directionLeft: // L
+				cropX = 200
+				cropY = unitBaseY + 28 //nolint:mnd
+				cropWidth = 16
+				cropHeight = 14
 				flip = false
-			case 7: // GL
-				x = 176
-				y = unitBaseY + 7
-				w = 24
-				h = 21
+			case directionUpLeft: // GL
+				cropX = 176
+				cropY = unitBaseY + 7 //nolint:mnd
+				cropWidth = 24
+				cropHeight = 21
 				flip = false
-				offX = -4
-				offY = -7
+				offX = -4 //nolint:mnd
+				offY = -7 //nolint:mnd
 			}
 		}
 
-		finalID := baseUnitID + (frame * 8) + dir
+		finalID := unitBaseID + (uint16(frame) * 8) + uint16(direction) //nolint:mnd
+
 		if finalID < maxSpriteID {
 			spriteRegistry[finalID] = spriteDef{
 				atlasID: atlas,
-				x:       x, y: y, w: w, h: h,
+				cropX:   cropX, cropY: cropY, cropWidth: cropWidth, cropHeight: cropHeight,
 				flipX: flip,
 				offX:  offX, offY: offY,
 			}
@@ -798,141 +890,155 @@ func generateMeleeAttackFrames(baseUnitID int, frame int, atlas battleAtlasID, u
 	}
 }
 
+// @todo: wiele tych liczb można zamienić stałymi sprite…
 func initBuildingSprites() {
 	assetID := atlasBuildings
 
-	setBuilding := func(id int, x, y uint16) {
-		if id < maxSpriteID {
-			spriteRegistry[id] = spriteDef{
+	setBuilding := func(spriteID uint16, cropX, cropY uint16) {
+		if spriteID < maxSpriteID {
+			spriteRegistry[spriteID] = spriteDef{
 				atlasID: assetID,
-				x:       x, y: y,
-				w: 16, h: 14, //nolint:mnd
+				cropX:   cropX, cropY: cropY,
+				cropWidth: tileWidth, cropHeight: tileHeight,
 				offX: 0, offY: 0,
+				flipX: false,
 			}
 		}
 	}
 	// Budowa → y:168
-	for i := 127; i <= 135; i++ {
-		setBuilding(i, uint16((i-127)*16), 168) //nolint:mnd
+	for i := uint16(127); i <= 135; i++ { //nolint:mnd
+		setBuilding(i, (i-127)*16, 168) //nolint:mnd
 	}
 
 	// Zgliszcza → y:182
-	for i := 257; i <= 265; i++ {
-		setBuilding(i, uint16((i-257)*16), 182) //nolint:mnd
+	for i := uint16(257); i <= 265; i++ { //nolint:mnd
+		setBuilding(i, (i-257)*16, 182) //nolint:mnd
 	}
 
 	// Budynek główny
 	// ID 137-155 → y:84
-	for i := 137; i <= 155; i++ {
-		setBuilding(i, uint16((i-137)*16), 84) //nolint:mnd
+	for i := uint16(137); i <= 155; i++ { //nolint:mnd
+		setBuilding(i, (i-137)*16, 84) //nolint:mnd
 	}
 	// ID 156 Most
 	setBuilding(156, 304, 84) //nolint:mnd
 
 	// Obora
 	// ID 157-175 → y:98
-	for i := 157; i <= 175; i++ {
-		setBuilding(i, uint16((i-157)*16), 98) //nolint:mnd
+	for i := uint16(157); i <= 175; i++ { //nolint:mnd
+		setBuilding(i, (i-157)*16, 98) //nolint:mnd
 	}
 	// Chata drwali
 	// ID 177-195 → y:112
-	for i := 177; i <= 195; i++ {
-		setBuilding(i, uint16((i-177)*16), 112) //nolint:mnd
+	for i := uint16(177); i <= 195; i++ { //nolint:mnd
+		setBuilding(i, (i-177)*16, 112) //nolint:mnd
 	}
 	// Świątynia
 	// ID 197-215 → y:126
-	for i := 197; i <= 215; i++ {
-		setBuilding(i, uint16((i-197)*16), 126) //nolint:mnd
+	for i := uint16(197); i <= 215; i++ { //nolint:mnd
+		setBuilding(i, (i-197)*16, 126) //nolint:mnd
 	}
 	// Chata wojów
 	// ID 217-235 → y:140
-	for i := 217; i <= 235; i++ {
-		setBuilding(i, uint16((i-217)*16), 140) //nolint:mnd
+	for i := uint16(217); i <= 235; i++ { //nolint:mnd
+		setBuilding(i, (i-217)*16, 140) //nolint:mnd
 	}
 	// Dwór
 	// ID 237-255 → y:154
-	for i := 237; i <= 255; i++ {
-		setBuilding(i, uint16((i-237)*16), 154) //nolint:mnd
+	for i := uint16(237); i <= 255; i++ { //nolint:mnd
+		setBuilding(i, (i-237)*16, 154) //nolint:mnd
 	}
 
-	setBuilding(int(spriteBridgeConstruction), 304, 84) //nolint:mnd
+	setBuilding(spriteBridgeConstruction, 304, 84) //nolint:mnd
 }
 
 func initProjectileSprites() {
-	setProjectile := func(id int, x, y uint16, offX, offY int8, flip bool) {
-		if id < maxSpriteID {
-			spriteRegistry[id] = spriteDef{
+	setProjectile := func(spiteID uint16, cropX, cropY uint16, flip bool) {
+		if spiteID < maxSpriteID {
+			spriteRegistry[spiteID] = spriteDef{
 				atlasID: atlasUnits2,
-				x:       x, y: y,
-				w: 16, h: 14, //nolint:mnd
-				offX: offX, offY: offY,
+				cropX:   cropX, cropY: cropY,
+				cropWidth: tileWidth, cropHeight: tileHeight,
+				offX: -8, offY: -7,
 				flipX: flip,
 			}
 		}
 	}
 
-	offX := int8(-8)
-	offY := int8(-7)
 	// === STRZAŁA ===
-	setProjectile(spriteMissileArrowUp, 256, 0, offX, offY, false)        //nolint:mnd
-	setProjectile(spriteMissileArrowUpLeft, 240, 0, offX, offY, false)    //nolint:mnd
-	setProjectile(spriteMissileArrowLeft, 240, 14, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileArrowDownLeft, 240, 28, offX, offY, false) //nolint:mnd
-	setProjectile(spriteMissileArrowDown, 256, 28, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileArrowUpRight, 240, 0, offX, offY, true)    //nolint:mnd
-	setProjectile(spriteMissileArrowRight, 240, 14, offX, offY, true)     //nolint:mnd
-	setProjectile(spriteMissileArrowDownRight, 240, 28, offX, offY, true) //nolint:mnd
+	setProjectile(spriteMissileArrowUp, 256, 0, false)        //nolint:mnd
+	setProjectile(spriteMissileArrowUpLeft, 240, 0, false)    //nolint:mnd
+	setProjectile(spriteMissileArrowLeft, 240, 14, false)     //nolint:mnd
+	setProjectile(spriteMissileArrowDownLeft, 240, 28, false) //nolint:mnd
+	setProjectile(spriteMissileArrowDown, 256, 28, false)     //nolint:mnd
+	setProjectile(spriteMissileArrowUpRight, 240, 0, true)    //nolint:mnd
+	setProjectile(spriteMissileArrowRight, 240, 14, true)     //nolint:mnd
+	setProjectile(spriteMissileArrowDownRight, 240, 28, true) //nolint:mnd
 
 	// === PIORUN ===
-	setProjectile(spriteMissileLightningUp, 258, 42, offX, offY, false)       //nolint:mnd
-	setProjectile(spriteMissileLightningUpLeft, 242, 40, offX, offY, false)   //nolint:mnd
-	setProjectile(spriteMissileLightningLeft, 242, 54, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileLightningDownLeft, 242, 68, offX, offY, false) //nolint:mnd
-	setProjectile(spriteMissileLightningDown, 258, 69, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileLightningUpRight, 242, 40, offX, offY, true)   //nolint:mnd
-	setProjectile(spriteMissileLightningRight, 242, 54, offX, offY, true)     //nolint:mnd
-	setProjectile(spriteMissileLightningDownRight, 242, 68, offX, offY, true) //nolint:mnd
+	setProjectile(spriteMissileLightningUp, 258, 42, false)       //nolint:mnd
+	setProjectile(spriteMissileLightningUpLeft, 242, 40, false)   //nolint:mnd
+	setProjectile(spriteMissileLightningLeft, 242, 54, false)     //nolint:mnd
+	setProjectile(spriteMissileLightningDownLeft, 242, 68, false) //nolint:mnd
+	setProjectile(spriteMissileLightningDown, 258, 69, false)     //nolint:mnd
+	setProjectile(spriteMissileLightningUpRight, 242, 40, true)   //nolint:mnd
+	setProjectile(spriteMissileLightningRight, 242, 54, true)     //nolint:mnd
+	setProjectile(spriteMissileLightningDownRight, 242, 68, true) //nolint:mnd
 
 	// === OGIEŃ ===
-	setProjectile(spriteMissileFireUp, 255, 84, offX, offY, false)        //nolint:mnd
-	setProjectile(spriteMissileFireUpLeft, 241, 83, offX, offY, false)    //nolint:mnd
-	setProjectile(spriteMissileFireLeft, 241, 97, offX, offY, false)      //nolint:mnd
-	setProjectile(spriteMissileFireDownLeft, 241, 110, offX, offY, false) //nolint:mnd
-	setProjectile(spriteMissileFireDown, 255, 111, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileFireUpRight, 241, 83, offX, offY, true)    //nolint:mnd
-	setProjectile(spriteMissileFireRight, 241, 97, offX, offY, true)      //nolint:mnd
-	setProjectile(spriteMissileFireDownRight, 241, 110, offX, offY, true) //nolint:mnd
+	setProjectile(spriteMissileFireUp, 255, 84, false)        //nolint:mnd
+	setProjectile(spriteMissileFireUpLeft, 241, 83, false)    //nolint:mnd
+	setProjectile(spriteMissileFireLeft, 241, 97, false)      //nolint:mnd
+	setProjectile(spriteMissileFireDownLeft, 241, 110, false) //nolint:mnd
+	setProjectile(spriteMissileFireDown, 255, 111, false)     //nolint:mnd
+	setProjectile(spriteMissileFireUpRight, 241, 83, true)    //nolint:mnd
+	setProjectile(spriteMissileFireRight, 241, 97, true)      //nolint:mnd
+	setProjectile(spriteMissileFireDownRight, 241, 110, true) //nolint:mnd
 
 	// === WŁÓCZNIA ===
-	setProjectile(spriteMissileSpearUp, 255, 126, offX, offY, false)       //nolint:mnd
-	setProjectile(spriteMissileSpearUpLeft, 239, 125, offX, offY, false)   //nolint:mnd
-	setProjectile(spriteMissileSpearLeft, 239, 139, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileSpearDownLeft, 239, 154, offX, offY, false) //nolint:mnd
-	setProjectile(spriteMissileSpearDown, 255, 154, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileSpearUpRight, 239, 125, offX, offY, true)   //nolint:mnd
-	setProjectile(spriteMissileSpearRight, 239, 139, offX, offY, true)     //nolint:mnd
-	setProjectile(spriteMissileSpearDownRight, 239, 154, offX, offY, true) //nolint:mnd
+	setProjectile(spriteMissileSpearUp, 255, 126, false)       //nolint:mnd
+	setProjectile(spriteMissileSpearUpLeft, 239, 125, false)   //nolint:mnd
+	setProjectile(spriteMissileSpearLeft, 239, 139, false)     //nolint:mnd
+	setProjectile(spriteMissileSpearDownLeft, 239, 154, false) //nolint:mnd
+	setProjectile(spriteMissileSpearDown, 255, 154, false)     //nolint:mnd
+	setProjectile(spriteMissileSpearUpRight, 239, 125, true)   //nolint:mnd
+	setProjectile(spriteMissileSpearRight, 239, 139, true)     //nolint:mnd
+	setProjectile(spriteMissileSpearDownRight, 239, 154, true) //nolint:mnd
 
 	// === DUCH ===
-	setProjectile(spriteMissileGhostUp, 288, 0, offX, offY, false)        //nolint:mnd
-	setProjectile(spriteMissileGhostUpLeft, 272, 0, offX, offY, false)    //nolint:mnd
-	setProjectile(spriteMissileGhostLeft, 272, 14, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileGhostDownLeft, 272, 28, offX, offY, false) //nolint:mnd
-	setProjectile(spriteMissileGhostDown, 288, 28, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileGhostUpRight, 272, 0, offX, offY, true)    //nolint:mnd
-	setProjectile(spriteMissileGhostRight, 272, 14, offX, offY, true)     //nolint:mnd
-	setProjectile(spriteMissileGhostDownRight, 272, 28, offX, offY, true) //nolint:mnd
-	setProjectile(spriteMissileGhostAttack, 288, 14, 0, 0, false)         //nolint:mnd
+	setProjectile(spriteMissileGhostUp, 288, 0, false)        //nolint:mnd
+	setProjectile(spriteMissileGhostUpLeft, 272, 0, false)    //nolint:mnd
+	setProjectile(spriteMissileGhostLeft, 272, 14, false)     //nolint:mnd
+	setProjectile(spriteMissileGhostDownLeft, 272, 28, false) //nolint:mnd
+	setProjectile(spriteMissileGhostDown, 288, 28, false)     //nolint:mnd
+	setProjectile(spriteMissileGhostUpRight, 272, 0, true)    //nolint:mnd
+	setProjectile(spriteMissileGhostRight, 272, 14, true)     //nolint:mnd
+	setProjectile(spriteMissileGhostDownRight, 272, 28, true) //nolint:mnd
 
 	// === BEŁT ===
-	setProjectile(spriteMissileBoltUp, 288, 42, offX, offY, false)       //nolint:mnd
-	setProjectile(spriteMissileBoltUpLeft, 272, 42, offX, offY, false)   //nolint:mnd
-	setProjectile(spriteMissileBoltLeft, 272, 56, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileBoltDownLeft, 272, 70, offX, offY, false) //nolint:mnd
-	setProjectile(spriteMissileBoltDown, 288, 70, offX, offY, false)     //nolint:mnd
-	setProjectile(spriteMissileBoltUpRight, 272, 42, offX, offY, true)   //nolint:mnd
-	setProjectile(spriteMissileBoltRight, 272, 56, offX, offY, true)     //nolint:mnd
-	setProjectile(spriteMissileBoltDownRight, 272, 70, offX, offY, true) //nolint:mnd
+	setProjectile(spriteMissileBoltUp, 288, 42, false)       //nolint:mnd
+	setProjectile(spriteMissileBoltUpLeft, 272, 42, false)   //nolint:mnd
+	setProjectile(spriteMissileBoltLeft, 272, 56, false)     //nolint:mnd
+	setProjectile(spriteMissileBoltDownLeft, 272, 70, false) //nolint:mnd
+	setProjectile(spriteMissileBoltDown, 288, 70, false)     //nolint:mnd
+	setProjectile(spriteMissileBoltUpRight, 272, 42, true)   //nolint:mnd
+	setProjectile(spriteMissileBoltRight, 272, 56, true)     //nolint:mnd
+	setProjectile(spriteMissileBoltDownRight, 272, 70, true) //nolint:mnd
+
+	// Efekt ducha. Musi być wydzielony ponieważ nie jest to zwykły pocisk.
+	setGhost := func(spiteID uint16, cropX, cropY uint16) {
+		if spiteID < maxSpriteID {
+			spriteRegistry[spiteID] = spriteDef{
+				atlasID: atlasUnits2,
+				cropX:   cropX, cropY: cropY,
+				cropWidth: tileWidth, cropHeight: tileHeight,
+				offX: 0, offY: 0,
+				flipX: false,
+			}
+		}
+	}
+
+	setGhost(spriteMissileGhostAttack, 288, 14) //nolint:mnd
 }
 
 // Mapowanie battleAtlasID → rawAssetDef {TopChunk, BotChunk, PaletteID}.

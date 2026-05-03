@@ -631,21 +631,21 @@ var unitTypeMap = map[string]unitType{
 
 const (
 	// Przypisanie wartości liczbowych każdemu z rodzajów jednostek.
-
-	unitCow         unitType = iota // Krowa
-	unitAxeman                      // Drwal
-	unitArcher                      // Łucznik
-	unitPriestess                   // Kapłanka
-	unitPriest                      // Kapłan
-	unitSwordsman                   // Miecznik
-	unitSpearman                    // Włócznik
-	unitCommander                   // Rycerz (w tamtych czasach nie było jeszcze rycerzy!)
-	unitBear                        // Niedźwiedź
-	unitUnknown                     // Strzyga
-	unitShepherd                    // Pastuch
-	unitMage                        // Mag
-	unitCrossbowman                 // Kusznik
-	unitNone                        // Zapychacz jakiś @todo: usuń później.
+	unitCow         unitType          = iota // Krowa
+	unitAxeman                               // Drwal
+	unitArcher                               // Łucznik
+	unitPriestess                            // Kapłanka
+	unitPriest                               // Kapłan
+	unitSwordsman                            // Miecznik
+	unitSpearman                             // Włócznik
+	unitCommander                            // Rycerz (w tamtych czasach nie było jeszcze rycerzy!)
+	unitBear                                 // Niedźwiedź
+	unitUnknown                              // Strzyga
+	unitShepherd                             // Pastuch
+	unitMage                                 // Mag
+	unitCrossbowman                          // Kusznik
+	unitNone                                 // Zapychacz jakiś @todo: usuń później.
+	unitTypeCount   = unitCrossbowman        // @reminder: nie wiem na ile to potrzebne;zawsze ostatnie
 )
 
 const (
@@ -1005,4 +1005,22 @@ const (
 	magicThunderManaCost uint16 = 10
 	magicFireManaCost    uint16 = 20
 	magicGhostManaCost   uint16 = 20
+)
+
+const (
+	// Stałe związane z duszkami zmarłych jednostek.
+	freshlyDeadSpriteOffset = 40
+	decayStartSpriteOffset  = 41
+)
+
+const (
+	directionUp uint8 = iota
+	directionUpRight
+	directionRight
+	directionDownRight
+	directionDown
+	directionDownLeft
+	directionLeft
+	directionUpLeft
+	directionCount
 )

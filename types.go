@@ -587,3 +587,5 @@ type bounds struct {
 	Width, Height     int32
 	WidthPx, HeightPx float32
 }
+
+type unitDirection uint8

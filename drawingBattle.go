@@ -332,7 +332,7 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 
 	// 2. Pobranie definicji
 	def := spriteRegistry[id]
-	if def.w == 0 {
+	if def.cropWidth == 0 {
 		return // Pusty wpis (np. ID 0)
 	}
 
@@ -343,19 +343,19 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 	}
 
 	// 4. Obliczenie Prostokąta Źródłowego
-	srcW := float32(def.w)
+	srcW := float32(def.cropWidth)
 
 	if def.flipX {
 		srcW = -srcW // Raylib obsługuje zwierciadlane odbicie przez ujemną szerokość
 	}
 
-	srcRect := rl.NewRectangle(float32(def.x), float32(def.y), srcW, float32(def.h))
+	srcRect := rl.NewRectangle(float32(def.cropX), float32(def.cropY), srcW, float32(def.cropHeight))
 
 	// 5. Obliczenie Pozycji Docelowej z uwzględnieniem offsetów
 	finalX := destX + float32(def.offX)
 	finalY := destY + float32(def.offY)
 
-	destRect := rl.NewRectangle(finalX, finalY, float32(def.w), float32(def.h))
+	destRect := rl.NewRectangle(finalX, finalY, float32(def.cropWidth), float32(def.cropHeight))
 
 	// 6. Rysowanie
 	rl.DrawTexturePro(tex, srcRect, destRect, rl.NewVector2(0, 0), 0, rl.White)
@@ -368,7 +368,7 @@ func drawSpriteEx(id uint16, destX, destY float32, ownerColor uint8, tint rl.Col
 
 	def := spriteRegistry[id]
 
-	if def.w == 0 {
+	if def.cropWidth == 0 {
 		return // Pusty wpis
 	}
 
@@ -376,19 +376,19 @@ func drawSpriteEx(id uint16, destX, destY float32, ownerColor uint8, tint rl.Col
 	tex := ps.Assets.getAtlas(def.atlasID, ownerColor)
 
 	// Logika flipX i Offsetów z definicji
-	srcW := float32(def.w)
+	srcW := float32(def.cropWidth)
 
 	if def.flipX {
 		srcW = -srcW
 	}
 
-	srcRect := rl.NewRectangle(float32(def.x), float32(def.y), srcW, float32(def.h))
+	srcRect := rl.NewRectangle(float32(def.cropX), float32(def.cropY), srcW, float32(def.cropHeight))
 
 	// Stosujemy offsety z SpriteDef
 	finalX := destX + float32(def.offX)
 	finalY := destY + float32(def.offY)
 
-	destRect := rl.NewRectangle(finalX, finalY, float32(def.w), float32(def.h))
+	destRect := rl.NewRectangle(finalX, finalY, float32(def.cropWidth), float32(def.cropHeight))
 
 	rl.DrawTexturePro(tex, srcRect, destRect, rl.NewVector2(0, 0), 0, tint)
 }
@@ -620,7 +620,7 @@ func drawGhostlySprite(spriteID uint16, x, y float32, phase1, phase2 float64, fr
 
 	def := spriteRegistry[spriteID]
 
-	if def.w == 0 {
+	if def.cropWidth == 0 {
 		return
 	}
 
@@ -640,21 +640,21 @@ func drawGhostlySprite(spriteID uint16, x, y float32, phase1, phase2 float64, fr
 	tint := rl.Fade(rl.White, alpha)
 
 	// 3. Zwierciadlane odbicie jeśli potrzeba
-	srcW := float32(def.w)
+	srcW := float32(def.cropWidth)
 	if def.flipX {
 		srcW = -srcW
 	}
 
 	// 4. Wycięcie duszka z atlasu
-	srcRect := rl.NewRectangle(float32(def.x), float32(def.y), srcW, float32(def.h))
+	srcRect := rl.NewRectangle(float32(def.cropX), float32(def.cropY), srcW, float32(def.cropHeight))
 
 	// 5. Pozycjonowanie
-	centerX := x + float32(def.offX) + wobbleX + float32(def.w)
-	centerY := y + float32(def.offY) + wobbleY + float32(def.h)
+	centerX := x + float32(def.offX) + wobbleX + float32(def.cropWidth)
+	centerY := y + float32(def.offY) + wobbleY + float32(def.cropHeight)
 
 	// 6, Umiejscowienie
-	destW := float32(def.w) * pulse
-	destH := float32(def.h) * pulse
+	destW := float32(def.cropWidth) * pulse
+	destH := float32(def.cropHeight) * pulse
 
 	destRect := rl.NewRectangle(centerX-destW*0.5, centerY-destH*0.5, destW, destH)
 
@@ -1236,20 +1236,20 @@ func drawUnitWounds(u *unit, ps *programState, screenX, screenY float32) {
 		}
 
 		def := spriteRegistry[effectID]
-		if def.w == 0 {
+		if def.cropWidth == 0 {
 			continue
 		}
 
 		tex := ps.Assets.getAtlas(def.atlasID, colorNone)
 
 		sourceRec := rl.NewRectangle(
-			float32(def.x), float32(def.y),
-			float32(def.w), float32(def.h),
+			float32(def.cropX), float32(def.cropY),
+			float32(def.cropWidth), float32(def.cropHeight),
 		)
 
 		// Skalowanie rany
-		destW := float32(def.w) * wound.Scale
-		destH := float32(def.h) * wound.Scale
+		destW := float32(def.cropWidth) * wound.Scale
+		destH := float32(def.cropHeight) * wound.Scale
 
 		// Pozycja finalna: pozycja jednostki + środek kafelka + losowy offset rany
 		destRect := rl.NewRectangle(
@@ -1464,34 +1464,6 @@ func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bState
 	}
 }
 
-func drawGhost(xPos, yPos float32, bState *battleState, ps *programState) {
-	// Wyliczenia pod wodotryski.
-	// @reminder: Te gołe liczby, to składowe do efektu, który jest wykorzystywany tylko
-	// w tym miejscu. Nie jest to błąd i nie ma sensu robić z tego stałych.
-	pulse := float32(0.9 + 0.4*(0.5+0.5*math.Sin(float64(bState.GlobalFrameCounter)*0.3)))            //nolint:mnd
-	wobbleX := float32(1.5 * math.Sin(float64(bState.GlobalFrameCounter)*0.3))                        //nolint:mnd
-	wobbleY := float32(1.5 * math.Cos(float64(bState.GlobalFrameCounter)*0.3))                        //nolint:mnd
-	ghostTint := rl.Fade(rl.White, 0.9+0.1*float32(math.Sin(float64(bState.GlobalFrameCounter)*0.2))) //nolint:mnd
-
-	// Bierzemy odpowiedni atlas
-	def := spriteRegistry[spriteMissileGhostAttack]
-	tex := ps.Assets.getAtlas(def.atlasID, colorNone)
-
-	// Wspołrzędne do duszka w atlasie
-	srcW := float32(def.w)
-	srcRect := rl.NewRectangle(float32(def.x), float32(def.y), srcW, float32(def.h))
-
-	// Przygotowanie końcowego prostokąta
-	finalX := xPos + float32(def.offX) + wobbleX
-	finalY := yPos + float32(def.offY) + wobbleY
-	destRect := rl.NewRectangle(finalX, finalY, float32(def.w)*pulse, float32(def.h)*pulse)
-
-	// Nie potrzebujemy dodatkowego przesunięcia, dlatego 0,0
-	origin := rl.NewVector2(float32(def.w)*0.5, float32(def.h)*0.5)
-
-	rl.DrawTexturePro(tex, srcRect, destRect, origin, 0, ghostTint)
-}
-
 // === UI, MINIMAPA, KURSOR ===
 // @reminder: muszę się zastanowić, czy nie przenieść tego poniżej do osobnego pliku, bo
 // tutaj już jest strasznie zagracone.
@@ -1511,7 +1483,7 @@ func drawGameCursorOnRealScreen(bState *battleState, ps *programState, scale flo
 
 func drawCursorSprite(ps *programState, cursorID uint16, pos rl.Vector2, scale float32) {
 	def := spriteRegistry[cursorID]
-	if def.w == 0 {
+	if def.cropWidth == 0 {
 		return
 	}
 
@@ -1525,21 +1497,21 @@ func drawCursorSprite(ps *programState, cursorID uint16, pos rl.Vector2, scale f
 			return
 		}
 
-		srcRect = rl.NewRectangle(0, 0, float32(def.w), float32(def.h))
+		srcRect = rl.NewRectangle(0, 0, float32(def.cropWidth), float32(def.cropHeight))
 	} else {
 		tex = ps.Assets.getAtlas(def.atlasID, colorNone)
 		if tex.ID == 0 {
 			return
 		}
 
-		srcRect = rl.NewRectangle(float32(def.x), float32(def.y), float32(def.w), float32(def.h))
+		srcRect = rl.NewRectangle(float32(def.cropX), float32(def.cropY), float32(def.cropWidth), float32(def.cropHeight))
 	}
 
 	finalX := pos.X + (float32(def.offX) * scale)
 	finalY := pos.Y + (float32(def.offY) * scale)
 
-	destW := float32(def.w) * scale
-	destH := float32(def.h) * scale
+	destW := float32(def.cropWidth) * scale
+	destH := float32(def.cropHeight) * scale
 
 	ps.RenderDestRect = rl.NewRectangle(finalX, finalY, destW, destH)
 	ps.RenderOrigin = rl.NewVector2(0, 0)
@@ -1685,15 +1657,15 @@ func drawButtons(bState *battleState, ps *programState) {
 		}
 
 		// Wyznaczamy wycinek z atlasu (Source)
-		srcRect := rl.NewRectangle(float32(def.x), float32(def.y), float32(def.w), float32(def.h))
+		srcRect := rl.NewRectangle(float32(def.cropX), float32(def.cropY), float32(def.cropWidth), float32(def.cropHeight))
 		if def.flipX {
 			srcRect.Width = -srcRect.Width
 		}
 		// Centrujemy ikonę na przycisku
 		// Skalujemy ją, żeby zajmowała np. 80% wysokości przycisku
-		scale := (rect.Height * iconScale) / float32(def.h)
-		destW := float32(def.w) * scale
-		destH := float32(def.h) * scale
+		scale := (rect.Height * iconScale) / float32(def.cropHeight)
+		destW := float32(def.cropWidth) * scale
+		destH := float32(def.cropHeight) * scale
 		destX := rect.X + (rect.Width-destW)/2
 		destY := rect.Y + (rect.Height-destH)/2
 		rl.DrawTexturePro(tex, srcRect, rl.NewRectangle(destX, destY, destW, destH), rl.Vector2{}, 0, rl.White)
