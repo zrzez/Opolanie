@@ -972,7 +972,7 @@ func drawCorpses(y, startX, endX uint8, bState *battleState, ps *programState) {
 				finalID := baseID + corpsesFrameIndexOffset + offsetIndex
 				drawSprite(ps.Assets, finalID, posX, posY, currentCorpse.Owner)
 			} else {
-				cid := spriteeffectskeleton00 + uint16(currentCorpse.SkeletonType)
+				cid := spriteEffectskeleton00 + uint16(currentCorpse.SkeletonType)
 				tint := rl.Fade(rl.White, float32(currentCorpse.Alpha)/corpsesMaxAlpha)
 				drawSpriteEx(cid, posX, posY, colorNone, tint, ps)
 			}

@@ -2,10 +2,7 @@ package main
 
 // assets_ids.go
 
-// Zestawienie tekstura - ID
 const (
-	// Trawa 0 - 17
-
 	spriteGrassStart uint16 = 2
 	spriteGrassEnd   uint16 = 17
 
@@ -29,8 +26,6 @@ const (
 	spriteGrassStubbed uint16 = 0
 	spriteGrassGrazed  uint16 = 1
 
-	// --- SKAŁY (18 - 30) ---
-	// były 9-21
 	spriteRockStart uint16 = 18
 	spriteRockEnd   uint16 = 30
 
@@ -48,11 +43,16 @@ const (
 	spriteRock11 uint16 = 29
 	spriteRock12 uint16 = 30 // przechodnie! dawne rocks_17.png
 
-	// --- DROGI (31 - 51) ---
 	spriteRoadStart  uint16 = 31
 	spriteRoadButton uint16 = 46
 	spriteRoadEnd    uint16 = 51
 
+	/*
+		R - prawo
+		L - lewo
+		U - góra
+		D - dół
+	*/
 	spriteRoadR    uint16 = 37
 	spriteRoadL    uint16 = 38
 	spriteRoadD    uint16 = 39
@@ -69,8 +69,6 @@ const (
 	spriteRoadLRD  uint16 = 50
 	spriteRoadLRUD uint16 = 51
 
-	// --- MOSTY (55 - 62) ---
-	// były 46-53
 	spriteBridgeStart uint16 = 52
 	spriteBridgeEnd   uint16 = 59
 
@@ -85,13 +83,10 @@ const (
 
 	spriteBridgeConstruction uint16 = 516
 
-	// --- SUCHA ZIEMIA () ---
-	// były 22-24
 	spriteDryEarth01 uint16 = 60
 	spriteDryEarth02 uint16 = 61
 	spriteDryEarth03 uint16 = 62
 
-	// --- GADŻETY
 	spriteGadgetStart uint16 = 363
 	spriteGadgetEnd   uint16 = 378
 
@@ -112,15 +107,13 @@ const (
 	spriteGadget14 uint16 = 377
 	spriteGadget15 uint16 = 378
 
-	// --- WODA ---
-	spriteWaterStart  uint16 = 74 // Początek kafelków wody
+	spriteWaterStart  uint16 = 74
 	spriteWaterMiddle uint16 = 82
 	spriteWaterEnd    uint16 = 112
 
-	// --- DRZEWA ---
-	spriteTreeStumpStart uint16 = 113 // Pnie
+	spriteTreeStumpStart uint16 = 113
 	spriteTreeStumpEnd   uint16 = 119
-	spriteTreeTopStart   uint16 = 120 // Korony
+	spriteTreeTopStart   uint16 = 120
 	spriteTreeTopEnd     uint16 = 126
 
 	spriteTreeStump00    uint16 = 113
@@ -131,6 +124,9 @@ const (
 	spriteTreeStump05    uint16 = 118
 	spriteDryTreeStump00 uint16 = 119
 
+	// Nie są używane bezpośrednio - 03.05.2026.
+	// Pośrednio przy rysowaniu pni dodajemy przesunięcie
+	// aby uzyskać właściwy numer duszka.
 	spriteTreeTop00    uint16 = 120
 	spriteTreeTop01    uint16 = 121
 	spriteTreeTop02    uint16 = 122
@@ -139,58 +135,46 @@ const (
 	spriteTreeTop05    uint16 = 125
 	spriteDryTreeTop00 uint16 = 126
 
-	spriteTreeBurntStump00 uint16 = 380 // Spalone stojące
-	spriteTreeBurntStump01 uint16 = 381 // Spalone stojące
+	spriteTreeBurntStump00 uint16 = 380
+	spriteTreeBurntStump01 uint16 = 381
 
-	spriteTreeBurntTop00 uint16 = 382 // Spalone stojące
-	spriteTreeBurntTop01 uint16 = 383 // Spalone stojące
+	spriteTreeBurntTop00 uint16 = 382
+	spriteTreeBurntTop01 uint16 = 383
 
-	// == Upadające drzewa
+	spriteDryFallenTreeStump uint16 = 384
+	spriteDryFallenTreeTop   uint16 = 385
 
-	// = Suche
-	// Obalone
-	spriteDryFallenTreeStump uint16 = 384 // suche obalone 02
-	spriteDryFallenTreeTop   uint16 = 385 // suche obalone 02
-	// Upadające
-	spriteDryFallingStump   uint16 = 386 // suche obalane 01
-	spriteDryFallingTreeTop uint16 = 387 // suche obalane 01
-	// Przechylające się
-	spriteDryLeaningTreeStump     uint16 = 388 // suche obalane 00
-	spriteDryLeaningTreeTop       uint16 = 389 // suche obalane 00
-	spriteDryLeaningTreeCrownLeft uint16 = 390 // suche obalane 00
+	spriteDryFallingStump   uint16 = 386
+	spriteDryFallingTreeTop uint16 = 387
 
-	// = Zwęglone
-	// Obalone
-	spriteBurntFallenTreeStump uint16 = 391 // suche obalone 02
-	spriteBurntFallenTreeCrown uint16 = 392 // suche obalone 02
-	// Upadające
-	spriteBurntFallingTreeStump uint16 = 393 // suche obalane 01
-	spriteBurntFallingTreeCrown uint16 = 394 // suche obalane 01
-	// Przechylające się
-	spriteBurntLeaningTreeStump     uint16 = 395 // suche obalane 00
-	spriteBurntLeaningTreeCrown     uint16 = 396 // suche obalane 00
-	spriteBurntLeaningTreeCrownLeft uint16 = 397 // suche obalane 00
+	spriteDryLeaningTreeStump     uint16 = 388
+	spriteDryLeaningTreeTop       uint16 = 389
+	spriteDryLeaningTreeCrownLeft uint16 = 390
 
-	// 2. BUDYNKI I KONSTRUKCJE
+	spriteBurntFallenTreeStump uint16 = 391
+	spriteBurntFallenTreeCrown uint16 = 392
 
-	// --- PLAC BUDOWY (127 - 135) ---
+	spriteBurntFallingTreeStump uint16 = 393
+	spriteBurntFallingTreeCrown uint16 = 394
+
+	spriteBurntLeaningTreeStump     uint16 = 395
+	spriteBurntLeaningTreeCrown     uint16 = 396
+	spriteBurntLeaningTreeCrownLeft uint16 = 397
+
 	spriteConstructionStart uint16 = 127
 	spriteConstructionEnd   uint16 = 135
 
-	// --- RUINY (257 - 265) ---
 	spriteRuinStart uint16 = 257
 	spriteRuinEnd   uint16 = 265
 
-	// --- PALISADY (266 - 277) ---
 	spritePalisadeStart uint16 = 266
 	spritePalisadeEnd   uint16 = 277
 
-	spritePalisadeNE        uint16 = 266 // Niepołączona (pojedynczy słup)
-	spritePalisadeV         uint16 = 267 // Pionowa
-	spritePalisadeH         uint16 = 271 // Pozioma
-	spritePalisadeDestroyed uint16 = 277 // Zniszczona
+	spritePalisadeNE        uint16 = 266
+	spritePalisadeV         uint16 = 267
+	spritePalisadeH         uint16 = 271
+	spritePalisadeDestroyed uint16 = 277
 
-	// --- GOTOWE BUDYNKI --
 	spriteBuildingMainBase      uint16 = 137
 	spriteBuildingBarnBase      uint16 = 157
 	spriteBuildingBarracksBase  uint16 = 177
@@ -200,9 +184,6 @@ const (
 
 	spriteBuildingEnd uint16 = 255
 
-	// 3. UI I EFEKTY
-
-	// --- KURSORY ---
 	spriteCursorDefaultBig    uint16 = 501
 	spriteCursorCrossWhite    uint16 = 502
 	spriteCursorCrossRed      uint16 = 503
@@ -219,7 +200,6 @@ const (
 	spriteCursorPointer       uint16 = 515
 	spriteCursorFrameWhite    uint16 = 516
 
-	// --- PRZYCISKI (600+) ---
 	spriteBtnBuildPalisade      uint16 = 600
 	spriteBtnShield             uint16 = 601
 	spriteBtnRepair             uint16 = 603
@@ -233,23 +213,22 @@ const (
 	spriteBtnSpellMagicLighting uint16 = 610
 	spriteBtnSpellMagicFire     uint16 = 611
 
-	// --- EFEKTY ---
-	spriteeffectskeleton00 uint16 = 612
-	spriteeffectskeleton01 uint16 = 613
-	spriteeffectskeleton02 uint16 = 614
-	spriteEffectHit00      uint16 = 615
-	spriteEffectHit01      uint16 = 616
+	spriteEffectskeleton00 uint16 = 612
+	spriteEffectskeleton01 uint16 = 613
+	spriteEffectskeleton02 uint16 = 614
 
-	// --- LECZENIE
+	spriteEffectHit00 uint16 = 615
+	spriteEffectHit01 uint16 = 616
+
 	spriteEffectHeal00 uint16 = 617
 	spriteEffectHeal01 uint16 = 618
 
+	// @todo: oba powinny być wykorzystywane. Jakieś niedociągnięcie przy rysowaniu!
 	spriteEffectTransform00 uint16 = 619
 	spriteEffectTransform01 uint16 = 620
 
 	spriteVictoryPoint uint16 = 621
 
-	// --- OGIEŃ
 	spriteFireStart uint16 = 622
 	spriteFireEnd   uint16 = 635
 
@@ -266,12 +245,9 @@ const (
 	spriteFire10 uint16 = 632
 	spriteFire11 uint16 = 633
 
-	// --- POPIÓŁ
 	spriteAsh00 uint16 = 634
 	spriteAsh01 uint16 = 635
 
-	// --- POCISKI
-	// Strzała
 	spriteMissileArrowUp        = 636
 	spriteMissileArrowUpLeft    = 637
 	spriteMissileArrowLeft      = 638
@@ -281,7 +257,6 @@ const (
 	spriteMissileArrowRight     = 642
 	spriteMissileArrowDownRight = 643
 
-	// Bełt
 	spriteMissileBoltUp        = 644
 	spriteMissileBoltUpLeft    = 645
 	spriteMissileBoltLeft      = 646
@@ -291,7 +266,6 @@ const (
 	spriteMissileBoltRight     = 650
 	spriteMissileBoltDownRight = 651
 
-	// Ognisty pocisk
 	spriteMissileFireUp        = 652
 	spriteMissileFireUpLeft    = 653
 	spriteMissileFireLeft      = 654
@@ -301,7 +275,6 @@ const (
 	spriteMissileFireRight     = 658
 	spriteMissileFireDownRight = 659
 
-	// Piorun
 	spriteMissileLightningUp        = 660
 	spriteMissileLightningUpLeft    = 661
 	spriteMissileLightningLeft      = 662
@@ -311,7 +284,6 @@ const (
 	spriteMissileLightningRight     = 666
 	spriteMissileLightningDownRight = 667
 
-	// Włócznia
 	spriteMissileSpearUp        = 668
 	spriteMissileSpearUpLeft    = 669
 	spriteMissileSpearLeft      = 670
@@ -321,7 +293,6 @@ const (
 	spriteMissileSpearRight     = 674
 	spriteMissileSpearDownRight = 675
 
-	// Duch
 	spriteMissileGhostUp        = 676
 	spriteMissileGhostUpLeft    = 677
 	spriteMissileGhostLeft      = 678
@@ -333,7 +304,7 @@ const (
 	spriteMissileGhostAttack    = 684
 
 	// 4. JEDNOSTKI (700+)
-	// ID uint16 = 700 + (Type * 200) + (Frame * 8) + Dir.
+	// ID uint16 = 700 + (unitType * 200) + (Frame * 8) + Direction.
 	spriteUnitBaseID uint16 = 700
 	spriteUnitStep   uint16 = 200
 )

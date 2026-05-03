@@ -99,9 +99,9 @@ var idRegistry = map[string]uint16{
 	"SPRITE_EFFECT_HEAL_00":      spriteEffectHeal00,
 	"SPRITE_EFFECT_TRANSFORM_00": spriteEffectTransform00,
 	"SPRITE_VICTORY_POINT":       spriteVictoryPoint,
-	"SPRITE_EFFECT_SKELETON_00":  spriteeffectskeleton00,
-	"SPRITE_EFFECT_SKELETON_01":  spriteeffectskeleton01,
-	"SPRITE_EFFECT_SKELETON_02":  spriteeffectskeleton02,
+	"SPRITE_EFFECT_SKELETON_00":  spriteEffectskeleton00,
+	"SPRITE_EFFECT_SKELETON_01":  spriteEffectskeleton01,
+	"SPRITE_EFFECT_SKELETON_02":  spriteEffectskeleton02,
 
 	// Ogień
 	"SPRITE_FIRE_00": spriteFire00,
@@ -502,9 +502,9 @@ func initUISprites() {
 
 	// Zwłoki
 	// @todo: kompletnie porąbane nazwy!
-	setUI(spriteeffectskeleton00, 219, 50) //nolint:mnd
-	setUI(spriteeffectskeleton01, 219, 64) //nolint:mnd
-	setUI(spriteeffectskeleton02, 219, 78) //nolint:mnd
+	setUI(spriteEffectskeleton00, 219, 50) //nolint:mnd
+	setUI(spriteEffectskeleton01, 219, 64) //nolint:mnd
+	setUI(spriteEffectskeleton02, 219, 78) //nolint:mnd
 
 	// Rany
 	setUI(spriteEffectHit00, 219, 8) //nolint:mnd
@@ -557,11 +557,6 @@ func initUnitSprites() {
 		unitCrossbowman: {Atlas: atlasBuildings, BaseX: 224, BaseY: 0, Melee: false}, //nolint:mnd
 	}
 
-	const (
-		StartID uint16 = 700
-		StepID  uint16 = 200
-	)
-
 	for unitIndex := range uint16(unitTypeCount) {
 		currentUnitType := unitType(unitIndex)
 
@@ -570,7 +565,7 @@ func initUnitSprites() {
 			continue
 		}
 
-		spriteBaseID := StartID + (unitIndex * StepID)
+		spriteBaseID := spriteUnitBaseID + (unitIndex * spriteUnitStep)
 
 		for frame := range frameCount {
 			if cfg.Melee && (frame == frameAttack1 || frame == frameAttack2) {
