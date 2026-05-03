@@ -1013,7 +1013,7 @@ const (
 	decayStartSpriteOffset  = 41
 )
 
-// == Rzeczy dla assets_db.go
+// == Rzeczy dla assets_db.go.
 const (
 	directionUp uint8 = iota
 	directionUpRight
