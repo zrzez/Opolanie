@@ -850,14 +850,14 @@ func makeGrassVariations(bState *battleState) {
 	for y := range boardMaxY {
 		y5 := y * 5
 		for x := range boardMaxX {
-			tile := &bState.Board.Tiles[x][y]
-			id := tile.TextureID
+			currentTile := &bState.Board.Tiles[x][y]
+			id := currentTile.TextureID
 
 			if id >= spriteGrassStart && id <= spriteGrassEnd {
 				hash := uint16((x + y5) & 0x0F)
 				finalID := spriteGrassStart + hash
 
-				tile.TextureID = finalID
+				currentTile.TextureID = finalID
 			}
 		}
 	}

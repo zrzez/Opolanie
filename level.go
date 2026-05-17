@@ -80,10 +80,12 @@ func (l *jsonLevelLoader) applyJSONLevel(jsonLevel *jsonLevel, bState *battleSta
 		bState.CampaignData.TransformationSiteX = jsonLevel.SpecialLocations.TransformationPoint.X
 		bState.CampaignData.TransformationSiteY = jsonLevel.SpecialLocations.TransformationPoint.Y
 	}
+
 	if jsonLevel.SpecialLocations.VictoryPoint != nil {
 		bState.CampaignData.VictoryPointX = jsonLevel.SpecialLocations.VictoryPoint.X
 		bState.CampaignData.VictoryPointY = jsonLevel.SpecialLocations.VictoryPoint.Y
 	}
+
 	if jsonLevel.SpecialLocations.RescueTarget != nil {
 		bState.CampaignData.RescueTargetX = jsonLevel.SpecialLocations.RescueTarget.X
 		bState.CampaignData.RescueTargetY = jsonLevel.SpecialLocations.RescueTarget.Y
@@ -168,6 +170,7 @@ func configureTile(currentTile *tile, graphicID uint16) {
 		currentTile.IsWalkable = false
 	}
 
+	// @todo: to jest niepoprawne. niektóre ozdoby są przechodnie!
 	if isGadget(graphicID) {
 		currentTile.IsWalkable = false
 	}
@@ -236,13 +239,13 @@ func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bState *battleS
 
 			// 2. Pobranie wskaźnika na kafelek
 			tX, tY := uint8(xAxis), uint8(yAxis)
-			tile := &bState.Board.Tiles[tX][tY]
+			currentTile := &bState.Board.Tiles[tX][tY]
 
 			// 3. Przypisanie grafiki
-			tile.TextureID = graphicID
+			currentTile.TextureID = graphicID
 
 			// 4. Przetworzenie
-			configureTile(tile, graphicID)
+			configureTile(currentTile, graphicID)
 			l.spawnPalisade(tX, tY, graphicID, bState)
 		}
 	}

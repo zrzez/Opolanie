@@ -97,8 +97,9 @@ func isGrassOrGadget(tileTexID uint16) bool {
 }
 
 // Sprawdza, czy tekstura jest kamieniem nieprzechodnim. W ozdobach (gadget) są przechodnie.
-// @todo: zweryfików w pierwowzorze, czy wszystkie kamyczki są przeczywiście przechodnie i się palą.
+// @todo: zweryfikuj w pierwowzorze, czy wszystkie kamyczki są rzeczywiście przechodnie i się palą.
 // 17.05.2026
+// @todo: w większości są. Funkcja niestety do poprawy
 func isRockNonWalkable(tileTexID uint16) bool {
 	return tileTexID >= spriteRockStart && tileTexID < spriteRockEnd
 }
