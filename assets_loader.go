@@ -10,7 +10,8 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-// Stałe formatu pliku .dat
+// Stałe formatu pliku .dat.
+// Potrzebuję ich do otwierania i czytania oryginalnych plików gry.
 const (
 	loaderChunkSize  = 33000
 	loaderHeaderSize = 6
@@ -55,6 +56,7 @@ func (al *assetLoader) close() {
 // Wczytuje kawałki zdefiniowane w rawAssetDef i zwraca surowy bufor pikseli (RGBA).
 func (al *assetLoader) loadRawImage(def rawAssetDef) ([]byte, error) {
 	const linesPerChunk = 100
+
 	const totalHeight = 200
 
 	// Alokacja pamięci na pełny obraz 320x200
@@ -65,6 +67,7 @@ func (al *assetLoader) loadRawImage(def rawAssetDef) ([]byte, error) {
 	if palIdx >= len(al.palettes) {
 		palIdx = 0
 	}
+
 	activePalette := al.palettes[palIdx]
 
 	// Czytanie górnego kawałka (linie 0-99)
@@ -106,6 +109,7 @@ func (al *assetLoader) readChunkToBuffer(chunkID int, destY int, lines int, pal 
 			if ptr >= len(buf) {
 				break
 			}
+
 			colIdx := buf[ptr]
 			ptr++
 
@@ -131,6 +135,7 @@ func (al *assetLoader) readChunkToBuffer(chunkID int, destY int, lines int, pal 
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -157,18 +162,22 @@ func loadAllPalettes(path string) ([][]rl.Color, error) {
 
 	for i := 0; i < count; i++ {
 		buf := make([]byte, 768)
+
 		if _, err := io.ReadFull(f, buf); err != nil {
 			return nil, err
 		}
 
 		p := make([]rl.Color, 256)
+
 		for j := 0; j < 256; j++ {
 			r := buf[j*3]
 			g := buf[j*3+1]
 			b := buf[j*3+2]
-			p[j] = rl.NewColor(r, g, b, 255)
+			p[j] = rl.NewColor(r, g, b, 255) //nolint:mnd
 		}
+
 		res = append(res, p)
 	}
+
 	return res, nil
 }
