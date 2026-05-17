@@ -170,9 +170,13 @@ func configureTile(currentTile *tile, graphicID uint16) {
 		currentTile.IsWalkable = false
 	}
 
-	// @todo: to jest niepoprawne. niektóre ozdoby są przechodnie!
 	if isGadget(graphicID) {
-		currentTile.IsWalkable = false
+		switch graphicID {
+		case spriteGadget02, spriteGadget03, spriteGadget13:
+			currentTile.IsWalkable = true
+		default:
+			currentTile.IsWalkable = false
+		}
 	}
 
 	if state, isBurnt, isWalkableOverride := classifyTreeFromTexture(graphicID); state != noTree {

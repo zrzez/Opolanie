@@ -564,15 +564,18 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 			bState.SelectionStart = rl.NewVector2(0, 0)
 			bState.InitialClickPos = rl.NewVector2(0, 0)
 			bState.MouseCommandMode = 1
+
 			return true
 		}
 
 		if bState.MouseCommandMode > 1 {
 			log.Println("INPUT: Anulowano tryb celowania prawym przyciskiem.")
+
 			bState.MouseCommandMode = cmdIdle
 			bState.PendingBuildingType = 0
 			bState.CurrentMessage.Text = "Anulowano"
 			bState.CurrentMessage.Duration = 30
+
 			return true
 		}
 
@@ -580,6 +583,7 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 		if len(selectedUnits) > 0 {
 			tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
 			targetID := uint(0)
+
 			var targetOwner uint8
 
 			if tileUnderCursor.Unit != nil {
@@ -606,6 +610,7 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 						break
 					}
 				}
+
 				if canAttackTree {
 					commandType = cmdAttack
 					// targetID pozostaje 0; koordynaty ataku są przekazywane przez tileX, tileY

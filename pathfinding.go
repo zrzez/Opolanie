@@ -172,9 +172,9 @@ func isWalkableUnit(bState *battleState, x, y uint8, mover *unit) bool {
 	}
 
 	// 2. Standardowa weryfikacja terenu
-	if isWaterOrObstacle(currentTile.TextureID) {
-		return false
-	}
+	// if isWaterOrObstacle(currentTile.TextureID) {
+	// 	return false
+	// }
 
 	// 3. Flaga z loadera mapy (jeśli loader oznaczył coś jako nieprzechodnie ręcznie)
 	if !currentTile.IsWalkable {
@@ -205,10 +205,10 @@ func isWaterOrObstacle(spriteID uint16) bool {
 	// Stary kod blokował: 54, 58, 60... (wybiórczo).
 	// Nowy start gadżetów to 363. Stare 54 to teraz 363.
 	// Przykładowo: blokujemy wszystko co wygląda na duży kamień/płot.
-	if spriteID >= spriteGadgetStart && spriteID <= spriteGadgetEnd {
-		// Tu można dodać wyjątki dla grzybków (przechodnich)
-		return true
-	}
+	//if spriteID >= spriteGadgetStart && spriteID <= spriteGadgetEnd {
+	//	// Tu można dodać wyjątki dla grzybków (przechodnich)
+	//	return false
+	//}
 
 	// Zgliszcza i palisady (jeśli nie mają obiektu building)
 	// UWAGA: Palisady (building) są obsługiwane przez tile.building != nil w isWalkableUnit.
@@ -236,8 +236,8 @@ func calculateMoveCost(from, to *pathNode, bState *battleState, moverID uint) fl
 
 	// Unikanie tłoku (sztuczka A*):
 	// Inne jednostki nie są ścianą (isWalkableUnit puszcza), ale są bardzo drogie.
-	tile := &bState.Board.Tiles[to.X][to.Y]
-	if tile.Unit != nil && uint(tile.Unit.Owner) == moverID {
+	currentTile := &bState.Board.Tiles[to.X][to.Y]
+	if currentTile.Unit != nil && uint(currentTile.Unit.Owner) == moverID {
 		cost *= 3
 	}
 
@@ -247,15 +247,18 @@ func calculateMoveCost(from, to *pathNode, bState *battleState, moverID uint) fl
 func calcHeuristic(from, to *pathNode) float64 {
 	dx := float64(to.X - from.X)
 	dy := float64(to.Y - from.Y)
+
 	return math.Sqrt(dx*dx + dy*dy)
 }
 
 func reconstructPath(node *pathNode) []*pathNode {
 	var path []*pathNode
+
 	current := node
 	for current != nil {
 		path = append(path, current)
 		current = current.parent
 	}
+
 	return path
 }
