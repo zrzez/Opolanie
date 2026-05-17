@@ -740,7 +740,10 @@ func drawUnitInterface(renderUnit *unit, bState *battleState) {
 	screenX := int32(renderUnit.X) * int32(tileWidth)
 	screenY := int32(renderUnit.Y) * int32(tileHeight)
 
-	if renderUnit.IsSelected {
+	isUnitSelected := renderUnit.IsSelected ||
+		(bState.CurrentSelection.IsUnit && bState.CurrentSelection.UnitID == renderUnit.ID)
+
+	if isUnitSelected {
 		drawUnitSelectionFrame(renderUnit, bState)
 		drawUnitHealthBar(screenX, screenY, renderUnit)
 
