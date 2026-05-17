@@ -97,6 +97,8 @@ func isGrassOrGadget(tileTexID uint16) bool {
 }
 
 // Sprawdza, czy tekstura jest kamieniem nieprzechodnim. W ozdobach (gadget) są przechodnie.
+// @todo: zweryfików w pierwowzorze, czy wszystkie kamyczki są przeczywiście przechodnie i się palą.
+// 17.05.2026
 func isRockNonWalkable(tileTexID uint16) bool {
 	return tileTexID >= spriteRockStart && tileTexID < spriteRockEnd
 }
@@ -143,8 +145,11 @@ func (t *tile) isBurntTree() bool {
 
 // Płomienie
 
-// @todo: odsiej kafelki, które nie powinny się palić: np. woda.
 func (t *tile) setOnFire(fireSize uint16, bState *battleState) {
+	if isWaterTileOnly(t.TextureID) {
+		return
+	}
+
 	t.IsBurning = true
 	t.BurnElapsed = fireSize - bigBurn
 
