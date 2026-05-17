@@ -2,7 +2,7 @@ package main
 
 // drawingBattle.go
 
-// @todo: OPTYMALIZACJA PAMIĘCI. Obecnie w pętli rysowania tworzone są nowe obiekty.
+// @todo: OPTYMALIZACJA PAMIĘCI. Obecnie w pętli rysowania tworzone są nowiuśkie obiekty.
 // (rl.NewRectangle, rl.NewVector2), co powoduje wzrost zużycia RAMu.
 // Docelowo należy wprowadzić pre-alokowane zmienne robocze na wzór programState
 // RenderSourceRect rl.Rectangle

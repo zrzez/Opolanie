@@ -19,7 +19,7 @@ import (
 
 var rng *rand.Rand
 
-// @todo: sprawdź później, czy nadal jest to potrzebne przy odnajdywaniu drogi przez jednostki
+// @todo: sprawdź później, czy nadal jest to potrzebne przy odnajdywaniu drogi przez jednostki.
 func init() {
 	source := rand.NewSource(time.Now().UnixNano())
 	rng = rand.New(source)
@@ -31,7 +31,7 @@ const (
 	virtualScreenHeight uint16 = 400
 )
 
-// Stałe potrzebne do rysowania widoku bitwy
+// Stałe potrzebne do rysowania widoku bitwy.
 const (
 	gameViewVirtualWidth = 640                  // Szerokość widoku bitwy
 	uiPanelVirtualWidth  = 120                  // Szerokość nakładki
@@ -40,31 +40,31 @@ const (
 	scrollZoneYThreshold = 8
 )
 
-// Rodzaj ekranów, które mogą wystąpić podczas działania programu
+// Rodzaj ekranów, które mogą wystąpić podczas działania programu.
 type screenState uint8
 
 const (
 	gameScreen            screenState = iota // Eran bitwy
 	mainMenuScreen                           // Ekran menu głównego
 	newCampaignMenuScreen                    // Ekran wyboru wyprawy
-	// SELECT_MISSION_MENU_SCREEN                    // Ekran wyboru misji w oryginalnej wyprawie
-	// SAVE_MENU_SCREEN                              // Ekran zapisu gry
-	// LOAD_MENU_SCREEN                              // Ekran wczytywania gry
-	// SETTINGS_MENU_SCREEN                          // Ekran ustawień gry
-	// INTRO_SCREEN                                  // Ekran odtwarzania wstępniaków
+	// SELECT_MISSION_MENU_SCREEN                    // Ekran wyboru misji w oryginalnej wyprawie.
+	// SAVE_MENU_SCREEN                              // Ekran zapisu gry.
+	// LOAD_MENU_SCREEN                              // Ekran wczytywania gry.
+	// SETTINGS_MENU_SCREEN                          // Ekran ustawień gry.
+	// INTRO_SCREEN                                  // Ekran odtwarzania wstępniaków.
 )
 
-// Określnik poziomu trudności rozgrywki
+// Określnik poziomu trudności rozgrywki.
 type difficultyLevel int
 
-// Poziomy trudności rozgrywki
+// Poziomy trudności rozgrywki.
 const (
 	difficultyEasy   = iota // Łatwy
 	difficultyNormal        // Zwyczajny
 	difficultyHard          // Trudny
 )
 
-// Określenie stanu programu
+// Określenie stanu programu.
 type programState struct {
 	// === OGÓLNE ===
 	BaseAssetsPath string      // Ścieżka dostępu do zasobów gry
@@ -97,8 +97,7 @@ type programState struct {
 	MenuCamera         rl.Camera2D        // Kamera wykorzystywana w menu głównym
 	GameCamera         rl.Camera2D        // Kamera wykorzystywana w bitwie
 
-	Assets *assetManager // zbiór atlasów z pliku .dat; Przechodzę na ten układ korzystania z tekstur
-	// NOWE PODEJŚCIE DO PRZYCISKÓW 31.12.2025 próba ostatecznego rozwiązania sprawy
+	Assets            *assetManager // zbiór atlasów z pliku .dat; Przechodzę na ten układ korzystania z tekstur
 	ActiveMenuButtons []button
 }
 
@@ -126,10 +125,11 @@ func newProgramState() *programState {
 	return ps
 }
 
-// Przelicza wymiary urojonego płótna na podstawie fizycznych wymiarów okna
-// Zachowuje proporcje
+// Przelicza wymiary urojonego płótna na podstawie fizycznych wymiarów okna.
+// Zachowuje proporcje.
 func (ps *programState) recalculateVirtualResolution() {
 	fmt.Print("DEBUG: zmiana wielkości okna. To nie powinno być ciągle wywoływane")
+
 	if ps.ActualScreenHeight == 0 {
 		ps.ActualScreenHeight = 1
 	}
@@ -172,10 +172,11 @@ func (ps *programState) recalculateVirtualResolution() {
 	setupMenuCamera(ps)
 }
 
-// Odtwarza animację bez dźwięku
+// Odtwarza animację bez dźwięku.
 func playFrameAnimation(framesDirPath string, targetFps int) bool {
 	if _, err := os.Stat(framesDirPath); os.IsNotExist(err) {
 		log.Printf("OSTRZEŻENIE: Katalog animacji nie istnieje: %s\n", framesDirPath)
+
 		return true // błąd nie jest krytyczny, można działać dalej
 		// brak folderu z animacjami nie powinien zawieszać/zamykać gry
 	}
@@ -183,11 +184,13 @@ func playFrameAnimation(framesDirPath string, targetFps int) bool {
 	files, err := os.ReadDir(framesDirPath)
 	if err != nil {
 		log.Printf("OSTRZEŻENIE: Nie można odczytać katalogu animacji: %s\n", framesDirPath)
+
 		return true // błąd nie jest krytyczny, można działać dalej
 		// brak klatek z animacji nie powinien zawieszać/zamykać gry
 	}
 
 	var frameFiles []string
+
 	for _, file := range files {
 		if !file.IsDir() { // tylko pliki, które nie są folderami
 			frameFiles = append(frameFiles, filepath.Join(framesDirPath, file.Name()))
@@ -196,6 +199,7 @@ func playFrameAnimation(framesDirPath string, targetFps int) bool {
 
 	if len(frameFiles) == 0 {
 		log.Printf("OSTRZEŻENIE: Brak klatek w katalogu: %s\n", framesDirPath)
+
 		return true // brak animacji nie jest krytycznym błędem, można działać dalej
 	}
 
@@ -203,18 +207,22 @@ func playFrameAnimation(framesDirPath string, targetFps int) bool {
 	sort.Strings(frameFiles) // klatki powinny być w odpowiedniej kolejności
 
 	textures := make([]rl.Texture2D, len(frameFiles))
-	for i, filePath := range frameFiles {
+	for index, filePath := range frameFiles {
 		tex := rl.LoadTexture(filePath)
+
 		if tex.ID == 0 { // sprawdzenie, czy tekstura została załadowana poprawnie
 			log.Printf("OSTRZEŻENIE: Nie udało się załadować klatki: %s\n", filePath)
-			for j := 0; j < i; j++ {
+			for j := 0; j < index; j++ {
 				// czyścimy załadowane tekstury
 				rl.UnloadTexture(textures[j])
 			}
+
 			return true // brak animacji nie jest krytycznym błędem, można działać dalej
 		}
-		textures[i] = tex
+
+		textures[index] = tex
 	}
+
 	defer func() {
 		for _, tex := range textures {
 			if tex.ID != 0 {
@@ -222,6 +230,7 @@ func playFrameAnimation(framesDirPath string, targetFps int) bool {
 			}
 		}
 	}()
+
 	animShortName := filepath.Base(framesDirPath)
 	log.Printf("INFO: Rozpoczęcie odtwarzania animacji klatkowej: %s (%d klatek @ %d FPS)\n", animShortName,
 		len(textures), targetFps)
@@ -233,6 +242,7 @@ func playFrameAnimation(framesDirPath string, targetFps int) bool {
 	for !rl.WindowShouldClose() {
 		if rl.IsKeyPressed(rl.KeySpace) {
 			log.Println("INFO: Animacja pominięta przez użytkownika.")
+
 			return false // pomijamy
 		}
 
@@ -240,6 +250,7 @@ func playFrameAnimation(framesDirPath string, targetFps int) bool {
 		if frameTimer >= frameDuration {
 			frameTimer -= frameDuration
 			currentFrameIndex++
+
 			if currentFrameIndex >= len(textures) {
 				break
 			}
@@ -263,10 +274,10 @@ func playFrameAnimation(framesDirPath string, targetFps int) bool {
 	return true
 }
 
-// Odtwarza dźwięk dla wstępniaka
-// prawdopodobnie tylko .wav wchodzi w grę
+// Odtwarza dźwięk dla wstępniaka prawdopodobnie tylko .wav wchodzi w grę.
 func playSoundEffect(ps *programState, soundPath string) rl.Sound {
 	if _, err := os.Stat(soundPath); os.IsNotExist(err) {
+
 		log.Printf("OSTRZEŻENIE: Plik ze ścieżką dźwiękową nie istnieje: %s\n", soundPath)
 		return rl.Sound{}
 	}
@@ -274,16 +285,18 @@ func playSoundEffect(ps *programState, soundPath string) rl.Sound {
 	sound := rl.LoadSound(soundPath)
 	if !rl.IsSoundValid(sound) {
 		log.Printf("OSTRZEŻENIE: Nie udało się załadować dźwięku: %s\n", soundPath)
+
 		return rl.Sound{}
 	}
 
 	rl.SetSoundVolume(sound, ps.SFXVolume)
 	rl.PlaySound(sound)
 	log.Printf("INFO: Odtwarzanie dźwięku: %s\n", filepath.Base(soundPath))
+
 	return sound
 }
 
-// Zatrzymuje i zwalnia dźwięk
+// Zatrzymuje i zwalnia dźwięk.
 func stopAndUnloadSound(sound rl.Sound) {
 	if rl.IsSoundValid(sound) {
 		log.Printf("INFO: zatrzymywanie dźwięku i zwalnianie kanału z dźwiękiem.\n")
@@ -298,6 +311,7 @@ func playIntroSegment(ps *programState, framesDirName, soundFileName string) boo
 	framesPath := filepath.Join(dataPath, framesDirName)
 
 	var currentSound rl.Sound
+
 	if soundFileName != "" {
 		soundPath := filepath.Join(dataPath, soundFileName)
 		currentSound = playSoundEffect(ps, soundPath)
@@ -305,9 +319,11 @@ func playIntroSegment(ps *programState, framesDirName, soundFileName string) boo
 
 	const defaultIntroFPS = 60
 	continueSequence := playFrameAnimation(framesPath, defaultIntroFPS)
+
 	if !continueSequence {
 		log.Println("INFO: Wstęp przerwany przez gracza.")
 		stopAndUnloadSound(currentSound)
+
 		return false
 	}
 
@@ -323,6 +339,7 @@ func playIntro(ps *programState) bool {
 
 	if ps.BaseAssetsPath == "" {
 		log.Println("OSTRZEŻENIE: programState.BaseAssetsPath nie jest ustawione! Nie można odtworzyć wstępu")
+
 		return true
 	}
 
@@ -336,10 +353,11 @@ func playIntro(ps *programState) bool {
 	playIntroSegment(ps, "s002_frames", "i002.wav")
 
 	log.Println("INFO: Wstęp odtworzony pomyślnie")
+
 	return true
 }
 
-// Powinien zainicjować odtwarzacz pieśni
+// Powinien zainicjować odtwarzacz pieśni.
 func initMusicPlayer(ps *programState) {
 	if !rl.IsAudioDeviceReady() {
 		log.Println("OSTRZEŻENIE: urządzenie audio nie jest gotowe.")
@@ -350,14 +368,16 @@ func initMusicPlayer(ps *programState) {
 	}
 }
 
-// Odtworzenie pieśni
+// Odtworzenie pieśni.
 func playMusicByNumber(ps *programState, trackNumber int) error {
 	if !ps.MusicEnabled {
 		return nil
 	}
+
 	if trackNumber < 1 || trackNumber > len(ps.GameMusicFiles) {
 		return fmt.Errorf("nieprawidłowy numer pieśni: %d", trackNumber)
 	}
+
 	if ps.CurrentMusic.Stream.Buffer != nil {
 		rl.StopMusicStream(ps.CurrentMusic)
 		rl.UnloadMusicStream(ps.CurrentMusic)
@@ -370,23 +390,25 @@ func playMusicByNumber(ps *programState, trackNumber int) error {
 	rl.SetMusicVolume(ps.CurrentMusic, ps.MusicVolume)
 	ps.CurrentTruckNumber = trackNumber
 	log.Printf("INFO: Odtwarzanie pieśni: %s (ścieżka %d)", ps.GameMusicFiles[trackNumber-1], trackNumber)
+
 	return nil
 }
 
-// Uaktualnienie pieśni
+// Uaktualnienie pieśni.
 func updateMusic(ps *programState) {
 	if ps.CurrentMusic.Stream.Buffer != nil && ps.MusicEnabled {
 		rl.UpdateMusicStream(ps.CurrentMusic)
 	}
 }
 
-// Wyłącz odtwarzanie pieśni
+// Wyłącz odtwarzanie pieśni.
 func shutDownMusicPlayer(ps *programState) {
 	if ps.CurrentMusic.Stream.Buffer != nil {
 		rl.StopMusicStream(ps.CurrentMusic)
 		rl.UnloadMusicStream(ps.CurrentMusic)
 		ps.MusicEnabled = false
 	}
+
 	log.Println("INFO: Układ odtwarzania pieśni wyłączony.")
 }
 
@@ -409,18 +431,19 @@ func drawMainMenu(ps *programState) {
 	for _, btn := range ps.ActiveMenuButtons {
 		rl.DrawRectangleLinesEx(btn.Rectangle, 1, rl.Green)
 	}
+
 	rl.EndMode2D()
 }
 
 // Odpowiada za tłumaczenie współrzędnych z płótna rzeczywistego
-// do płótna urojonego, które jest płótnem podstawowym w programie
+// do płótna urojonego, które jest płótnem podstawowym w programie.
 func screenToVirtualCoords(ps *programState, screenPos rl.Vector2) rl.Vector2 {
 	if ps.CurrentState == gameScreen {
 		// Mysz w bitwie
 		// Proste skalowanie, bo gra wypełnia ekran
 		scale := float32(ps.ActualScreenHeight) / ps.VirtualHeight
-		return rl.NewVector2(screenPos.X/scale, screenPos.Y/scale)
 
+		return rl.NewVector2(screenPos.X/scale, screenPos.Y/scale)
 	}
 
 	// Mysz w menu
@@ -461,7 +484,7 @@ func (ps *programState) changeState(newState screenState, bState *battleState) {
 	}
 }
 
-// Odpowiada za rysowanie urojonego płótna, które później ma być skalowane do docelowej wielkości
+// Odpowiada za rysowanie urojonego płótna, które później ma być skalowane do docelowej wielkości.
 func drawSceneToVirtualScreen(bState *battleState, ps *programState) {
 	rl.BeginTextureMode(ps.ScreenTarget)
 	rl.ClearBackground(rl.Black)
@@ -545,7 +568,7 @@ func drawSceneToActualScreen(bState *battleState, ps *programState) {
 }
 
 // Odpowiada za dopasowanie rozmiaru okna w ProgramState do rzeczywistego
-// Pozwala prawidłowo dopasować tekstury do okna
+// Pozwala prawidłowo dopasować tekstury do okna.
 func updateWindowSize(bState *battleState, ps *programState) {
 	newWidth := int32(rl.GetScreenWidth())
 	newHeight := int32(rl.GetScreenHeight())
@@ -579,7 +602,7 @@ func updateWindowSize(bState *battleState, ps *programState) {
 	}
 }
 
-// Zwraca współrzędne myszy. Używać do nastawiania przycisków
+// Zwraca współrzędne myszy. Używać do nastawiania przycisków.
 func logVirtualMouseCoordinates(ps *programState) {
 	if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		screenMousePos := rl.GetMousePosition()
@@ -642,7 +665,7 @@ func drawEyes(ps *programState) {
 }
 
 // Odpowiada za wybór funkcji do rysowania właściwego widoku
-// menu głównego, wybór wyprawy itd
+// menu głównego, wybór wyprawy itd.
 func renderCurrentScene(bState *battleState, ps *programState) {
 	switch ps.CurrentState {
 	case mainMenuScreen:
@@ -659,7 +682,7 @@ func renderCurrentScene(bState *battleState, ps *programState) {
 	}
 }
 
-// Dobiera logikę obsługi wejścia na postawie programState.CurrentState
+// Dobiera logikę obsługi wejścia na postawie programState.CurrentState.
 func handleCurrentScreenInput(bState *battleState, ps *programState) {
 	// logVirtualMouseCoordinates(ps) // @todo: zakomentuj później, bo zapycha konsolę niepotrzebnie
 	switch ps.CurrentState {
@@ -674,13 +697,13 @@ func handleCurrentScreenInput(bState *battleState, ps *programState) {
 	}
 }
 
-// Odpowiada za wywołanie odświeżania obrazu
+// Odpowiada za wywołanie odświeżania obrazu.
 func updateCurrentScreen(bState *battleState, ps *programState) {
 	switch ps.CurrentState {
 	case mainMenuScreen:
-		// można zostawić puste, bo nie powinno być logiki zmiany ekranu co klatkę
+		// można zostawić puste, bo nie powinno być logiki zmiany ekranu co klatkę.
 	case newCampaignMenuScreen:
-		// można zostawić puste, bo nie powinno być logiki zmiany ekranu co klatkę
+		// można zostawić puste, bo nie powinno być logiki zmiany ekranu co klatkę.
 	case gameScreen:
 		updateGame(bState)
 		updateActionButtons(bState)
@@ -696,6 +719,7 @@ func (ps *programState) loadTextureCategory(texMap map[int]rl.Texture2D, dirPath
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		log.Printf("OSTRZEŻENIE: Nie można odczytać katalogu %s ('%s'): %v", categoryName, dirPath, err)
+
 		return
 	}
 
@@ -713,16 +737,19 @@ func (ps *programState) loadTextureCategory(texMap map[int]rl.Texture2D, dirPath
 			if err != nil {
 				log.Printf("BŁĄD: %s - Nie można sparsować ID '%s' z pliku '%s'",
 					categoryName, matches[len(matches)-1], file.Name())
+
 				continue
 			}
 
 			if _, found := texMap[id]; found {
 				log.Printf("OSTRZEŻENIE: %s - Konflikt ID %d. Plik '%s' zignorowany", categoryName, id, file.Name())
+
 				continue
 			}
 
 			texPath := filepath.Join(dirPath, file.Name())
 			texture := rl.LoadTexture(texPath)
+
 			if texture.ID == 0 {
 				log.Printf("BŁĄD: %s - Nie udało się załadować: %s", categoryName, texPath)
 			} else {
@@ -730,22 +757,24 @@ func (ps *programState) loadTextureCategory(texMap map[int]rl.Texture2D, dirPath
 			}
 		}
 	}
+
 	log.Printf("INFO: %s - Załadowano %d tekstur", categoryName, len(texMap))
 }
 
-// @todo: sprawdź, czy do zmiany po ogarnięciu ładowania zasobów z .dat
+// @todo: sprawdź, czy do zmiany po ogarnięciu ładowania zasobów z .dat.
 func (ps *programState) loadSingleTexture(path string) (rl.Texture2D, error) {
 	texture := rl.LoadTexture(path)
 	if texture.ID == 0 {
 		return rl.Texture2D{}, fmt.Errorf("nie udało się załadować tekstury: %s", path)
 	}
+
 	return texture, nil
 }
 
 // newBattleState @todo: w kampanii gracz zawsze czerwony, ale przeciwnicy to już różnie
 // zmień to zakodowane na sztywno na dynamiczne, w zależności od prowincji
 // te dane przechowujemy nawet w „prowintionInit”
-// w ogóle powinno się przenieść określenie battleState w miejsce, gdzie odpalamy bitwy
+// w ogóle powinno się przenieść określenie battleState w miejsce, gdzie odpalamy bitwy.
 func newBattleState(pState *programState) *battleState {
 	return &battleState{
 		// Ustawiamy na NONE (0) - stan jest "nieuzbrojony"
@@ -848,10 +877,10 @@ func getEnemyColor(levelNumber uint8) uint8 {
 
 func main() {
 	// Debugger (opcjonalny)
-	//go func() {
-	//	log.Println("Uruchamiam serwer pprof na localhost:6060")
-	//	log.Println(http.ListenAndServe("localhost:6060", nil))
-	//}()
+	//	go func() {
+	//		log.Println("Uruchamiam serwer pprof na localhost:6060")
+	//		log.Println(http.ListenAndServe("localhost:6060", nil))
+	//	}()
 
 	// 1. Inicjalizacja zmiennych stanu (bez grafiki!)
 	programState := newProgramState()
@@ -861,7 +890,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Krytyczny błąd: Nie można ustalić ścieżki pliku wykonywalnego: %v", err)
 	}
+
 	executableDir := filepath.Dir(executablePath)
+
 	programState.BaseAssetsPath = filepath.Join(executableDir, "assets")
 	log.Printf("Bazowa ścieżka zasobów ustawiona na: %s", programState.BaseAssetsPath)
 
@@ -869,10 +900,12 @@ func main() {
 	rl.SetConfigFlags(rl.FlagWindowResizable | rl.FlagWindowAlwaysRun)
 	rl.InitWindow(programState.ActualScreenWidth, programState.ActualScreenHeight, "Opolanie")
 	rl.SetWindowMinSize(640, 400)
+
 	defer rl.CloseWindow()
 
 	// 4. Audio
 	rl.InitAudioDevice()
+
 	defer func() {
 		shutDownMusicPlayer(programState)
 		rl.CloseAudioDevice()
@@ -887,12 +920,14 @@ func main() {
 		log.Printf("BŁĄD KRYTYCZNY: Nie udało się otworzyć .dat: %v", err)
 	} else {
 		log.Println("INFO: assetLoader załadowany pomyślnie.")
+
 		defer loader.close()
 	}
 
 	// 6. Inicjalizacja AssetManagera
 	if loader != nil {
 		programState.Assets = newAssetManager(loader)
+
 		log.Println("INFO: AssetManager utworzony i gotowy do pracy.")
 	}
 
@@ -913,7 +948,9 @@ func main() {
 		rl.CloseWindow()
 		log.Fatalln("Nie udało się załadować tekstury renderującej (Błąd FBO)")
 	}
+
 	rl.SetTextureFilter(programState.ScreenTarget.Texture, rl.FilterPoint)
+
 	defer func() {
 		if programState.ScreenTarget.ID != 0 {
 			rl.UnloadRenderTexture(programState.ScreenTarget)
