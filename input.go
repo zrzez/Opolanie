@@ -749,6 +749,10 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 
 		if tileUnderCursor.Unit != nil {
 			targetID = tileUnderCursor.Unit.ID
+
+			// @todo: usuń
+			log.Printf("JEDNOSTKA MA: %d doświadczenia", tileUnderCursor.Unit.Experience)
+			log.Printf("MAGICZNA TARCZA: %t", tileUnderCursor.Unit.hasMagicShield)
 		} else if tileUnderCursor.Building != nil {
 			targetID = tileUnderCursor.Building.ID
 		}
@@ -763,6 +767,7 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 		// Kliknięto w puste pole -> Początek rysowania prostokąta zaznaczenia (Drag Selection)
 		log.Println("DBG_LCLICK: Kliknięto na puste pole. Początek zaznaczania.")
 
+		// @todo: sprawdź, czy to w ogóle działa!
 		if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
 			// Jeśli nie trzymamy Shift, czyścimy poprzednie zaznaczenie
 			clearSelection(bState)

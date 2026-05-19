@@ -153,11 +153,16 @@ const (
 )
 
 const (
-	// Ile kosztują czarny.
+	// Ile kosztują czary.
 	spellCostMagicShield uint16 = 50
 	spellCostMagicSight  uint16 = 25
 	// Zasięg ?
 	spellRangeMagicSight uint8 = 14
+)
+
+const (
+	// Ile trwają czary.
+	spellDurationMagicShield uint = 100
 )
 
 const (
@@ -232,6 +237,15 @@ var victoryPointColors = []rl.Color{
 	rl.Gold,                          // DarkYellow
 	rl.Yellow,                        // Yellow
 }
+
+// @reminder: O ile dobrze rozumiem, to ograniczenie doświadczenia było
+// ustawione na 240, ale 224 było ostatnim „poziomem. Pomiędzy 224 a 240
+// jest martwa przestrzeń, która nic już nie zmienia. Dlatego ustawiam
+// ogranicznik na 224.
+var (
+	experienceCap         uint = 224
+	experienceCasterBonus uint = 2
+)
 
 // @todo: to chyba powiązane ze zdobywanym doświadczeniem przez jednostkę.
 var dDamage = [15]uint8{1, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6, 7, 8, 9}

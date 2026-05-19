@@ -86,17 +86,21 @@ type unit struct {
 	// kto do kogo przynależy i np. krowy gdzie idą dać się wydoić!
 	AllowFriendlyFire bool // Wskaźnik, czy możemy napaść swoich
 	// cechy w grze
-	SightRange  uint8          // Pole widzenia
-	AttackRange uint8          // Zasięg uderzenia
-	Damage      uint16         // Obrażenia
-	Armor       uint16         // Obrona
-	MaxDelay    uint16         // Najwyższe opóźnienie jednostki. Nie rozumiem, co to znaczy
-	Mana        uint16         // Miara many jednostki
-	MaxMana     uint16         // Górna granica many
-	Effects     []activeEffect // Wykaz działających efektów
+	SightRange  uint8  // Pole widzenia
+	AttackRange uint8  // Zasięg uderzenia
+	Damage      uint16 // Obrażenia
+	Armor       uint16 // Obrona
+	MaxDelay    uint16 // Najwyższe opóźnienie jednostki. Nie rozumiem, co to znaczy
+	Mana        uint16 // Miara many jednostki
+	MaxMana     uint16 // Górna granica many
+	// Effects     []activeEffect // Wykaz działających efektów
 	// przechowywanie mleka przez jednostki
 	Udder  uint8   // Dosłownie wymiona
 	Wounds []wound // Wykaz świeżo zadanych ran
+
+	// Magiczna tarcza, tylko dla unitPriestess
+	hasMagicShield      bool // Wskazuje, czy jednostka jest chroniona magiczną tarczą
+	MagicShieldCooldown uint // Wskazuje ile zostało do końca ochrony magiczną tarczą
 
 	// Pola do rysowania jednostki
 	AnimationType    string     // Rodzaj rysunku ("walk", "attack"). "idle" NIE ISTNIEJE!

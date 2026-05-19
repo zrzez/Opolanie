@@ -118,6 +118,22 @@ func healingShrine(bState *battleState) {
 	}
 }
 
+func handleMagicShieldEffect(bState *battleState) {
+	if bState.GlobalFrameCounter%4 != 0 {
+		return
+	}
+
+	for _, currentUnit := range bState.Units {
+		if currentUnit.hasMagicShield {
+			currentUnit.MagicShieldCooldown--
+
+			if currentUnit.MagicShieldCooldown == 0 {
+				currentUnit.hasMagicShield = false
+			}
+		}
+	}
+}
+
 func manaRegen(bState *battleState) {
 	// 15 Hz dla 60 klatek na sekundę, aby zachować zgodność z pierwowzorem
 	if bState.GlobalFrameCounter%4 != 0 {

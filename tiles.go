@@ -128,6 +128,10 @@ func (t *tile) isTree() bool {
 	return t.treeState != noTree
 }
 
+func (t *tile) isDryTree() bool {
+	return t.treeState == treeStraight && t.TextureID == spriteDryTreeStump00
+}
+
 func (t *tile) isStandingTree() bool {
 	return t.treeState == treeStraight
 }

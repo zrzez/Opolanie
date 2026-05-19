@@ -303,6 +303,11 @@ const (
 	spriteMissileGhostDownRight = 683
 	spriteMissileGhostAttack    = 684
 
+	spriteMagicShield00 = 685
+	spriteMagicShield01 = 686
+	spriteMagicShield02 = 687
+	spriteMagicShield03 = 688
+
 	// 4. JEDNOSTKI (700+)
 	// ID uint16 = 700 + (unitType * 200) + (Frame * 8) + Direction.
 	spriteUnitBaseID uint16 = 700

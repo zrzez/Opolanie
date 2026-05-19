@@ -698,6 +698,20 @@ func drawManaBar(screenX, screenY int32, unit *unit) {
 	rl.DrawRectangle(barX, newY, barW, fillH, rl.Blue)
 }
 
+func drawExperienceBar(screenX, screenY int32, unit *unit) {
+	barW, barH := int32(1), int32(tileHeight)
+	barX := screenX - 2 // nie dodaję szerokości kafelka ponieważ chcę mieć pasek po lewej
+	barY := screenY
+
+	// Wypełnienie wskazujące na poziom doświadczenia
+	experiencePercent := float32(unit.Experience) / float32(experienceCap) // @reminder: sprawdź ile to maxExp!
+	fillH := int32(float32(barH) * experiencePercent)
+
+	// Rysujemy ↑
+	newY := (barY + barH) - fillH
+	rl.DrawRectangle(barX, newY, barW, fillH, rl.Gold)
+}
+
 func drawMilkBar(screenX, screenY int32, unit *unit) {
 	barW, barH := int32(1), int32(tileHeight)
 	barX := screenX + int32(tileWidth) + 1
@@ -746,6 +760,9 @@ func drawUnitInterface(renderUnit *unit, bState *battleState) {
 	if isUnitSelected {
 		drawUnitSelectionFrame(renderUnit, bState)
 		drawUnitHealthBar(screenX, screenY, renderUnit)
+
+		// @reminder: pracuję nad tym w tej chwili - 19.05.2026
+		drawExperienceBar(screenX, screenY, renderUnit)
 
 		if renderUnit.MaxMana > 0 {
 			drawManaBar(screenX, screenY, renderUnit)
@@ -1219,20 +1236,30 @@ func drawUnit(u *unit, bState *battleState, ps *programState) {
 	drawSpriteEx(finalID, screenX, screenY, u.Owner, rl.White, ps)
 
 	if len(u.Wounds) > 0 {
-		drawUnitWounds(u, ps, screenX, screenY)
+		drawUnitWounds(u, screenX, screenY, ps)
+	}
+
+	// 7. Rysowanie magicznej tarczy dla czarodziejek
+	drawMagicShield(u, screenX, screenY, ps)
+}
+
+// @todo: nad tym teraz pracuję 19.05.2026
+func drawMagicShield(u *unit, screenX, screenY float32, ps *programState) {
+	if u.Type == unitPriestess && u.hasMagicShield {
+		drawSprite(ps.Assets, spriteMagicShield00, screenX, screenY, colorNone)
 	}
 }
 
 // @todo: koniecznie wrócić do tej funkcji i ją przepisać, rozbić, bo jest dramat!
-func drawUnitWounds(u *unit, ps *programState, screenX, screenY float32) {
+func drawUnitWounds(u *unit, screenX, screenY float32, ps *programState) {
 	// Stałe offsety, aby krew była na środku kafelka 16x14.
 	const centerOffsetX = 8.0
 	const centerOffsetY = 7.0
 
-	for _, wound := range u.Wounds {
+	for _, currentWound := range u.Wounds {
 		// Wybór tekstury
 		effectID := spriteEffectHit00
-		if wound.IsSevere && wound.Timer <= 10 {
+		if currentWound.IsSevere && currentWound.Timer <= 10 {
 			effectID = spriteEffectHit01
 		}
 
@@ -1249,20 +1276,20 @@ func drawUnitWounds(u *unit, ps *programState, screenX, screenY float32) {
 		)
 
 		// Skalowanie rany
-		destW := float32(def.cropWidth) * wound.Scale
-		destH := float32(def.cropHeight) * wound.Scale
+		destW := float32(def.cropWidth) * currentWound.Scale
+		destH := float32(def.cropHeight) * currentWound.Scale
 
 		// Pozycja finalna: pozycja jednostki + środek kafelka + losowy offset rany
 		destRect := rl.NewRectangle(
-			screenX+centerOffsetX+wound.OffsetX,
-			screenY+centerOffsetY+wound.OffsetY,
+			screenX+centerOffsetX+currentWound.OffsetX,
+			screenY+centerOffsetY+currentWound.OffsetY,
 			destW,
 			destH,
 		)
 
 		origin := rl.NewVector2(destW/2, destH/2)
 
-		rl.DrawTexturePro(tex, sourceRec, destRect, origin, wound.Rotation, rl.White)
+		rl.DrawTexturePro(tex, sourceRec, destRect, origin, currentWound.Rotation, rl.White)
 	}
 }
 

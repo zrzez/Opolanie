@@ -565,6 +565,7 @@ func applyGlobalEffects(bState *battleState) {
 	burningTileEffect(bState)
 	fallingTreeEffect(bState)
 	ghostEffect(bState)
+	handleMagicShieldEffect(bState)
 }
 
 // handleLevelEvents przemiana w niedźwiedzia, odprowadzenie jednostki do punktu ucieczki

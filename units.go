@@ -179,7 +179,7 @@ func (u *unit) updateUnit(bState *battleState) {
 		return
 	}
 
-	u.processActiveEffects()
+	// u.processActiveEffects()
 
 	if u.handleBlockedCounter() {
 		return
@@ -234,7 +234,7 @@ func (u *unit) handleDelay(bState *battleState) bool {
 	return u.Delay > 0
 }
 
-func (u *unit) processActiveEffects() {
+/*func (u *unit) processActiveEffects() {
 	var activeEffects []activeEffect
 	for _, e := range u.Effects {
 		e.Duration--
@@ -244,7 +244,7 @@ func (u *unit) processActiveEffects() {
 	}
 
 	u.Effects = activeEffects
-}
+}*/
 
 func (u *unit) handleBlockedCounter() bool {
 	if u.BlockedCounter > 0 {
@@ -635,7 +635,6 @@ func (u *unit) prepareForNewCommand(command uint16, targetX, targetY uint8, targ
 	u.Delay = 0
 }
 
-// @todo: CmdFlee jest nie ogarnięta i wykrzacza program przez default.
 func (u *unit) applyCommandState(command uint16) {
 	switch command {
 	case cmdAttack:
@@ -655,10 +654,6 @@ func (u *unit) applyCommandState(command uint16) {
 		u.Command = cmdIdle
 	case cmdMagicFire, cmdMagicSight, cmdMagicShield, cmdMagicLightning:
 		u.State = stateCastingSpell
-		// @todo: jeżeli dobrze rozumiem to tutaj mogę wywołać magiczną tarczę dla
-		// kapłanki, bo sama jest celem i nie wymaga to więcej niż.
-		u.castMagicShield()
-		// @todo: jak ogarnąć gromobicie?!
 	case cmdGraze:
 		u.State = stateGrazing
 	case cmdRepairStructure, cmdBuildStructure:
@@ -1369,6 +1364,11 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bState *
 
 	bState.Projectiles = append(bState.Projectiles, proj)
 
+	// Za stworzenie jakiegokolwiek pocisku jest przyznawane doświadczenie.
+	// Muszę dodać logikę rozdziało pomięcy celem jednostką a celem budynkiem.
+	// u.gainExperience tutaj!
+	u.gainExperience(target.Unit, bState)
+
 	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, targetX, targetY, damage)
 }
 
@@ -1403,15 +1403,16 @@ func (u *unit) getRangedTargetCoords(target *combatTarget) (uint8, uint8, bool) 
 	return 0, 0, false
 }
 
+// @reminder: zdobywanie doświadczenia jest niezależne od wyniku ataku. Wykonał atak→gainExperience()
 func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, bState *battleState) {
 	switch {
 	case target.Unit != nil && target.Unit.Exists:
 		target.Unit.takeDamage(damage, bState)
-		u.gainExperience(target.Unit, nil, bState)
+		u.gainExperience(target.Unit, bState)
 	case target.Building != nil && target.Building.Exists:
 		target.Building.takeDamage(damage)
-		u.gainExperience(nil, target.Building, bState)
-	case bState.Board.Tiles[u.interactionTargetX][u.interactionTargetY].TextureID == spriteDryTreeStump00:
+		u.gainExperience(nil, bState)
+	case bState.Board.Tiles[u.interactionTargetX][u.interactionTargetY].isDryTree():
 		bState.Board.Tiles[u.interactionTargetX][u.interactionTargetY].accumulateTreeCuts(bState)
 	default:
 		log.Printf("UWAGA: jednostka %d: cel ataku wręcz już nie istnieje", u.ID)
@@ -1479,43 +1480,46 @@ func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
 	}
 }
 
-func (u *unit) gainExperience(targetUnit *unit, targetBuilding *building, bState *battleState) {
-	if u.Experience >= 235 {
+// @todo: 19.05.2026. Na podstawie pierwowzoru wydaje mi się, że rzeczywistą górną granicą doświadczenia jest
+// 224. Dlatego dodałem stałą experienceCap, która służy za bezpiecznik.
+// Doświadczenie jest dobywane w chwili wyprowadzenia ataku.
+// Dodatkowo muszę uwzględnić:
+//  1. jednostki SI zawsze zdobywają doświadczenie
+//  2. jednostki gracza zdobywają doświadczenie jedynie na wrogich jednostkach
+//  3. jednostki czarujące mają dodatek
+func (u *unit) gainExperience(targetUnit *unit, bState *battleState) {
+	// 0. Sprawdzamy, czy osiągnęliśmy górną granicę.
+	// TAK: nie obsługujemy zdobywania doświadczenia
+	if u.Experience >= experienceCap {
+		return
+	}
+	// NIE: jednostka zdobywa doświadczenie w sposób
+	// 		odpowiedni dla atakującego i atakowanego.
+
+	// 1. Ustalamy, czy atakowana jest wroga jednostka lub wrogi budynek
+	isEnemyUnit := targetUnit != nil && targetUnit.Owner != u.Owner
+	// isEnemyBuilding := targetBuilding != nil && targetBuilding.Owner != u.Owner
+	// ↑↑↑ to wydaje się zbędne po uproszczeniu sprawdzeń, bo jeśli atakujemy budynek, to
+	// wystarczy sprawdzić właściciela atakującego
+
+	// 1a. Ustalamy, czy jednostka może dostać doświadczenie
+	//                       ↓SI zawsze                       ↓gracz tylko przy ataku wrogich jednostek
+	canGainExp := u.Owner == bState.AIPlayerID || (u.Owner == bState.PlayerID && isEnemyUnit)
+	// 1b. Jeśli nie to wracamy
+	if !canGainExp {
 		return
 	}
 
-	isEnemyUnit := false
-	isEnemyBuilding := false
+	// 2a. Podstawowy przyrost doświadczenia. Dzięki sprawdzeniu w 0. zawsze możliwy.
+	u.Experience++
 
-	if targetUnit != nil && targetUnit.Owner != u.Owner {
-		isEnemyUnit = true
-	}
-
-	if targetBuilding != nil && targetBuilding.Owner != u.Owner {
-		isEnemyBuilding = true
-	}
-
-	var canGainExp bool
-
-	if u.Owner == bState.PlayerID {
-		canGainExp = isEnemyUnit
-	} else {
-		canGainExp = isEnemyBuilding || isEnemyUnit
-	}
-
-	if canGainExp {
-		u.Experience++
-
-		if u.Type == unitPriestess || u.Type == unitPriest || u.Type == unitMage {
-			u.Experience += 3
-		}
-
-		if u.Experience > 235 {
-			u.Experience = 235
-		}
+	// 2b. Dodatek dla jednostek czarujących.
+	if u.Type.isCaster() {
+		u.Experience += experienceCasterBonus
 	}
 }
 
+// @todo: każdorazowe obliczanie dodatku do statystyk należy zastąpić jednorazowym ich powiększeniem.
 func (u *unit) getExperienceBonus() (damageBonus, armorBonus uint8, manaBonus uint16) {
 	tier := u.Experience / 16
 	if tier >= 15 {
@@ -1555,12 +1559,20 @@ func (u *unit) repair(bState *battleState) {
 
 //goland:noinspection SpellCheckingInspection
 func (u *unit) castMagicShield() {
-	if u.Mana >= spellCostMagicShield {
-		u.Mana -= spellCostMagicShield
-		u.Effects = append(u.Effects, activeEffect{Name: "MagicShield", Duration: 300})
-		log.Printf("unit %d: Aktywowano tarczę magiczną!", u.ID)
+	// 0. Jeśli już jest magiczna tarcza, to nie można rzucić nowej
+	if u.hasMagicShield {
+		return
 	}
-	// @todo: jak zrobić aby takedamage brało tarcze pod uwagę?
+	// 1. Odejmujemy potrzebną manę
+	// @todo: sprawdź ile rzeczywiście kosztowała
+	if u.tryToDecreaseMana(spellCostMagicShield) {
+		// 2. aktywujemy efekt
+		u.hasMagicShield = true
+		// 3. Ustalamy ile ma trwać
+		// @todo: sprawdź ile rzeczywiście trwała
+		u.MagicShieldCooldown = spellDurationMagicShield
+	}
+
 	u.State = stateIdle
 	u.AnimationType = "idle"
 	u.Command = cmdIdle
@@ -1591,30 +1603,10 @@ func (u *unit) castMagicSight(bState *battleState) {
 	u.Command = cmdIdle
 }
 
-func handleMagicShield(u *unit) {
-	hasShield := false
-	// @todo: ogarnij czy są jeszcze jakieś inne efekty, bo póki co tylko MT
-	// jeżeli tak, to warto wyciągnąć przechodzenie po u.Effects a sprawdzenie
-	// typu dać w przełączniku!
-	for _, effect := range u.Effects {
-		// @todo: używanie łańcucha znaków w taki sposób, to zbrodnia na programie!
-		// dodaj coś w stylu „EFFECT_MAGIC_SHIELD” int.
-		if effect.Name == "MagicShield" {
-			hasShield = true
-		}
-
-		if hasShield {
-			log.Printf("Jednostka %d: Magiczna tarcza pochłonęła obrażenia!", u.ID)
-
-			return
-		}
-	}
-}
-
 func (u *unit) takeDamage(damage uint16, bState *battleState) {
-	// @todo: w ogóle nie ogarnięty temat.
-	if u.Type == unitPriestess {
-		handleMagicShield(u)
+	// 0. Sprawdzamy, czy jednostka jest chroniona przed obrażeniami.
+	if u.hasMagicShield {
+		return
 	}
 
 	var finalDamage uint16
