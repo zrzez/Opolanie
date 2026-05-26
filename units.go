@@ -32,6 +32,10 @@ func (u *unit) initUnit(unitType unitType, x, y uint8, command uint16, bState *b
 	u.AnimationCounter = 0
 	u.Direction = rl.NewVector2(0, 1)
 	u.IsSelected = false
+	u.Experience = 0
+	u.Delay = u.MaxDelay
+	u.AttackCooldown = 0
+	u.Wounds = make([]wound, 0, maxWoundsCount)
 
 	stats, ok := unitDefs[unitType]
 	if ok {
@@ -42,11 +46,9 @@ func (u *unit) initUnit(unitType unitType, x, y uint8, command uint16, bState *b
 		u.MaxHP = stats.MaxHP
 		u.MaxDelay = stats.MoveDelay
 		u.HP = stats.MaxHP
-
-		if stats.MaxMana > 0 {
-			u.MaxMana = stats.MaxMana
-			u.Mana = stats.MaxMana / 2
-		}
+		u.MaxMana = stats.MaxMana
+		u.Mana = stats.MaxMana / 2
+		u.ManaRegen = stats.BaseManaRegen
 	} else {
 		log.Printf("OSTRZEŻENIE: Nieznany rodzaj jednostki w init: %d.", unitType)
 
@@ -59,11 +61,6 @@ func (u *unit) initUnit(unitType unitType, x, y uint8, command uint16, bState *b
 		u.HP = u.MaxHP
 		u.Mana = 0
 	}
-
-	u.Experience = 0
-	u.Delay = u.MaxDelay
-	u.AttackCooldown = 0
-	u.Wounds = make([]wound, 0, 6)
 }
 
 // isCaster zwraca true jeżeli dana jednostka czaruje.
@@ -80,10 +77,13 @@ func (ut unitType) hasMana() bool {
 // increaseManaUnit dla każdej istniejącej jednostki zwiększa manę o amount
 // Pilnuje, aby u.Mana <= u.MaxMana.
 func (u *unit) increaseManaUnit(amount uint16) {
-	if !u.Exists {
+	if !u.Exists || amount == 0 {
 		return
 	}
 
+	// @reminder: najwięcej many ma unitMage i unitUnknown 15 poziomu, tj. 60+280=340.
+	// Czyli nie ma możliwości, aby przyrost many przekroczył górną granicę
+	// uint16 i „przekręcił się” w okolice zera. Dlatego nie ma bezpiecznika.
 	u.Mana += amount
 
 	if u.Mana > u.MaxMana {

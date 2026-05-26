@@ -142,14 +142,7 @@ func manaRegen(bState *battleState) {
 
 	// Każda żywa jednostka powinna odnowić część many
 	for _, currentUnit := range bState.Units {
-		if currentUnit.Type.hasMana() {
-			currentUnit.increaseManaUnit(1)
-
-			// Dodatek dla maga
-			if currentUnit.Type == unitMage {
-				currentUnit.increaseManaUnit(1)
-			}
-		}
+		currentUnit.increaseManaUnit(currentUnit.ManaRegen)
 	}
 }
 

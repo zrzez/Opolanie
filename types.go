@@ -43,7 +43,8 @@ type unitStats struct {
 	MoveDelay uint16
 
 	// Mana
-	MaxMana uint16
+	MaxMana       uint16
+	BaseManaRegen uint16
 }
 
 const (
@@ -93,6 +94,7 @@ type unit struct {
 	MaxDelay    uint16 // Najwyższe opóźnienie jednostki. Nie rozumiem, co to znaczy
 	Mana        uint16 // Miara many jednostki
 	MaxMana     uint16 // Górna granica many
+	ManaRegen   uint16 // Miara odnowy many
 	// Effects     []activeEffect // Wykaz działających efektów
 	// przechowywanie mleka przez jednostki
 	Udder  uint8   // Dosłownie wymiona
