@@ -238,33 +238,17 @@ var victoryPointColors = []rl.Color{
 	rl.Yellow,                        // Yellow
 }
 
-// @reminder: O ile dobrze rozumiem, to ograniczenie doświadczenia było
-// ustawione na 240, ale 224 było ostatnim „poziomem. Pomiędzy 224 a 240
-// jest martwa przestrzeń, która nic już nie zmienia. Dlatego ustawiam
-// ogranicznik na 224.
-var (
-	experienceCap         uint = 224
-	experienceCasterBonus uint = 2
-)
-
-// @todo: to chyba powiązane ze zdobywanym doświadczeniem przez jednostkę.
-var dDamage = [15]uint8{1, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6, 7, 8, 9}
-
-// @todo: powiązane ze zdobywanym doświadczeniem przez jednostkę.
-var dArmor = [15]uint8{0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6}
-
-// @todo: powiązane ze zdobywanym doświadczeniem przez jednostkę czarującą.
-var dMana = [15]uint16{60, 80, 85, 90, 120, 140, 150, 160, 170, 180, 190, 200, 220, 240, 280}
-
 // Statystyki jednostek.
 // @reminder: wyłączyłem lintera ponieważ tutaj powinny znajdować się te zaczarodziejskie liczby!
-
+// @reminder: wszystkim jednostkom dodałem 1 do obrażeń, bo taki jest dodatek dla jednostek
+//
+//	o zerowym poziomie doświadczenia.
 var unitDefs = map[unitType]unitStats{
 	//nolint:mnd
 	unitArcher: {
 		Name:          "Archer",
 		MaxHP:         100,
-		BaseDamage:    5,
+		BaseDamage:    6, // 5+1
 		BaseArmor:     0,
 		SightRange:    4,
 		AttackRange:   3,
@@ -277,7 +261,7 @@ var unitDefs = map[unitType]unitStats{
 	unitAxeman: {
 		Name:          "Axeman",
 		MaxHP:         100,
-		BaseDamage:    10,
+		BaseDamage:    11, // 10+1
 		BaseArmor:     0,
 		SightRange:    3,
 		AttackRange:   1,
@@ -290,7 +274,7 @@ var unitDefs = map[unitType]unitStats{
 	unitBear: {
 		Name:          "Bear",
 		MaxHP:         300,
-		BaseDamage:    25,
+		BaseDamage:    26, // 25+1
 		BaseArmor:     3,
 		SightRange:    4,
 		AttackRange:   1,
@@ -303,7 +287,7 @@ var unitDefs = map[unitType]unitStats{
 	unitCommander: {
 		Name:          "Commander",
 		MaxHP:         150,
-		BaseDamage:    30,
+		BaseDamage:    31, // 30+1
 		BaseArmor:     5,
 		SightRange:    4,
 		AttackRange:   1,
@@ -316,7 +300,7 @@ var unitDefs = map[unitType]unitStats{
 	unitCow: {
 		Name:          "Cow",
 		MaxHP:         100,
-		BaseDamage:    0,
+		BaseDamage:    1, // 0+1 @reminder: wyczuwam kłopoty! @todo: czy krowa może atakować?
 		BaseArmor:     0,
 		SightRange:    2,
 		AttackRange:   0,
@@ -329,7 +313,7 @@ var unitDefs = map[unitType]unitStats{
 	unitCrossbowman: {
 		Name:          "Crossbowman",
 		MaxHP:         130,
-		BaseDamage:    25,
+		BaseDamage:    26, // 25+1
 		BaseArmor:     5,
 		SightRange:    6,
 		AttackRange:   5,
@@ -342,7 +326,7 @@ var unitDefs = map[unitType]unitStats{
 	unitMage: {
 		Name:          "Mage",
 		MaxHP:         50,
-		BaseDamage:    10,
+		BaseDamage:    11, // 10+1
 		BaseArmor:     0,
 		SightRange:    6,
 		AttackRange:   6,
@@ -355,7 +339,7 @@ var unitDefs = map[unitType]unitStats{
 	unitPriest: {
 		Name:          "Priest",
 		MaxHP:         80,
-		BaseDamage:    50,
+		BaseDamage:    51, // 50+1
 		BaseArmor:     0,
 		SightRange:    5,
 		AttackRange:   5,
@@ -368,7 +352,7 @@ var unitDefs = map[unitType]unitStats{
 	unitPriestess: {
 		Name:          "Priestess",
 		MaxHP:         70,
-		BaseDamage:    35,
+		BaseDamage:    36, // 35+1
 		BaseArmor:     0,
 		SightRange:    4,
 		AttackRange:   3,
@@ -381,7 +365,7 @@ var unitDefs = map[unitType]unitStats{
 	unitShepherd: {
 		Name:          "Shepherd",
 		MaxHP:         40,
-		BaseDamage:    0,
+		BaseDamage:    1, // 0+1 @reminder: jak z krową! @todo: sprawdź, czy może atakować
 		BaseArmor:     0,
 		SightRange:    3,
 		AttackRange:   1,
@@ -394,7 +378,7 @@ var unitDefs = map[unitType]unitStats{
 	unitSpearman: {
 		Name:          "Spearman",
 		MaxHP:         120,
-		BaseDamage:    15,
+		BaseDamage:    16, // 15+1
 		BaseArmor:     3,
 		SightRange:    5,
 		AttackRange:   4,
@@ -407,7 +391,7 @@ var unitDefs = map[unitType]unitStats{
 	unitSwordsman: {
 		Name:          "Swordsman",
 		MaxHP:         120,
-		BaseDamage:    20,
+		BaseDamage:    21, // 20+1
 		BaseArmor:     3,
 		SightRange:    3,
 		AttackRange:   1,
@@ -420,7 +404,7 @@ var unitDefs = map[unitType]unitStats{
 	unitUnknown: {
 		Name:          "Unknown",
 		MaxHP:         120,
-		BaseDamage:    20,
+		BaseDamage:    21, // 20+1
 		BaseArmor:     3,
 		SightRange:    4,
 		AttackRange:   1,

@@ -508,6 +508,7 @@ func updateBuildings(bState *battleState) {
 	cleanupDestroyedBuildings(bState)
 }
 
+// @todo: CZEMU TO JEST W battle.go a nie constructions.go?! 26.05.2026
 func applyBuildingDamage(bld *building, finalDamage uint16, bState *battleState) {
 	// Bez tego bld.HP przekręca się na 65 tys.
 	if bld.HP >= finalDamage {
@@ -674,18 +675,18 @@ func placeRuins(bState *battleState, bld *building) {
 	for _, pt := range bld.OccupiedTiles {
 		x, y := pt.X, pt.Y
 
-		tile := &bState.Board.Tiles[x][y]
+		occupedTile := &bState.Board.Tiles[x][y]
 
 		// Czyścimy wskaźnik na budynek
-		tile.Building = nil
+		occupedTile.Building = nil
 
 		// Ustawiamy grafikę ruin
 		dx := pt.X - minX
 		dy := pt.Y - minY
 		idx := dy*width + dx
-		tile.TextureID = spriteRuinStart + uint16(idx)
+		occupedTile.TextureID = spriteRuinStart + uint16(idx)
 		// Zgliszcza uniemożliwiają ruch
-		tile.IsWalkable = false
+		occupedTile.IsWalkable = false
 	}
 }
 

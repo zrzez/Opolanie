@@ -77,7 +77,8 @@ type unit struct {
 	TargetID   uint      // Identyfikator przedmiotu (jednostka bądź budynek) rozkazu
 	TargetX    uint8     // Współrzędna X celu (dla cmdMove. cmdAttack)
 	TargetY    uint8     // Współrzędna Y celu (dla cmdMove. cmdAttack)
-	Experience uint      // Miara doświadczenia jednostki
+	Experience uint8     // Miara doświadczenia jednostki
+	Level      uint8     // Poziom doświadczenia jednostki
 	IsSelected bool      // Określa czy dana jednostka jest wybrana przez gracza
 	BelongsTo  *building // Określa do którego budynku jest przywiązana dana jednostka
 	IsInQueue  bool      // Wskaźnik, by wiedzieć, czy jednostka jest w kolejce

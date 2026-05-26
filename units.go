@@ -413,7 +413,7 @@ func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, b
 	if isTreeStump(targetTile.TextureID) {
 		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(*targetX, *targetY, bState)
 		if !ok {
-			return 0, 0, fmt.Errorf("Nie ma pozycji do ataku tego drzewa")
+			return 0, 0, fmt.Errorf("nie ma pozycji do ataku tego drzewa")
 		}
 
 		return bestX, bestY, nil
@@ -1320,26 +1320,14 @@ func (u *unit) canAttackTarget(target *combatTarget) bool {
 }
 
 func (u *unit) performDirectAttack(target *combatTarget, bState *battleState) {
-	damage := u.calculateAttackDamage()
-
 	if u.AttackRange > 1 {
-		u.performRangedAttack(target, damage, bState)
+		u.performRangedAttack(target, u.Damage, bState)
 	} else {
-		u.performMeleeAttack(target, damage, bState)
+		u.performMeleeAttack(target, u.Damage, bState)
 	}
 
 	u.setAttackTimings()
 	u.handleTargetPostAttack(target.Unit, target.Building)
-}
-
-// @todo: funkcja getExperienceBonus powinna być przebudowana, bo robi zbyt wiele
-// Zwraca podwyżkę statystyk i obrażeń, które powinny być „jednorazowe” zmieniając
-// statystyki jednostki a nie każdorazowo dodawać do ataku.
-// @todo: @reminder: to przypomniało mi, że zapisy gry nie biorą pod uwagę poziomu jednostek!
-func (u *unit) calculateAttackDamage() uint16 {
-	damageBonus, _, _ := u.getExperienceBonus()
-
-	return u.Damage + uint16(damageBonus)
 }
 
 func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bState *battleState) {
@@ -1478,55 +1466,6 @@ func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
 		u.AnimationType = "fight"
 		u.AnimationFrame = 0
 	}
-}
-
-// @todo: 19.05.2026. Na podstawie pierwowzoru wydaje mi się, że rzeczywistą górną granicą doświadczenia jest
-// 224. Dlatego dodałem stałą experienceCap, która służy za bezpiecznik.
-// Doświadczenie jest dobywane w chwili wyprowadzenia ataku.
-// Dodatkowo muszę uwzględnić:
-//  1. jednostki SI zawsze zdobywają doświadczenie
-//  2. jednostki gracza zdobywają doświadczenie jedynie na wrogich jednostkach
-//  3. jednostki czarujące mają dodatek
-func (u *unit) gainExperience(targetUnit *unit, bState *battleState) {
-	// 0. Sprawdzamy, czy osiągnęliśmy górną granicę.
-	// TAK: nie obsługujemy zdobywania doświadczenia
-	if u.Experience >= experienceCap {
-		return
-	}
-	// NIE: jednostka zdobywa doświadczenie w sposób
-	// 		odpowiedni dla atakującego i atakowanego.
-
-	// 1. Ustalamy, czy atakowana jest wroga jednostka lub wrogi budynek
-	isEnemyUnit := targetUnit != nil && targetUnit.Owner != u.Owner
-	// isEnemyBuilding := targetBuilding != nil && targetBuilding.Owner != u.Owner
-	// ↑↑↑ to wydaje się zbędne po uproszczeniu sprawdzeń, bo jeśli atakujemy budynek, to
-	// wystarczy sprawdzić właściciela atakującego
-
-	// 1a. Ustalamy, czy jednostka może dostać doświadczenie
-	//                       ↓SI zawsze                       ↓gracz tylko przy ataku wrogich jednostek
-	canGainExp := u.Owner == bState.AIPlayerID || (u.Owner == bState.PlayerID && isEnemyUnit)
-	// 1b. Jeśli nie to wracamy
-	if !canGainExp {
-		return
-	}
-
-	// 2a. Podstawowy przyrost doświadczenia. Dzięki sprawdzeniu w 0. zawsze możliwy.
-	u.Experience++
-
-	// 2b. Dodatek dla jednostek czarujących.
-	if u.Type.isCaster() {
-		u.Experience += experienceCasterBonus
-	}
-}
-
-// @todo: każdorazowe obliczanie dodatku do statystyk należy zastąpić jednorazowym ich powiększeniem.
-func (u *unit) getExperienceBonus() (damageBonus, armorBonus uint8, manaBonus uint16) {
-	tier := u.Experience / 16
-	if tier >= 15 {
-		tier = 14
-	}
-
-	return dDamage[tier], dArmor[tier], dMana[tier]
 }
 
 func (u *unit) repair(bState *battleState) {

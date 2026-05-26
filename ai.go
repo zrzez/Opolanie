@@ -234,7 +234,7 @@ func aiMakeNewUnits(bState *battleState) {
 
 				newUnit.initUnit(randomUnitType, spawnX, spawnY, cmdIdle, bState)
 				newUnit.Owner = bState.AIEnemyState.PlayerID
-				newUnit.Experience = uint(20 + int(bState.DifficultyLevel)*20)
+				newUnit.Experience = uint8(20 + int(bState.DifficultyLevel)*20)
 
 				// Rejestracja w nowej strukturze
 				newUnit.show(bState)
