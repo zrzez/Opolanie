@@ -749,10 +749,6 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 
 		if tileUnderCursor.Unit != nil {
 			targetID = tileUnderCursor.Unit.ID
-
-			// @todo: usuń
-			log.Printf("JEDNOSTKA MA: %d doświadczenia", tileUnderCursor.Unit.Experience)
-			log.Printf("MAGICZNA TARCZA: %t", tileUnderCursor.Unit.hasMagicShield)
 		} else if tileUnderCursor.Building != nil {
 			targetID = tileUnderCursor.Building.ID
 		}

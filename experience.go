@@ -14,30 +14,27 @@ przez jednostki.
 var (
 	experienceCap         uint8 = 224
 	experienceCasterBonus uint8 = 2
+	experiencePerLevel    uint8 = 16
 )
 
-// @todo: to chyba powiązane ze zdobywanym doświadczeniem przez jednostkę.
 // @reminder: w pierwowzorze było 1, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6, 7, 8, 9.
 // Zmieniłem logikę z dodatku do każdego uderzenia na jednorazowe podniesienie
 // statystyk. Dzięki temu upraszczam, ale wymaga zmian wartości w tablicy.
 var levelUpBonusDamage = [15]uint16{0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1}
 
-// @todo: powiązane ze zdobywanym doświadczeniem przez jednostkę.
 // @reminder: w pierwowzorze było 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6
 // Zmieniłem logikę z dodatku do zbroi na jednorazowe podniesienie
 // statystyk. Dzięki temu upraszczam, ale wymaga zmian wartości w tablicy.
 var levelUpBonusArmor = [15]uint16{0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1}
 
-// @todo: powiązane ze zdobywanym doświadczeniem przez jednostkę czarującą.
 // @reminder: w pierwowzorze było 60, 80, 85, 90, 120, 140, 150, 160, 170, 180, 190, 200, 220, 240, 280.
 // Górna granica many była nadpisywana wartością z tablicy, teraz jest podobnie, ale pierwsza
-// jest już ustawiona przy tworzeniu jednostek, dlatego różni się od tego, co w komentarzu
+// jest już ustawiona przy tworzeniu jednostek, dlatego różni się od tego, co w komentarzu.
 var levelUpBonusMana = [15]uint16{0, 80, 85, 90, 120, 140, 150, 160, 170, 180, 190, 200, 220, 240, 280}
 
 func (u *unit) checkLevelUp() {
 	// 0. Sprawdzamy poziom doświadczenia
-	// @todo: jak odróżnimy aktualny poziom od nowego?
-	currentLevel := u.Experience / 16
+	currentLevel := u.Experience / experiencePerLevel
 
 	// 1. Sprawdzamy, czy został przekroczony próg, zwany też „tier”
 	// Poziom doświadczenia się nie zmienił.
@@ -45,24 +42,28 @@ func (u *unit) checkLevelUp() {
 	if currentLevel == u.Level {
 		return
 	}
-	//↓↓↓ poziom się podniósł, możemy zmieniać statystyki.
-	// 2. Zwiększamy obrażenia i pancerz
-	// 2a. ponieważ jest to „dodatek” to rzeczywista wartość przyrostu musi być inna
-	//     niż to jest pokazane w dDamage i dArmor
-	u.levelUpBonusDamage(currentLevel)
-	u.levelUpBonusArmor(currentLevel)
-	// 3. Jeśli jednostka ma manę, to podmieniamy MaxMana
-	u.levelUpBonusMana(currentLevel)
+
+	// Poziom się podniósł, możemy zmieniać statystyki.
+	for currentLevel > u.Level {
+		u.levelUp()
+	}
 }
 
-func (u *unit) levelUpBonusDamage(currentLevel uint8) {
+func (u *unit) levelUp() {
+	u.Level++
+	u.levelUpBonusDamage(u.Level)
+	u.levelUpBonusArmor(u.Level)
+	u.levelUpBonusMana(u.Level)
+}
+
+func (u *unit) levelUpBonusDamage(level uint8) {
 	// Jeśli się zmarło, to dziękujemy
 	if !u.Exists {
 		return
 	}
 
 	// Uwzględniamy dodatek za podniesienie poziomu
-	u.Damage += levelUpBonusDamage[currentLevel]
+	u.Damage += levelUpBonusDamage[level]
 }
 
 func (u *unit) levelUpBonusArmor(level uint8) {
@@ -75,13 +76,14 @@ func (u *unit) levelUpBonusArmor(level uint8) {
 	u.Armor += levelUpBonusArmor[level]
 }
 
-// Jest to najprostszy przypadek ponieważ tylko podmieniamy u.MaxMana na nową wartość
+// Jest to najprostszy przypadek ponieważ tylko podmieniamy u.MaxMana na nową wartość.
 func (u *unit) levelUpBonusMana(level uint8) {
 	// Jeśli się zmarło lub nie ma many
-	if !u.Exists || u.Type.hasMana() {
+	if !u.Exists || !u.Type.hasMana() {
 		return
 	}
 
+	// Uwzględniamy dodatek za podniesienie poziomu
 	u.MaxMana = levelUpBonusMana[level]
 }
 
