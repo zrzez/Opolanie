@@ -265,8 +265,8 @@ func initTerrainSprites() {
 	// 303, 112 pierwsza magiczna tarcza, później miarowo w dół
 	setUnit1(spriteMagicShield00, 112) //nolint:mnd
 	setUnit1(spriteMagicShield01, 126) //nolint:mnd
-	setUnit1(spriteMagicShield02, 142) //nolint:mnd
-	setUnit1(spriteMagicShield03, 156) //nolint:mnd
+	setUnit1(spriteMagicShield02, 140) //nolint:mnd
+	setUnit1(spriteMagicShield03, 154) //nolint:mnd
 
 	// C. Mieszanie
 	spriteRegistry[spriteGrass08] = spriteRegistry[spriteGrass02]

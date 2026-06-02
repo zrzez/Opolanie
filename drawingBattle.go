@@ -895,6 +895,7 @@ func drawSoil(startX, startY, endX, endY uint8, bState *battleState, ps *program
 	}
 }
 
+// @todo: przemyśl, czy musi to być tak być, bo wygląda tragicznie
 func drawBuilding(startY, endY uint8, bState *battleState, ps *programState) {
 	for yAxis := startY; yAxis < endY; yAxis++ {
 		for _, bld := range bState.RenderBuildingRows[yAxis] {
@@ -1240,20 +1241,22 @@ func drawUnit(u *unit, bState *battleState, ps *programState) {
 	}
 
 	// 7. Rysowanie magicznej tarczy dla czarodziejek
-	drawMagicShield(u, screenX, screenY, ps)
+	drawMagicShield(u, screenX, screenY, bState, ps)
 }
 
 // @todo: nad tym teraz pracuję 19.05.2026
-func drawMagicShield(u *unit, screenX, screenY float32, ps *programState) {
+func drawMagicShield(u *unit, screenX, screenY float32, bState *battleState, ps *programState) {
 	if u.Type == unitPriestess && u.hasMagicShield {
-		drawSprite(ps.Assets, spriteMagicShield00, screenX, screenY, colorNone)
+		frame := bState.FireAnimationFrame % 4
+		drawSprite(ps.Assets, spriteMagicShield00+frame, screenX, screenY, colorNone)
 	}
 }
 
-// @todo: koniecznie wrócić do tej funkcji i ją przepisać, rozbić, bo jest dramat!
+// @todo: koniecznie wrócić do tej funkcji i ją przepisz, rozbij, bo jest dramat!
 func drawUnitWounds(u *unit, screenX, screenY float32, ps *programState) {
 	// Stałe offsety, aby krew była na środku kafelka 16x14.
 	const centerOffsetX = 8.0
+
 	const centerOffsetY = 7.0
 
 	for _, currentWound := range u.Wounds {
