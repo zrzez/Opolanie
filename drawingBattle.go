@@ -1241,13 +1241,22 @@ func drawUnit(u *unit, bState *battleState, ps *programState) {
 	}
 
 	// 7. Rysowanie magicznej tarczy dla czarodziejek
-	drawMagicShield(u, screenX, screenY, bState, ps)
+	drawActiveMagicShield(u, screenX, screenY, bState, ps)
 }
 
-// @todo: nad tym teraz pracuję 19.05.2026
-func drawMagicShield(u *unit, screenX, screenY float32, bState *battleState, ps *programState) {
+func drawActiveMagicShield(u *unit, screenX, screenY float32, bState *battleState, ps *programState) {
 	if u.Type == unitPriestess && u.hasMagicShield {
-		frame := bState.FireAnimationFrame % 4
+		// 0. Podkładka.
+		centerX := int32(screenX) + int32(tileWidth/2)  //nolint:mnd
+		centerY := int32(screenY) + int32(tileHeight/2) //nolint:mnd
+		radius := float32(6.0)                          //nolint:mnd
+		shieldGlow := rl.Fade(rl.Violet, 0.1)           //nolint:mnd
+
+		rl.DrawCircle(centerX, centerY, radius, shieldGlow)
+
+		// 1. Rysowanie właściwej tarczy.
+		// @reminder: dzielę przez cztery, bo tyle klatek ma uruchomienie magicznej tarczy.
+		frame := bState.FireAnimationFrame % 4 //nolint:mnd
 		drawSprite(ps.Assets, spriteMagicShield00+frame, screenX, screenY, colorNone)
 	}
 }
