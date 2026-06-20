@@ -166,6 +166,13 @@ const (
 )
 
 const (
+	// Dla potrójnych ikonek czarów.
+	tileAspectRatio         = float32(tileWidth) / float32(tileHeight)
+	tripleIconScale         = 0.85
+	tripleIconOverlapFactor = 0.35
+)
+
+const (
 	// Rany.
 	maxWoundsCount int    = 6
 	severeDamage   uint16 = 4

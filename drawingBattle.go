@@ -1712,45 +1712,47 @@ func drawButtons(bState *battleState, ps *programState) {
 	}
 }
 
-// @todo: będzie wykorzystane przy rysowaniu ikonek już z ostatecznego układu
+// @todo: będzie wykorzystane przy rysowaniu ikonek już z ostatecznego układu.
 func drawTripleIcon(tex rl.Texture2D, btnRect rl.Rectangle) {
-	// 1. Źródło (zakładamy standardową ikonkę 16x14)
-	sourceRect := rl.NewRectangle(0, 0, 16, 14)
+	// 0. Źródło: Jaki duszek będzie wykorzystany do narysowania potrojonej ikonki.
+	sourceRect := rl.NewRectangle(0, 0, float32(tileWidth), float32(tileHeight))
+	textureOrigin := rl.NewVector2(0, 0)
 
-	// 2. ROZMIAR: 85% wysokości przycisku
-	destH := btnRect.Height * 0.85
-	destW := destH * (16.0 / 14.0) // Zachowanie proporcji
+	// 1. Wymiary: 85% wysokości przycisku.
+	destH := btnRect.Height * tripleIconScale
+	destW := destH * tileAspectRatio // Zachowanie proporcji
 
-	// 3. NAKŁADANIE (overlap)
-	// Krok przesunięcia to tylko 35% szerokości (ciasne upakowanie)
-	stepX := destW * 0.35
+	// 2. Składanie.
+	// Przesunięcie 35% szerokości.
+	iconOffsetX := destW * tripleIconOverlapFactor
 
-	// 4. CENTROWANIE GRUPY w POZIOMIE
-	totalGroupWidth := destW + (2 * stepX)
+	// 3. Środkowanie potrojonego duszka.
+	totalGroupWidth := destW + (2 * iconOffsetX)
 	groupStartX := btnRect.X + (btnRect.Width-totalGroupWidth)/2.0
 
-	// 5. POZYCJE y (GÓRA / DÓŁ)
+	// 4. Pozycjonowanie góra-dół.
 	paddingY := btnRect.Height - destH
 
-	// Skrajne przy górze, środkowa przy dole
+	// Skrajne przy górze, środkowa niżej.
+	// aby uzyskać coś na podobieństwo '.'
 	yHigh := btnRect.Y
 	yLow := btnRect.Y + paddingY
 
-	// 6. RYSOWANIE
-	// Lewa (Góra)
+	// 5. Rysowanie.
+	// '__
 	rl.DrawTexturePro(tex, sourceRect,
 		rl.NewRectangle(groupStartX, yHigh, destW, destH),
-		rl.Vector2{}, 0, rl.White)
+		textureOrigin, 0, rl.White)
 
-	// Środkowa (Dół) - Rysujemy drugą, żeby była pod spodem prawej, ale nad lewą (lub na odwrót zależnie od gustu)
+	// _._
 	rl.DrawTexturePro(tex, sourceRect,
-		rl.NewRectangle(groupStartX+stepX, yLow, destW, destH),
-		rl.Vector2{}, 0, rl.White)
+		rl.NewRectangle(groupStartX+iconOffsetX, yLow, destW, destH),
+		textureOrigin, 0, rl.White)
 
-	// Prawa (Góra)
+	// __'
 	rl.DrawTexturePro(tex, sourceRect,
-		rl.NewRectangle(groupStartX+(2*stepX), yHigh, destW, destH),
-		rl.Vector2{}, 0, rl.White)
+		rl.NewRectangle(groupStartX+(2*iconOffsetX), yHigh, destW, destH),
+		textureOrigin, 0, rl.White)
 }
 
 func drawMinimapUnits(bState *battleState, minimapX, minimapY, minimapWidth, minimapHeight, actualGameViewWidth float32) {
