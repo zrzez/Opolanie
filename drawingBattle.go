@@ -1684,9 +1684,11 @@ func drawButtons(bState *battleState, ps *programState) {
 		case cmdBuildStructure, cmdStop, cmdMagicShield, cmdMagicSight, cmdRepairStructure:
 			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
 			iconScale = 1
-
 		case cmdMagicLightning, cmdMagicFire:
-			// @todo: potrójna ikonka do wywołania tutaj
+			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
+			drawTripleIcon(tex, def, rect)
+			continue
+
 		default:
 			// 4. Napis (Label)
 			fontSize := int32(10)
@@ -1713,9 +1715,15 @@ func drawButtons(bState *battleState, ps *programState) {
 }
 
 // @todo: będzie wykorzystane przy rysowaniu ikonek już z ostatecznego układu.
-func drawTripleIcon(tex rl.Texture2D, btnRect rl.Rectangle) {
+func drawTripleIcon(tex rl.Texture2D, def spriteDef, btnRect rl.Rectangle) {
 	// 0. Źródło: Jaki duszek będzie wykorzystany do narysowania potrojonej ikonki.
-	sourceRect := rl.NewRectangle(0, 0, float32(tileWidth), float32(tileHeight))
+	srcW := float32(def.cropWidth)
+
+	if def.flipX {
+		srcW = -srcW
+	}
+
+	sourceRect := rl.NewRectangle(float32(def.cropX), float32(def.cropY), srcW, float32(def.cropHeight))
 	textureOrigin := rl.NewVector2(0, 0)
 
 	// 1. Wymiary: 85% wysokości przycisku.

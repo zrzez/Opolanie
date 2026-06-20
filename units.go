@@ -320,6 +320,8 @@ func (u *unit) executeStandardUnitCommand(bState *battleState) {
 		}
 	case cmdMagicShield:
 		u.castMagicShield()
+	case cmdMagicLightning:
+		// u.castMagicLightning()
 	case cmdMagicFire:
 		// u.castMagicFire(bs)
 	case cmdMagicSight:

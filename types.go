@@ -574,7 +574,7 @@ type uiAssets struct {
 	CurrentActions [5]uiAction
 }
 
-// opisuje pojedyńcze działąnie dostępne pod przyciskiem z nakładki, pomost pomiędzy rysowaniem a logiką.
+// opisuje pojedyńcze działanie dostępne pod przyciskiem z nakładki, pomost pomiędzy rysowaniem a logiką.
 type uiAction struct {
 	IsActive bool    // widoczność
 	Label    string  // @todo: tymczasowy napis

@@ -130,7 +130,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 		bState.UI.CurrentActions[2] = uiAction{
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Gromobicie",
-			IconID:   spriteBtnSpellMagicLighting,
+			IconID:   spriteBtnSpellMagicLighting, // @todo powinno być potrójne, a nie jeden!
 			Cmd: command{
 				ActionType:      cmdMagicLightning,
 				ExecutorID:      unitID,
