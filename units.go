@@ -1519,6 +1519,79 @@ func (u *unit) castMagicShield() {
 	u.Command = cmdIdle
 }
 
+// Metoda odpowiedzialna za gromobicie i deszcz ognia.
+// @todo: dla kapłana tworzy nieprawidłowy rodzaj pocisku!
+func (u *unit) magicShower(targetX, targetY uint8, bState *battleState) {
+	// 0. Koszt czaru
+	spellCost := uint16(5) // @todo: to powinna być stała
+
+	if !u.tryToDecreaseMana(spellCost) {
+		log.Printf("INFO: Jednostka %d nei ma wystarczająco many na rzucenie czaru", u.ID)
+		return
+	}
+
+	// 1. Ustawienie obrażeń i rodzaju pocisku
+	var damage uint16
+	var missileKind uint8
+
+	switch u.Type {
+	case unitPriest:
+		damage = 30
+		missileKind = missileFire
+	case unitPriestess:
+		damage = 35
+		missileKind = missileLightning
+	default:
+		log.Printf("UWAGA: magicShower wywołany dla jednostki o nieobsługiwanym rodzaju %d!", u.Type)
+		return
+	}
+
+	// 2. Bezpiecznik pozycji początkowej tworzonych pocisków
+	spawnY := targetY
+
+	if spawnY >= 4 {
+		spawnY -= 4
+	} else {
+		spawnY = 0
+	}
+
+	// 3. Tworzenie opadów
+	for offset := -1; offset <= 1; offset++ {
+		spawnX := int(targetX) + offset
+
+		if spawnX < 0 || spawnX >= int(boardMaxX) {
+			continue
+		}
+
+		proj := &projectile{}
+		proj.initProjectile(
+			missileKind,
+			u.Owner,
+			uint16(spawnX), uint16(spawnY),
+			uint16(spawnX), uint16(targetY),
+			damage,
+		)
+
+		if proj.Exists {
+			bState.Projectiles = append(bState.Projectiles, proj)
+		}
+	}
+
+	// 4. Doświadczenie
+	centerTile := &bState.Board.Tiles[targetX][targetY]
+
+	if centerTile.Unit != nil && centerTile.Unit.Exists && centerTile.Unit.Owner != u.Owner {
+		u.gainExperience(centerTile.Unit, bState)
+	}
+
+	// 5. Skończyliśmy czarowanie, stoimy bezczynnie
+	u.State = stateIdle
+	u.AnimationType = "idle"
+	u.Command = cmdIdle
+
+	log.Printf("INFO: Jednostka %d rzuciła czar na (%d, %d)", u.ID, targetX, targetY)
+}
+
 func (u *unit) castMagicSight(bState *battleState) {
 	if u.Mana >= spellCostMagicSight {
 		u.Mana -= spellCostMagicSight

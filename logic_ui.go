@@ -130,11 +130,11 @@ func fillUnitActions(bState *battleState, unitID uint) {
 		bState.UI.CurrentActions[2] = uiAction{
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Gromobicie",
-			IconID:   spriteBtnSpellMagicLighting, // @todo powinno być potrójne, a nie jeden!
+			IconID:   spriteBtnSpellMagicLighting,
 			Cmd: command{
 				ActionType:      cmdMagicLightning,
 				ExecutorID:      unitID,
-				CommandCategory: 1,
+				CommandCategory: 5,
 			},
 		}
 	}
@@ -156,11 +156,11 @@ func fillUnitActions(bState *battleState, unitID uint) {
 		bState.UI.CurrentActions[2] = uiAction{
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Deszcz ognia",
-			IconID:   spriteBtnSpellMagicFire, // @todo powinno być potrójne, a nie jeden!
+			IconID:   spriteBtnSpellMagicFire,
 			Cmd: command{
 				ActionType:      cmdMagicFire,
 				ExecutorID:      unitID,
-				CommandCategory: 1,
+				CommandCategory: 5,
 			},
 		}
 	}

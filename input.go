@@ -331,6 +331,12 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 					bState.CurrentMessage.Text = "Wskaż budynek do naprawy"
 					bState.CurrentMessage.Duration = 60
 
+				case cmdMagicLightning, cmdMagicFire:
+					bState.MouseCommandMode = cmdCastSpell
+					bState.CurrentCommands[0] = action.Cmd
+					bState.CurrentMessage.Text = "Wskaż cel czaru"
+					bState.CurrentMessage.Duration = 60
+
 				default:
 					// Rozkazy natychmiastowe (CMD_PRODUCE, CMD_MILK, itp.)
 					// Wysyłamy je bezpośrednio do kolejki rozkazów.
@@ -727,18 +733,33 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 
 	// === 2. RZUCANIE CZARÓW ===
 	case cmdCastSpell:
-		log.Println("DBG_LCLICK: Tryb rzucania czaru.")
+		log.Println("DBG_LCLICK: Tryb rzucania czaru ofensywnego.")
 
 		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
-
-		if !ok && selectedUnit.Exists {
-			// TODO: Tutaj CMD_MAGIC_FIRE jest na sztywno, docelowo powinno zależeć od wybranego czaru w UI
-			selectedUnit.addUnitCommand(cmdMagicFire, tileX, tileY, 0, bState)
-			log.Printf("DBG_LCLICK: Wydano komendę czaru dla jednostki %d na (%d,%d).", selectedUnit.ID, tileX, tileY)
+		if !ok || !selectedUnit.Exists {
+			bState.MouseCommandMode = cmdIdle
+			return true
 		}
 
-		bState.MouseCommandMode = 1
+		// Pobieramy typ czaru. Jeśli został wybrany z UI, CurrentCommands[0] będzie go zawierał.
+		spellActionType := bState.CurrentCommands[0].ActionType
 
+		// Fallback: Jeśli gracz użył skrótu klawiszowego "C", CurrentCommands[0] może być "śmieciem".
+		// Dobieramy czar na podstawie typu zaznaczonej jednostki.
+		if spellActionType != cmdMagicLightning && spellActionType != cmdMagicFire {
+			if selectedUnit.Type == unitPriestess {
+				spellActionType = cmdMagicLightning
+			} else if selectedUnit.Type == unitPriest {
+				spellActionType = cmdMagicFire
+			}
+		}
+
+		if spellActionType == cmdMagicLightning || spellActionType == cmdMagicFire {
+			selectedUnit.magicShower(tileX, tileY, bState)
+			log.Printf("DBG_LCLICK: Wywołano magicShower dla jednostki %d na (%d,%d).", selectedUnit.ID, tileX, tileY)
+		}
+
+		bState.MouseCommandMode = cmdIdle
 		return true
 
 	// === 3. DOMYŚLNY TRYB (SELEKCJA I RUCH) ===

@@ -38,6 +38,7 @@ type projectile struct {
 
 	// Obrażenia
 	Damage uint16 // @reminder: to nie jest używane przez pociski unitPriest, uniteMage. Nie wiem, jak kapłanka.
+	// @reminder: zarówno unitPriest, jak i unitPriestess używają tego przy czarach!
 
 	// Stan
 	Exists bool
@@ -114,6 +115,8 @@ func (p *projectile) updateProjectile(bState *battleState) {
 }
 
 // hit zadaje obrażenia w punkcie docelowym.
+// @todo: atakowana krowa w oborze powoduje, że zarówno krowa, jak i obora otrzymują obrażenia
+// o ile dobrze rozumiem wynika to z braku przerwania przepływu po 1.
 func (p *projectile) hit(bState *battleState) {
 	if p.TargetX >= uint16(boardMaxX) || p.TargetY >= uint16(boardMaxY) {
 		p.Exists = false
@@ -145,9 +148,6 @@ func (p *projectile) hit(bState *battleState) {
 
 func (p *projectile) specialProjectiles(targetTile *tile, bState *battleState) {
 	// 1. Jeśli to duch (pocisk maga) to zostań widoczny na jednostce
-	// @todo: teraz się tym zajmuję 28.04.2026
-	// @todo: potrzebuję przekazać tutaj doświadczenie i właściciela maga, żeby poprawnie wyliczyć
-	// dodatek do obrażeń.
 	if p.Kind == missileGhost {
 		p.Sprite = spriteMissileGhostAttack
 		p.mageGhost(targetTile, p.Damage, bState)
@@ -282,7 +282,7 @@ func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
 }
 
 // @todo: sprawdź, czy odpryski rzeczywiście zadają obrażenia, które powinny.
-func (p *projectile) priestFireball(affedtedTile *tile, bState *battleState) {
+func (p *projectile) priestFireball(affectedTile *tile, bState *battleState) {
 	// @todo: @reminder: ciężko sobie wyobrazić lepszą nazwę na te zmienne.
 	// Jeśli coś mi przyjdzie do głowy, to zmienię, do tego czasu wyciszam.
 	dx, dy := p.spriteToDirection()
@@ -297,7 +297,7 @@ func (p *projectile) priestFireball(affedtedTile *tile, bState *battleState) {
 
 	var splash2 *tile
 
-	affedtedTile.setOnFire(bigBurn, bState)
+	affectedTile.setOnFire(bigBurn, bState)
 
 	if splash1X >= 0 && splash1X < int16(boardMaxX) && splash1Y >= 0 && splash1Y < int16(boardMaxY) {
 		splash1 = &bState.Board.Tiles[splash1X][splash1Y]
