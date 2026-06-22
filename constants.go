@@ -138,10 +138,9 @@ const (
 
 	// Czary.
 	cmdCastSpell
-	cmdMagicLightning // Rzuć czar
-	cmdMagicShield    // Rzuć magiczną tarczę
-	cmdMagicFire      // Rzuć deszcz ognia (NIE JESTEM PEWIEN)
-	cmdMagicSight     // Rzuć dalekowidztwo
+	cmdMagicShower
+	cmdMagicShield // Rzuć magiczną tarczę
+	cmdMagicSight  // Rzuć dalekowidztwo
 
 	// Gospodarka.
 	cmdProduce // Wytwarzaj
@@ -157,12 +156,21 @@ const (
 	spellCostMagicShield uint16 = 50
 	spellCostMagicSight  uint16 = 25
 	// Zasięg ?
-	spellRangeMagicSight uint8 = 14
+	spellCostRangeMagicSight uint8  = 14
+	spellCostMagicShower     uint16 = 5
+	spellBufferMagicShower   uint16 = 80
 )
 
 const (
 	// Ile trwają czary.
 	spellDurationMagicShield uint = 100
+)
+
+const (
+	// Obrażenia gromobicia
+	spellDamageLightningShower uint16 = 35
+	// Obrażenia ognistego deszczu
+	spellDamageFireShower uint16 = 30
 )
 
 const (

@@ -331,7 +331,7 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 					bState.CurrentMessage.Text = "Wskaż budynek do naprawy"
 					bState.CurrentMessage.Duration = 60
 
-				case cmdMagicLightning, cmdMagicFire:
+				case cmdMagicShower:
 					bState.MouseCommandMode = cmdCastSpell
 					bState.CurrentCommands[0] = action.Cmd
 					bState.CurrentMessage.Text = "Wskaż cel czaru"
@@ -446,7 +446,7 @@ func handleGameShortcuts(bState *battleState) bool {
 		}
 		if rl.IsKeyPressed(rl.KeyC) {
 			if (selectedUnit.Type == unitPriestess || selectedUnit.Type == unitPriest ||
-				selectedUnit.Type == unitMage) && selectedUnit.Mana >= 79 {
+				selectedUnit.Type == unitMage) && selectedUnit.Mana >= spellBufferMagicShower {
 				log.Println("SKRÓT: Wejście w tryb rzucania czaru bojowego")
 				bState.MouseCommandMode = cmdCastSpell
 				return true
@@ -741,23 +741,11 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 			return true
 		}
 
-		// Pobieramy typ czaru. Jeśli został wybrany z UI, CurrentCommands[0] będzie go zawierał.
-		spellActionType := bState.CurrentCommands[0].ActionType
+		spellActionType := cmdMagicShower
 
-		// Fallback: Jeśli gracz użył skrótu klawiszowego "C", CurrentCommands[0] może być "śmieciem".
-		// Dobieramy czar na podstawie typu zaznaczonej jednostki.
-		if spellActionType != cmdMagicLightning && spellActionType != cmdMagicFire {
-			if selectedUnit.Type == unitPriestess {
-				spellActionType = cmdMagicLightning
-			} else if selectedUnit.Type == unitPriest {
-				spellActionType = cmdMagicFire
-			}
-		}
-
-		if spellActionType == cmdMagicLightning || spellActionType == cmdMagicFire {
-			selectedUnit.magicShower(tileX, tileY, bState)
-			log.Printf("DBG_LCLICK: Wywołano magicShower dla jednostki %d na (%d,%d).", selectedUnit.ID, tileX, tileY)
-		}
+		// Dodajemy rozkaz do kolejki
+		selectedUnit.addUnitCommand(spellActionType, tileX, tileY, 0, bState)
+		log.Printf("DBG_LCLICK: Wydano rozkaz czaru %d na (%d,%d).", spellActionType, tileX, tileY)
 
 		bState.MouseCommandMode = cmdIdle
 		return true

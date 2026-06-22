@@ -13,6 +13,7 @@ const (
 	missileArrow uint8 = iota
 	missileBolt
 	missileFire
+	missileFireRain
 	missileLightning
 	missileSpear
 	missileGhost
@@ -156,9 +157,13 @@ func (p *projectile) specialProjectiles(targetTile *tile, bState *battleState) {
 	}
 
 	// 2. Ogień musi palić się przez jakiś czas
-	// @todo: czy można uwspólnić logikę ognia i ducha?
 	if p.Kind == missileFire {
 		p.priestFireball(targetTile, bState)
+	}
+
+	// 3. Deszcz ognia
+	if p.Kind == missileFireRain {
+		p.priestFireRain(targetTile, bState)
 	}
 }
 
@@ -226,7 +231,7 @@ func resolveProjectileSprite(kind uint8, dx, dy float32) uint16 {
 		baseSprite = spriteMissileSpearUp
 	case missileLightning:
 		baseSprite = spriteMissileLightningUp
-	case missileFire:
+	case missileFire, missileFireRain:
 		baseSprite = spriteMissileFireUp
 	case missileGhost:
 		baseSprite = spriteMissileGhostUp
@@ -308,16 +313,10 @@ func (p *projectile) priestFireball(affectedTile *tile, bState *battleState) {
 		splash2 = &bState.Board.Tiles[splash2X][splash2Y]
 		splash2.setOnFire(minBurn, bState)
 	}
+}
 
-	// 0. efekt to
-	// a. obrażenia
-	// unit/building.takedamage(p.Damage)
-	// b. zapalenie kafelka na którym był cel
-	// burningTileEffect()
-
-	// 1. efekt100 w kafelku, damage
-	// 2. efekt90 w kafelku+1, damage-10
-	// 3. efekt80 w kafelku+2, damage-20
+func (p *projectile) priestFireRain(affectedTile *tile, bState *battleState) {
+	affectedTile.setOnFire(midBurn, bState)
 }
 
 // @reminder: funkcja da efekt każdemu zaatakowanemu kafelkowi, ale bezpiecznik musi być

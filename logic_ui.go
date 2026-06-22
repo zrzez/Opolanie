@@ -132,7 +132,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Gromobicie",
 			IconID:   spriteBtnSpellMagicLighting,
 			Cmd: command{
-				ActionType:      cmdMagicLightning,
+				ActionType:      cmdMagicShower,
 				ExecutorID:      unitID,
 				CommandCategory: 5,
 			},
@@ -158,7 +158,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Deszcz ognia",
 			IconID:   spriteBtnSpellMagicFire,
 			Cmd: command{
-				ActionType:      cmdMagicFire,
+				ActionType:      cmdMagicShower,
 				ExecutorID:      unitID,
 				CommandCategory: 5,
 			},

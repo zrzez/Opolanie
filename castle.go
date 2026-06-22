@@ -83,7 +83,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	case cmdMove:
 		log.Printf("INFO: castle.go wydano cmdMove.")
 		playerS.handleMoveCommand(cmd, targetUnit, bState)
-	case cmdAttack, cmdStop, cmdMagicFire, cmdMagicLightning, cmdMagicSight:
+	case cmdAttack, cmdStop, cmdMagicShower, cmdMagicSight:
 		// @todo: tutaj chyba jest poważny błąd w logice, bo jednostka zdaje się atakować samą siebie, ale…
 		// w grze działa prawidłowo muszę się przyjrzeć i ogarnąć, co się odjaniepawla.
 		log.Printf("INFO: castle.go wydano cmdAttack.")

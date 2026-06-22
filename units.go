@@ -320,10 +320,18 @@ func (u *unit) executeStandardUnitCommand(bState *battleState) {
 		}
 	case cmdMagicShield:
 		u.castMagicShield()
-	case cmdMagicLightning:
-		// u.castMagicLightning()
-	case cmdMagicFire:
-		// u.castMagicFire(bs)
+	case cmdMagicShower:
+		if u.canCastSpellFromCurrentPosition() {
+			u.State = stateCastingSpell
+			u.AnimationType = "fight"
+			u.clearPath()
+			u.castSpell(bState)
+		} else {
+			u.State = stateMoving
+			u.AnimationType = "walk"
+			u.move(bState)
+		}
+
 	case cmdMagicSight:
 		u.castMagicSight(bState)
 	case cmdIdle, cmdStop:
@@ -351,7 +359,7 @@ func (u *unit) determineActiveStateFromCommand() unitState {
 		return stateGrazing
 	case cmdRepairStructure:
 		return stateRepairing
-	case cmdMagicShield, cmdMagicFire, cmdMagicSight:
+	case cmdMagicShield, cmdMagicShower, cmdMagicSight:
 		return stateCastingSpell
 	default:
 		return stateIdle
@@ -511,6 +519,22 @@ func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command uint16,
 		return nil
 	}
 
+	// Gromobicie oraz deszcz ognia
+	if command == cmdMagicShower {
+		// Zapamiętujemy faktyczny cel czaru
+		u.interactionTargetX, u.interactionTargetY = *targetX, *targetY
+
+		// Szukamy miejsca, skąd jednostka może rzucić czar (w zasięgu AttackRange)
+		finalX, finalY, ok := u.findBestPositionAroundTile(*targetX, *targetY, bState)
+		if !ok {
+			return fmt.Errorf("brak miejsca w zasięgu czaru")
+		}
+
+		// Nadpisujemy TargetX/Y
+		*targetX, *targetY = finalX, finalY
+		return nil
+	}
+
 	if targetID == 0 {
 		u.interactionTargetX, u.interactionTargetY = *targetX, *targetY
 	}
@@ -527,7 +551,7 @@ func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command uint16,
 
 func isInteractionCommand(command uint16) bool {
 	switch command {
-	case cmdAttack, cmdRepairStructure, cmdBuildStructure:
+	case cmdAttack, cmdRepairStructure, cmdBuildStructure, cmdMagicShower:
 		return true
 	default:
 		return false
@@ -654,7 +678,7 @@ func (u *unit) applyCommandState(command uint16) {
 		u.AnimationType = "walk"
 		u.AnimationFrame = 0
 		u.Command = cmdIdle
-	case cmdMagicFire, cmdMagicSight, cmdMagicShield, cmdMagicLightning:
+	case cmdMagicSight, cmdMagicShield, cmdMagicShower:
 		u.State = stateCastingSpell
 	case cmdGraze:
 		u.State = stateGrazing
@@ -1012,6 +1036,8 @@ func (u *unit) handleTargetReached(bState *battleState) {
 
 		u.State = stateAttacking
 		u.attack(bState)
+	case cmdMagicShower:
+		u.State = stateCastingSpell
 	case cmdRepairStructure:
 		u.State = stateRepairing
 		u.repair(bState)
@@ -1520,33 +1546,50 @@ func (u *unit) castMagicShield() {
 }
 
 // Metoda odpowiedzialna za gromobicie i deszcz ognia.
-// @todo: dla kapłana tworzy nieprawidłowy rodzaj pocisku!
-func (u *unit) magicShower(targetX, targetY uint8, bState *battleState) {
+func (u *unit) magicShower(targetX, targetY uint8, bState *battleState) bool {
 	// 0. Koszt czaru
-	spellCost := uint16(5) // @todo: to powinna być stała
-
-	if !u.tryToDecreaseMana(spellCost) {
-		log.Printf("INFO: Jednostka %d nei ma wystarczająco many na rzucenie czaru", u.ID)
-		return
+	if u.Mana < spellBufferMagicShower || !u.tryToDecreaseMana(spellCostMagicShower) {
+		log.Printf("INFO: Jednostka %d nie ma wystarczająco many na rzucenie czaru", u.ID)
+		return false
 	}
 
-	// 1. Ustawienie obrażeń i rodzaju pocisku
-	var damage uint16
-	var missileKind uint8
+	// 1. Tworzymy czarodziejski deszcz
+	u.createMagicShower(targetX, targetY, bState)
 
-	switch u.Type {
-	case unitPriest:
-		damage = 30
-		missileKind = missileFire
-	case unitPriestess:
-		damage = 35
-		missileKind = missileLightning
-	default:
+	// 2. Skończyliśmy czarowanie, stoimy bezczynnie
+	u.State = stateIdle
+	u.AnimationType = "idle"
+	u.Command = cmdIdle
+
+	log.Printf("INFO: Jednostka %d rzuciła czar na (%d, %d)", u.ID, targetX, targetY)
+
+	return true
+}
+
+func (u *unit) createMagicShower(targetX, targetY uint8, bState *battleState) {
+	damage, missileKind, ok := u.resolveMagicShowerStats()
+	if !ok {
 		log.Printf("UWAGA: magicShower wywołany dla jednostki o nieobsługiwanym rodzaju %d!", u.Type)
 		return
 	}
 
-	// 2. Bezpiecznik pozycji początkowej tworzonych pocisków
+	u.spawnMagicShowerProjectiles(targetX, targetY, missileKind, damage, bState)
+}
+
+func (u *unit) resolveMagicShowerStats() (damage uint16, missileKind uint8, ok bool) {
+	// @reminder: inne rodzaje jednostek nie mają tego czaru więc ich nie wymieniam tutaj.
+	switch u.Type {
+	case unitPriest:
+		return spellDamageFireShower, missileFireRain, true
+	case unitPriestess:
+		return spellDamageLightningShower, missileLightning, true
+	default:
+		return 0, 0, false
+	}
+}
+
+func (u *unit) spawnMagicShowerProjectiles(targetX, targetY uint8, missileKind uint8, damage uint16, bState *battleState) {
+	// 0. Bezpiecznik pozycji początkowej tworzonych pocisków
 	spawnY := targetY
 
 	if spawnY >= 4 {
@@ -1555,7 +1598,7 @@ func (u *unit) magicShower(targetX, targetY uint8, bState *battleState) {
 		spawnY = 0
 	}
 
-	// 3. Tworzenie opadów
+	// 1. Tworzenie opadów
 	for offset := -1; offset <= 1; offset++ {
 		spawnX := int(targetX) + offset
 
@@ -1575,21 +1618,59 @@ func (u *unit) magicShower(targetX, targetY uint8, bState *battleState) {
 		if proj.Exists {
 			bState.Projectiles = append(bState.Projectiles, proj)
 		}
+
+		// 2. Przyzanie doświadczenia za zaatakowanie
+		currentTile := &bState.Board.Tiles[spawnX][targetY]
+
+		switch {
+		case currentTile.Unit != nil && currentTile.Unit.Exists:
+			u.gainExperience(currentTile.Unit, bState)
+		case currentTile.Building != nil && currentTile.Building.Exists:
+			u.gainExperience(nil, bState)
+		default:
+			// Nie przyznajemy nic doświadczenia za napaść na otoczenie
+		}
+	}
+}
+
+func (u *unit) canCastSpellFromCurrentPosition() bool {
+	targetX, targetY := u.interactionTargetX, u.interactionTargetY
+
+	if targetX == 0 && targetY == 0 {
+		targetX, targetY = u.TargetX, u.TargetY
 	}
 
-	// 4. Doświadczenie
-	centerTile := &bState.Board.Tiles[targetX][targetY]
+	dist := uint8(math.Max(
+		math.Abs(float64(int(u.X)-int(targetX))),
+		math.Abs(float64(int(u.Y)-int(targetY))),
+	))
 
-	if centerTile.Unit != nil && centerTile.Unit.Exists && centerTile.Unit.Owner != u.Owner {
-		u.gainExperience(centerTile.Unit, bState)
+	return dist <= u.AttackRange
+}
+
+func (u *unit) castSpell(bState *battleState) {
+	if u.AttackCooldown > 0 {
+		u.State = stateIdle
+		u.AnimationType = "idle"
+		u.Delay = 1
+
+		return
 	}
 
-	// 5. Skończyliśmy czarowanie, stoimy bezczynnie
-	u.State = stateIdle
-	u.AnimationType = "idle"
-	u.Command = cmdIdle
+	targetX, targetY := u.interactionTargetX, u.interactionTargetY
 
-	log.Printf("INFO: Jednostka %d rzuciła czar na (%d, %d)", u.ID, targetX, targetY)
+	if targetX == 0 && targetY == 0 {
+		targetX, targetY = u.TargetX, u.TargetY
+	}
+
+	if u.magicShower(targetX, targetY, bState) {
+		u.setRangedTimings()
+		u.setIdleWithReason("czar rzucony")
+	} else {
+		u.State = stateIdle
+		u.AnimationType = "idle"
+		u.Command = cmdIdle
+	}
 }
 
 func (u *unit) castMagicSight(bState *battleState) {
@@ -1597,7 +1678,7 @@ func (u *unit) castMagicSight(bState *battleState) {
 		u.Mana -= spellCostMagicSight
 		log.Printf("Jednostka %d rzuca czar widzenia", u.ID)
 
-		revealRadius := spellRangeMagicSight
+		revealRadius := spellCostRangeMagicSight
 		for i := u.X - revealRadius; i <= u.X+revealRadius; i++ {
 			for j := u.Y - revealRadius; j <= u.Y+revealRadius; j++ {
 				if i <= boardMaxX && j <= boardMaxY {
@@ -2005,6 +2086,51 @@ func (u *unit) findBestPositionAroundUnit(targetUnit *unit, bState *battleState)
 	// log.Println("Funkcja findBestPositionAroundUnit foundFreeSpot, x: %d, y: %d", bestX, bestY)
 
 	return uint8(bestX), uint8(bestY)
+}
+
+func (u *unit) findBestPositionAroundTile(tileX, tileY uint8, bState *battleState) (uint8, uint8, bool) {
+	// 1. Najpierw sprawdzamy, czy sam kliknięty kafelek jest przechodni i pusty
+	if isWalkable(bState, tileX, tileY) {
+		currentTile := &bState.Board.Tiles[tileX][tileY]
+		if currentTile.Unit == nil || currentTile.Unit.ID == u.ID {
+			return tileX, tileY, true
+		}
+	}
+
+	// 2. Jeśli nie, szukamy w promieniu AttackRange
+	bestX, bestY := tileX, tileY
+	minDist := math.MaxFloat64
+	found := false
+
+	for dx := -int(u.AttackRange); dx <= int(u.AttackRange); dx++ {
+		for dy := -int(u.AttackRange); dy <= int(u.AttackRange); dy++ {
+			checkX := int(tileX) + dx
+			checkY := int(tileY) + dy
+
+			if checkX < 0 || checkX >= int(boardMaxX) || checkY < 0 || checkY >= int(boardMaxY) {
+				continue
+			}
+
+			if !isWalkable(bState, uint8(checkX), uint8(checkY)) {
+				continue
+			}
+
+			// Pomijamy kafelki zajęte przez inne jednostki
+			currentTile := &bState.Board.Tiles[checkX][checkY]
+			if currentTile.Unit != nil && currentTile.Unit.ID != u.ID {
+				continue
+			}
+
+			dist := math.Abs(float64(dx)) + math.Abs(float64(dy))
+			if dist < minDist {
+				minDist = dist
+				bestX, bestY = uint8(checkX), uint8(checkY)
+				found = true
+			}
+		}
+	}
+
+	return bestX, bestY, found
 }
 
 func (u *unit) isValidMoveTarget(x, y uint8, bState *battleState) bool {

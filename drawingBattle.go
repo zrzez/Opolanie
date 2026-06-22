@@ -1684,7 +1684,7 @@ func drawButtons(bState *battleState, ps *programState) {
 		case cmdBuildStructure, cmdStop, cmdMagicShield, cmdMagicSight, cmdRepairStructure:
 			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
 			iconScale = 1
-		case cmdMagicLightning, cmdMagicFire:
+		case cmdMagicShower:
 			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
 			drawTripleIcon(tex, def, rect)
 			continue
