@@ -94,6 +94,12 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 		return spriteCursorStop
 	}
 
+	// Gromobicie/deszcz ognia
+	// @todo: sprawdź, czy w pierwowzorze można było tym zaatakować wszystko - 22.06.2026
+	if bState.MouseCommandMode == cmdCastSpell {
+		return spriteCursorCrossRed
+	}
+
 	// Wróg
 	if targetOwner != -1 && targetOwner != int(bState.PlayerID) {
 		return cursorForEnemy(bState, tileUnderCursor)
