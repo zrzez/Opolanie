@@ -156,9 +156,17 @@ func cursorForEnemy(bState *battleState, tileUnderCursor *tile) uint16 {
 			return spriteCursorStop
 		}
 
+		// dodałem w nadzei, że jednostki będą mogły chodzić po zniszczonej palisadzie
+		// ale teraz mają kursor ataku, chyba brakuje „else” na na zniszczoną palisadę
+		// W ogóle bez sensu, sprawdzenie powinno być po ustaleniu, że mamy palisadę
+		//                                          ↓↓↓↓↓
 		if targetBuilding.Type == buildingPalisade {
-			if ok && !canDamagePalisades(selectedUnit) {
-				return spriteCursorStop
+			if !targetBuilding.IsUnderConstruction {
+				if ok && !canDamagePalisades(selectedUnit) {
+					return spriteCursorStop
+				}
+			} else {
+				return spriteCursorCrossWhite
 			}
 		}
 

@@ -563,6 +563,7 @@ func handleBoardInitialChecks(input inputState, bState *battleState, ps *program
 	return false, tileX, tileY
 }
 
+// @todo: tutaj muszę wyłapać przypadek palisady w budowie. Niedrwale i niekapłani będą chodzić a nie atakować
 func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY uint8) bool {
 	if input.IsRightMouseButtonPressed {
 		if bState.IsSelectingBox {
@@ -606,6 +607,13 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 			switch {
 			case targetID != 0 && targetOwner != bState.PlayerID:
 				commandType = cmdAttack
+
+				// @reminder: chodzi o przypadek kliknięcia na zniszczoną palisadę w celu pójścia tam.
+				if tileUnderCursor.Building != nil && tileUnderCursor.Building.Type == buildingPalisade &&
+					tileUnderCursor.Building.IsUnderConstruction {
+					commandType = cmdMove
+				}
+
 			case isTreeStump(tileUnderCursor.TextureID):
 				canAttackTree := false
 

@@ -269,16 +269,16 @@ func tryBuildStructure(bState *battleState, tileX, tileY uint8) {
 					continue
 				}
 
-				tile := &bState.Board.Tiles[cx][cy]
+				currentTile := &bState.Board.Tiles[cx][cy]
 
-				if tile.Building != nil &&
-					tile.Building.Type == buildingPalisade &&
-					tile.Building.IsUnderConstruction {
+				if currentTile.Building != nil &&
+					currentTile.Building.Type == buildingPalisade &&
+					currentTile.Building.IsUnderConstruction {
 
-					tile.Building.OccupiedTiles = make([]point, 0, 1)
-					tile.IsWalkable = false
-					tile.Building.HP = 0
-					tile.Building.Exists = false
+					currentTile.Building.OccupiedTiles = make([]point, 0, 1)
+					currentTile.IsWalkable = false
+					currentTile.Building.HP = 0
+					currentTile.Building.Exists = false
 				}
 			}
 		}
@@ -972,8 +972,6 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		// Indeks 6: Budowa drogi/palisady (w zależności od kontekstu UI)
 		if actionIndex == 6 {
 			cmd.ActionType = cmdBuildStructure
-			// Traktujemy to jako strukturę. Jeżeli droga nie ma osobnego buildingType,
-			// używamy PALISADE lub innego odpowiednika.
 			cmd.InteractionTargetID = uint(buildingPalisade)
 		}
 

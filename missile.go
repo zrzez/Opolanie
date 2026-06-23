@@ -42,7 +42,8 @@ type projectile struct {
 	// @reminder: zarówno unitPriest, jak i unitPriestess używają tego przy czarach!
 
 	// Stan
-	Exists bool
+	Exists            bool
+	AllowFriendlyFire bool
 
 	// Faza uruchomienia (animacji) pocisku ducha
 	Phase1, Phase2 float64
@@ -127,14 +128,25 @@ func (p *projectile) hit(bState *battleState) {
 
 	targetTile := &bState.Board.Tiles[p.TargetX][p.TargetY]
 
+	// @reminder: if-else zapobiega „przeciekaniu” pocisków przez jednostki w budynki, np. krowa w oborze.
+	// Bez tego zaatakowanie dojonej spowodowałoby zaatakowanie i krowy i obory.
 	// 1. Trafienie jednostki
-	if targetTile.Unit != nil && targetTile.Unit.Exists && targetTile.Unit.Owner != p.Owner {
-		targetTile.Unit.takeDamage(p.Damage, bState) // @todo: czemu jednostka ma argument bs, a budynek nie?
-	}
+	if targetTile.Unit != nil && targetTile.Unit.Exists {
+		hitUnit := targetTile.Unit
 
-	// 2. Trafienie budynku
-	if targetTile.Building != nil && targetTile.Building.Exists && targetTile.Building.Owner != p.Owner {
-		targetTile.Building.takeDamage(p.Damage)
+		isEnemy := hitUnit.Owner != p.Owner
+
+		if isEnemy || p.AllowFriendlyFire {
+			hitUnit.takeDamage(p.Damage, bState)
+		}
+	} else if targetTile.Building != nil && targetTile.Building.Exists {
+		// 2. Trafienie budynku
+		hitBuilding := targetTile.Building
+
+		isEnemy := hitBuilding.Owner != p.Owner
+		if isEnemy || p.AllowFriendlyFire {
+			hitBuilding.takeDamage(p.Damage)
+		}
 	}
 
 	// 3. Efekty dla specjalnych przypadków

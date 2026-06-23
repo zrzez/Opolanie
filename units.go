@@ -1378,6 +1378,8 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bState *
 		damage,
 	)
 
+	proj.AllowFriendlyFire = u.AllowFriendlyFire
+
 	bState.Projectiles = append(bState.Projectiles, proj)
 
 	// Za stworzenie jakiegokolwiek pocisku jest przyznawane doświadczenie.
