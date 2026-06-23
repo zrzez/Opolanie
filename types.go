@@ -16,7 +16,7 @@ type inputState struct {
 	IsRightMouseButtonDown     bool       // Czy prawy przycisk myszy jest wciśnięty
 	IsRightMouseButtonPressed  bool       // Czy prawy przycisk myszy został przyciśnięty
 	IsRightMouseButtonReleased bool       // Czy prawy przycisk myszy został zwolniony
-	IsCtrlKeyDown              bool
+	IsCtrlKeyDown              bool       // Czy ctrl jest przyciśnięty
 }
 
 // unitState opisuje usposobienie jednostki.

@@ -7,19 +7,19 @@ import rl "github.com/gen2brain/raylib-go/raylib"
 // getCursorIDFromContext - otulina
 // Sprawdza stan gry. Jeśli gameScreen → deleguje do determineCursorState.
 // Jeśli inny stan → zwraca domyślny kursor.
-func getCursorIDFromContext(bState *battleState, ps *programState, realMousePos rl.Vector2, scale float32) uint16 {
-	if ps.CurrentState == gameScreen {
+func getCursorIDFromContext(bState *battleState, pState *programState, realMousePos rl.Vector2, scale float32, iState inputState) uint16 {
+	if pState.CurrentState == gameScreen {
 		virtualMouseX := realMousePos.X / scale
 		virtualMouseY := realMousePos.Y / scale
 		virtualMousePos := rl.NewVector2(virtualMouseX, virtualMouseY)
 
-		return determineCursorState(bState, virtualMousePos, ps.GameViewWidth, ps.VirtualWidth, ps.VirtualHeight)
+		return determineCursorState(bState, virtualMousePos, pState.GameViewWidth, pState.VirtualWidth, pState.VirtualHeight, iState)
 	}
 
 	return spriteCursorPointer
 }
 
-func determineCursorState(bState *battleState, mousePos rl.Vector2, viewW, totalW, viewH float32) uint16 {
+func determineCursorState(bState *battleState, mousePos rl.Vector2, viewW, totalW, viewH float32, iState inputState) uint16 {
 	// 1. Czy poza planszą
 	if screenCursor := checkScreenCursor(mousePos, viewW, totalW, viewH); screenCursor != 0 {
 		return screenCursor
@@ -50,7 +50,7 @@ func determineCursorState(bState *battleState, mousePos rl.Vector2, viewW, total
 	hasSelection := bState.CurrentSelection.IsUnit && bState.CurrentSelection.OwnerID == bState.PlayerID
 
 	if hasSelection {
-		return cursorForSelection(bState, tileUnderCursor, targetOwner, targetBuilding)
+		return cursorForSelection(bState, tileUnderCursor, targetOwner, targetBuilding, iState)
 	}
 
 	return cursorForNoSelection(targetOwner, bState.PlayerID)
@@ -84,7 +84,7 @@ func checkScreenCursor(mousePos rl.Vector2, viewW, totalW, viewH float32) uint16
 	return 0
 }
 
-func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner int, targetBuilding *building) uint16 {
+func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner int, targetBuilding *building, iState inputState) uint16 {
 	// Naprawa
 	if bState.MouseCommandMode == cmdRepairStructure {
 		if canRepair(targetBuilding, bState.PlayerID) {
@@ -107,7 +107,17 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 
 	// Swój
 	if targetOwner == int(bState.PlayerID) {
-		return spriteCursorFrameWhite
+		if !iState.IsCtrlKeyDown {
+			return spriteCursorFrameWhite
+		}
+
+		isSelfAttack := tileUnderCursor.Unit != nil && tileUnderCursor.Unit.IsSelected
+
+		if isSelfAttack {
+			return spriteCursorStop
+		}
+
+		return spriteCursorCrossRed
 	}
 
 	// Drzewa
@@ -152,14 +162,10 @@ func cursorForEnemy(bState *battleState, tileUnderCursor *tile) uint16 {
 		// Mag nie może atakować żadnych budynków
 		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
 
-		if selectedUnit.Type == unitMage {
+		if ok && selectedUnit.Type == unitMage {
 			return spriteCursorStop
 		}
 
-		// dodałem w nadzei, że jednostki będą mogły chodzić po zniszczonej palisadzie
-		// ale teraz mają kursor ataku, chyba brakuje „else” na na zniszczoną palisadę
-		// W ogóle bez sensu, sprawdzenie powinno być po ustaleniu, że mamy palisadę
-		//                                          ↓↓↓↓↓
 		if targetBuilding.Type == buildingPalisade {
 			if !targetBuilding.IsUnderConstruction {
 				if ok && !canDamagePalisades(selectedUnit) {

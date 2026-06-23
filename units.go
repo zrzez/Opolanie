@@ -611,7 +611,7 @@ func (u *unit) canAttack(targetID uint, bState *battleState) bool {
 
 	// Jednostki
 	// musi istnieć
-	if targetUnit != nil {
+	if targetUnit != nil && targetUnit.ID != u.ID {
 		// musi być oznaczona jako żywa
 		if !targetUnit.Exists {
 			return false

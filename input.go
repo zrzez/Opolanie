@@ -291,6 +291,22 @@ import (
 
 // OBSŁUGA WEJŚCIA - UI I INTERFEJS
 
+func pollInput(pState *programState) inputState {
+	screenMouse := rl.GetMousePosition()
+	virtualMouse := screenToVirtualCoords(pState, screenMouse)
+
+	return inputState{
+		MousePosition:              virtualMouse,
+		IsLeftMouseButtonDown:      rl.IsMouseButtonDown(rl.MouseButtonLeft),
+		IsLeftMouseButtonPressed:   rl.IsMouseButtonPressed(rl.MouseButtonLeft),
+		IsLeftMouseButtonReleased:  rl.IsMouseButtonReleased(rl.MouseButtonLeft),
+		IsRightMouseButtonDown:     rl.IsMouseButtonDown(rl.MouseButtonRight),
+		IsRightMouseButtonPressed:  rl.IsMouseButtonPressed(rl.MouseButtonRight),
+		IsRightMouseButtonReleased: rl.IsMouseButtonReleased(rl.MouseButtonRight),
+		IsCtrlKeyDown:              rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl),
+	}
+}
+
 func handleGameUIClicks(input inputState, bState *battleState, ps *programState) bool {
 	virtualMouse := input.MousePosition
 
@@ -605,7 +621,8 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 
 			// 1. Atak na wrogie jednostki/budynki
 			switch {
-			case targetID != 0 && targetOwner != bState.PlayerID:
+			// @todo: muszę przepuszczać bratobójcie ataki
+			case targetID != 0 && (targetOwner != bState.PlayerID || input.IsCtrlKeyDown):
 				commandType = cmdAttack
 
 				// @reminder: chodzi o przypadek kliknięcia na zniszczoną palisadę w celu pójścia tam.
@@ -858,37 +875,25 @@ func handleBoardInteraction(input inputState, bState *battleState, ps *programSt
 	}
 }
 
-func handleGameInput(bState *battleState, ps *programState) {
-	screenMouse := rl.GetMousePosition()
-	virtualMouse := screenToVirtualCoords(ps, screenMouse)
-
-	input := inputState{
-		MousePosition:              virtualMouse,
-		IsLeftMouseButtonDown:      rl.IsMouseButtonDown(rl.MouseLeftButton),
-		IsLeftMouseButtonPressed:   rl.IsMouseButtonPressed(rl.MouseLeftButton),
-		IsLeftMouseButtonReleased:  rl.IsMouseButtonReleased(rl.MouseLeftButton),
-		IsRightMouseButtonDown:     rl.IsMouseButtonDown(rl.MouseRightButton),
-		IsRightMouseButtonPressed:  rl.IsMouseButtonPressed(rl.MouseRightButton),
-		IsRightMouseButtonReleased: rl.IsMouseButtonReleased(rl.MouseRightButton),
-		IsCtrlKeyDown:              rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl),
-	}
+func handleGameInput(bState *battleState, pState *programState, iState inputState) {
+	virtualMouse := iState.MousePosition
 
 	//  if handleCheats(bs) {
 	//	return
 	//  }
 
-	handleCameraScroll(input, bState, ps)
+	handleCameraScroll(iState, bState, pState)
 
-	if isMouseOverUI(ps, virtualMouse) {
-		if input.IsLeftMouseButtonPressed || input.IsRightMouseButtonPressed || input.IsLeftMouseButtonDown ||
-			input.IsLeftMouseButtonReleased {
-			if handleGameUIClicks(input, bState, ps) {
+	if isMouseOverUI(pState, virtualMouse) {
+		if iState.IsLeftMouseButtonPressed || iState.IsRightMouseButtonPressed || iState.IsLeftMouseButtonDown ||
+			iState.IsLeftMouseButtonReleased {
+			if handleGameUIClicks(iState, bState, pState) {
 				return
 			}
 		}
 	} else {
 		handleGameShortcuts(bState)
-		handleBoardInteraction(input, bState, ps)
+		handleBoardInteraction(iState, bState, pState)
 	}
 }
 
@@ -1211,7 +1216,7 @@ func handleMinimapRightMouse(
 
 	cmd := cmdMove
 
-	if targetID != 0 && targetOwner != bState.PlayerID {
+	if targetID != 0 && (targetOwner != bState.PlayerID || input.IsCtrlKeyDown) {
 		cmd = cmdAttack
 	} else if !isWalkable(bState, tileX, tileY) {
 		bState.CurrentMessage.Text = "Nieprzechodnie!"

@@ -513,30 +513,30 @@ func drawSceneToVirtualScreen(bState *battleState, ps *programState) {
 	rl.EndTextureMode()
 }
 
-func drawSceneToActualScreen(bState *battleState, ps *programState) {
+func drawSceneToActualScreen(bState *battleState, pState *programState, iState inputState) {
 	rl.ClearBackground(rl.Black) // Czarne tło (pasy)
 
 	// 1. USTAWIENIE ŹRÓDŁA (Source)
-	ps.RenderSrcRect.X = 0
-	ps.RenderSrcRect.Y = 0
-	ps.RenderSrcRect.Width = float32(ps.ScreenTarget.Texture.Width)
-	ps.RenderSrcRect.Height = float32(-ps.ScreenTarget.Texture.Height)
+	pState.RenderSrcRect.X = 0
+	pState.RenderSrcRect.Y = 0
+	pState.RenderSrcRect.Width = float32(pState.ScreenTarget.Texture.Width)
+	pState.RenderSrcRect.Height = float32(-pState.ScreenTarget.Texture.Height)
 
 	// 2. USTAWIENIE CELU (Destination) i SKALI
 	var scale float32
 
-	if ps.CurrentState == gameScreen {
+	if pState.CurrentState == gameScreen {
 		// Gra na cały ekran
-		ps.RenderDestRect.X = 0
-		ps.RenderDestRect.Y = 0
-		ps.RenderDestRect.Width = float32(ps.ActualScreenWidth)
-		ps.RenderDestRect.Height = float32(ps.ActualScreenHeight)
+		pState.RenderDestRect.X = 0
+		pState.RenderDestRect.Y = 0
+		pState.RenderDestRect.Width = float32(pState.ActualScreenWidth)
+		pState.RenderDestRect.Height = float32(pState.ActualScreenHeight)
 
-		scale = float32(ps.ActualScreenHeight) / ps.VirtualHeight
+		scale = float32(pState.ActualScreenHeight) / pState.VirtualHeight
 	} else {
 		// Menu z zachowaniem proporcji
-		scaleX := float32(ps.ActualScreenWidth) / 640.0
-		scaleY := float32(ps.ActualScreenHeight) / 400.0
+		scaleX := float32(pState.ActualScreenWidth) / 640.0
+		scaleY := float32(pState.ActualScreenHeight) / 400.0
 
 		scale = scaleX
 		if scaleY < scaleX {
@@ -545,26 +545,26 @@ func drawSceneToActualScreen(bState *battleState, ps *programState) {
 
 		finalWidth := 640.0 * scale
 		finalHeight := 400.0 * scale
-		posX := (float32(ps.ActualScreenWidth) - finalWidth) / 2.0
-		posY := (float32(ps.ActualScreenHeight) - finalHeight) / 2.0
+		posX := (float32(pState.ActualScreenWidth) - finalWidth) / 2.0
+		posY := (float32(pState.ActualScreenHeight) - finalHeight) / 2.0
 
-		ps.RenderDestRect.X = posX
-		ps.RenderDestRect.Y = posY
-		ps.RenderDestRect.Width = finalWidth
-		ps.RenderDestRect.Height = finalHeight
+		pState.RenderDestRect.X = posX
+		pState.RenderDestRect.Y = posY
+		pState.RenderDestRect.Width = finalWidth
+		pState.RenderDestRect.Height = finalHeight
 	}
 
 	// 3. RYSOWANIE
 	rl.DrawTexturePro(
-		ps.ScreenTarget.Texture,
-		ps.RenderSrcRect,
-		ps.RenderDestRect,
-		ps.RenderOrigin,
+		pState.ScreenTarget.Texture,
+		pState.RenderSrcRect,
+		pState.RenderDestRect,
+		pState.RenderOrigin,
 		0.0,
 		rl.White,
 	)
 
-	drawGameCursorOnRealScreen(bState, ps, scale)
+	drawGameCursorOnRealScreen(bState, pState, scale, iState)
 }
 
 // Odpowiada za dopasowanie rozmiaru okna w ProgramState do rzeczywistego
@@ -683,17 +683,17 @@ func renderCurrentScene(bState *battleState, ps *programState) {
 }
 
 // Dobiera logikę obsługi wejścia na postawie programState.CurrentState.
-func handleCurrentScreenInput(bState *battleState, ps *programState) {
+func handleCurrentScreenInput(bState *battleState, pState *programState, iState inputState) {
 	// logVirtualMouseCoordinates(ps) // @todo: zakomentuj później, bo zapycha konsolę niepotrzebnie
-	switch ps.CurrentState {
+	switch pState.CurrentState {
 	case mainMenuScreen:
-		handleMenuInput(ps)
+		handleMenuInput(pState)
 	case newCampaignMenuScreen:
-		handleMenuInput(ps)
+		handleMenuInput(pState)
 	case gameScreen:
-		handleGameInput(bState, ps)
+		handleGameInput(bState, pState, iState)
 	default:
-		log.Printf("OSTRZEŻENIE: Nieznany stan (%d) dla obsługi wejścia", ps.CurrentState)
+		log.Printf("OSTRZEŻENIE: Nieznany stan (%d) dla obsługi wejścia", pState.CurrentState)
 	}
 }
 
@@ -883,7 +883,7 @@ func main() {
 	//	}()
 
 	// 1. Inicjalizacja zmiennych stanu (bez grafiki!)
-	programState := newProgramState()
+	pState := newProgramState()
 
 	// 2. Ścieżki
 	executablePath, err := os.Executable()
@@ -893,12 +893,12 @@ func main() {
 
 	executableDir := filepath.Dir(executablePath)
 
-	programState.BaseAssetsPath = filepath.Join(executableDir, "assets")
-	log.Printf("Bazowa ścieżka zasobów ustawiona na: %s", programState.BaseAssetsPath)
+	pState.BaseAssetsPath = filepath.Join(executableDir, "assets")
+	log.Printf("Bazowa ścieżka zasobów ustawiona na: %s", pState.BaseAssetsPath)
 
 	// 3. Okno
 	rl.SetConfigFlags(rl.FlagWindowResizable | rl.FlagWindowAlwaysRun)
-	rl.InitWindow(programState.ActualScreenWidth, programState.ActualScreenHeight, "Opolanie")
+	rl.InitWindow(pState.ActualScreenWidth, pState.ActualScreenHeight, "Opolanie")
 	rl.SetWindowMinSize(640, 400)
 
 	defer rl.CloseWindow()
@@ -907,13 +907,13 @@ func main() {
 	rl.InitAudioDevice()
 
 	defer func() {
-		shutDownMusicPlayer(programState)
+		shutDownMusicPlayer(pState)
 		rl.CloseAudioDevice()
 	}()
 
 	// 5. System Plików (.DAT)
-	datPath := filepath.Join(programState.BaseAssetsPath, "graf.dat")
-	palPath := filepath.Join(programState.BaseAssetsPath, "pal.dat")
+	datPath := filepath.Join(pState.BaseAssetsPath, "graf.dat")
+	palPath := filepath.Join(pState.BaseAssetsPath, "pal.dat")
 
 	loader, err := newAssetLoader(datPath, palPath)
 	if err != nil {
@@ -926,52 +926,52 @@ func main() {
 
 	// 6. Inicjalizacja AssetManagera
 	if loader != nil {
-		programState.Assets = newAssetManager(loader)
+		pState.Assets = newAssetManager(loader)
 
 		log.Println("INFO: AssetManager utworzony i gotowy do pracy.")
 	}
 
-	if err := programState.Assets.loadGlobalAssets(programState.BaseAssetsPath); err != nil {
+	if err = pState.Assets.loadGlobalAssets(pState.BaseAssetsPath); err != nil {
 		log.Fatalf("BŁAD KRYTYCZNY: nie udało się załadować UI %v", err)
 	}
 	// 7. Stan bitwy (Pusty)
-	battleState := newBattleState(programState)
+	bState := newBattleState(pState)
 
-	setupMainMenuButtons(programState, battleState)
+	setupMainMenuButtons(pState, bState)
 
 	// 8. Skalowanie ekranu
-	programState.ActualScreenWidth = int32(rl.GetScreenWidth())
-	programState.ActualScreenHeight = int32(rl.GetScreenHeight())
-	programState.recalculateVirtualResolution()
+	pState.ActualScreenWidth = int32(rl.GetScreenWidth())
+	pState.ActualScreenHeight = int32(rl.GetScreenHeight())
+	pState.recalculateVirtualResolution()
 
-	if programState.ScreenTarget.ID == 0 {
+	if pState.ScreenTarget.ID == 0 {
 		rl.CloseWindow()
 		log.Fatalln("Nie udało się załadować tekstury renderującej (Błąd FBO)")
 	}
 
-	rl.SetTextureFilter(programState.ScreenTarget.Texture, rl.FilterPoint)
+	rl.SetTextureFilter(pState.ScreenTarget.Texture, rl.FilterPoint)
 
 	defer func() {
-		if programState.ScreenTarget.ID != 0 {
-			rl.UnloadRenderTexture(programState.ScreenTarget)
+		if pState.ScreenTarget.ID != 0 {
+			rl.UnloadRenderTexture(pState.ScreenTarget)
 		}
 	}()
 
 	rl.SetTargetFPS(60)
 
 	if rl.IsWindowResized() {
-		updateWindowSize(battleState, programState)
+		updateWindowSize(bState, pState)
 	}
 
-	setupMenuCamera(programState)
-	setupGameCamera(battleState, programState)
+	setupMenuCamera(pState)
+	setupGameCamera(bState, pState)
 
 	// Pętla stałego kroku czasowego
 	timeAccumulator := 0.0
 
 	// === PĘTLA GŁÓWNA ===
-	for !programState.ShouldClose && !rl.WindowShouldClose() {
-		if programState.CurrentState == gameScreen && rl.GetScreenWidth() < 640+120 {
+	for !pState.ShouldClose && !rl.WindowShouldClose() {
+		if pState.CurrentState == gameScreen && rl.GetScreenWidth() < 640+120 {
 			rl.SetWindowMinSize(640+120, 400)
 			rl.SetWindowSize(640+120, 400)
 		}
@@ -983,20 +983,22 @@ func main() {
 
 		timeAccumulator += dt
 
+		iState := pollInput(pState)
+
 		for timeAccumulator >= tickRate {
 
-			updateWindowSize(battleState, programState)
-			handleCurrentScreenInput(battleState, programState)
-			updateCurrentScreen(battleState, programState)
+			updateWindowSize(bState, pState)
+			handleCurrentScreenInput(bState, pState, iState)
+			updateCurrentScreen(bState, pState)
 
-			battleState.GlobalFrameCounter++
+			bState.GlobalFrameCounter++
 			timeAccumulator -= tickRate
 		}
 
 		rl.BeginDrawing()
-		logVirtualMouseCoordinates(programState)
-		drawSceneToVirtualScreen(battleState, programState)
-		drawSceneToActualScreen(battleState, programState)
+		logVirtualMouseCoordinates(pState)
+		drawSceneToVirtualScreen(bState, pState)
+		drawSceneToActualScreen(bState, pState, iState)
 		rl.EndDrawing()
 	}
 }

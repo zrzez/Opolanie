@@ -1508,20 +1508,20 @@ func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bState
 // @reminder: muszę się zastanowić, czy nie przenieść tego poniżej do osobnego pliku, bo
 // tutaj już jest strasznie zagracone.
 
-func drawGameCursorOnRealScreen(bState *battleState, ps *programState, scale float32) {
+func drawGameCursorOnRealScreen(bState *battleState, pState *programState, scale float32, iState inputState) {
 	rl.HideCursor()
 
 	realMousePos := rl.GetMousePosition()
 
 	// 1. Wywołujemy otulinę, która zdecyduje jaki ID kursora zwrócić
-	cursorID := getCursorIDFromContext(bState, ps, realMousePos, scale)
+	cursorID := getCursorIDFromContext(bState, pState, realMousePos, scale, iState)
 
 	// 2. Animacja i rysowanie (to dzieje się niezależnie od tego, skąd wzięliśmy ID)
 	cursorID = animateCursorID(cursorID)
-	drawCursorSprite(ps, cursorID, realMousePos, 3*bState.GameCamera.Zoom/scale)
+	drawCursorSprite(pState, cursorID, realMousePos, 3*bState.GameCamera.Zoom/scale)
 }
 
-func drawCursorSprite(ps *programState, cursorID uint16, pos rl.Vector2, scale float32) {
+func drawCursorSprite(pState *programState, cursorID uint16, pos rl.Vector2, scale float32) {
 	def := spriteRegistry[cursorID]
 	if def.cropWidth == 0 {
 		return
@@ -1532,14 +1532,14 @@ func drawCursorSprite(ps *programState, cursorID uint16, pos rl.Vector2, scale f
 	var srcRect rl.Rectangle
 
 	if cursorID == spriteCursorFrameWhite {
-		tex = ps.Assets.CursorWhiteFrame
+		tex = pState.Assets.CursorWhiteFrame
 		if tex.ID == 0 {
 			return
 		}
 
 		srcRect = rl.NewRectangle(0, 0, float32(def.cropWidth), float32(def.cropHeight))
 	} else {
-		tex = ps.Assets.getAtlas(def.atlasID, colorNone)
+		tex = pState.Assets.getAtlas(def.atlasID, colorNone)
 		if tex.ID == 0 {
 			return
 		}
@@ -1553,9 +1553,9 @@ func drawCursorSprite(ps *programState, cursorID uint16, pos rl.Vector2, scale f
 	destW := float32(def.cropWidth) * scale
 	destH := float32(def.cropHeight) * scale
 
-	ps.RenderDestRect = rl.NewRectangle(finalX, finalY, destW, destH)
-	ps.RenderOrigin = rl.NewVector2(0, 0)
-	rl.DrawTexturePro(tex, srcRect, ps.RenderDestRect, ps.RenderOrigin, 0, rl.White)
+	pState.RenderDestRect = rl.NewRectangle(finalX, finalY, destW, destH)
+	pState.RenderOrigin = rl.NewVector2(0, 0)
+	rl.DrawTexturePro(tex, srcRect, pState.RenderDestRect, pState.RenderOrigin, 0, rl.White)
 }
 
 func drawMilkBarVisualizer(bState *battleState, ps *programState) {
