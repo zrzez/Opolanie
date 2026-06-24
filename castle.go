@@ -83,47 +83,18 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	case cmdMove:
 		log.Printf("INFO: castle.go wydano cmdMove.")
 		playerS.handleMoveCommand(cmd, targetUnit, bState)
-	case cmdAttack, cmdStop, cmdMagicShower, cmdMagicSight:
-		// @todo: tutaj chyba jest poważny błąd w logice, bo jednostka zdaje się atakować samą siebie, ale…
-		// w grze działa prawidłowo muszę się przyjrzeć i ogarnąć, co się odjaniepawla.
+	case cmdAttack:
 		log.Printf("INFO: castle.go wydano cmdAttack.")
-
-		targetUnit.addUnitCommand(
-			cmd.ActionType,
-			cmd.TargetX,
-			cmd.TargetY,
-			cmd.ExecutorID,
-			bState,
-		)
-		log.Printf(
-			"handleUnitCommand: Jednostka %d otrzymała komendę %d do (%d,%d).",
-			targetUnit.ID,
-			cmd.ActionType,
-			cmd.TargetX,
-			cmd.TargetY,
-		)
+		targetUnit.addUnitCommand(cmdAttack, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+	case cmdStop:
+		targetUnit.addUnitCommand(cmdStop, cmd.TargetX, cmd.TargetY, 0, bState) // czemu targetID = 0? może nil?
 	case cmdRepairStructure:
-		targetUnit.addUnitCommand(
-			cmd.ActionType,
-			cmd.TargetX,
-			cmd.TargetY,
-			cmd.InteractionTargetID,
-			bState,
-		)
+		targetUnit.addUnitCommand(cmdRepairStructure, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
-	case cmdMagicShield:
-		// @todo: jeżeli jednostka ma rzucić czar ochronny na samą siebie, to chyba
-		// muszę tutaj inaczej podać targetX, targetY?
-		// w ogóle nie czuję po choinkę jest mi ten castle.go skoro sprowadza się do
-		// wywołania jednej komendy. Mogę to zrobić w logic_ui bezpośrednio!!!
-		targetUnit.addUnitCommand(
-			cmd.ActionType,
-			cmd.TargetX,
-			cmd.TargetY,
-			cmd.ExecutorID,
-			bState,
-		)
+	case cmdCastSpell:
+		targetUnit.CurrentSpell = cmd.Spell
+		targetUnit.addUnitCommand(cmdCastSpell, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
 	default:
 		log.Printf("handleUnitCommand: Nieznany ActionType %d dla jednostki %d.",
 			cmd.ActionType, targetUnit.ID)

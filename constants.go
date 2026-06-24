@@ -127,36 +127,39 @@ const (
 )
 
 const (
+	// Podział na rozkazy dla budynków i jednostek
+	categoryBuilding = iota
+	categoryUnit
+)
+
+const (
+	cmdIdle            commandType = iota // Bezczynność
+	cmdMove                               // Ruch
+	cmdGoto                               // Idź do, teleportacja maga
+	cmdFlee                               // Ucieczka, krowa
+	cmdGraze                              // Wypasaj
+	cmdAttack                             // Napad
+	cmdStop                               // Zatrzymaj się @todo: potrzeba też „waruj”
+	cmdCastSpell                          // Rzuć czar
+	cmdProduce                            // Wytwarzaj
+	cmdMilking                            // Dój krowę
+	cmdRepairStructure                    // Napraw uszkodzoną budowlę
+	cmdBuildStructure                     // Budowa
+)
+
+const (
+	spellNone spellID = iota
+	spellMagicShower
+	spellMagicShield
+	spellMagicSight
+)
+
+const (
 	// stany kursora w nakładce (UI)
 	mouseStateNormal    mouseState = iota // Nic konkretnego, można zaznaczać itd.
 	mouseStateBuilding                    // Czekam na wskazanie miejsca budowy
 	mouseStateRepairing                   // Czekam na wskazanie budynku do naprawy
 	mouseStateCasting                     // Czekam na wskazanie celu czaru
-)
-
-const (
-	// Rozkazy dla jednostek.
-	cmdIdle   = uint16(iota) // Bezczynność
-	cmdMove                  // Ruch
-	cmdGoto                  // Idź do (czy to jest teleport maga?!)
-	cmdFlee                  // ucieczka
-	cmdGraze                 // Wypasaj
-	cmdAttack                // Napad
-	cmdStop                  // Zatrzymaj się
-
-	// Czary.
-	cmdCastSpell
-	cmdMagicShower
-	cmdMagicShield // Rzuć magiczną tarczę
-	cmdMagicSight  // Rzuć dalekowidztwo
-
-	// Gospodarka.
-	cmdProduce // Wytwarzaj
-	cmdMilking // dojenie
-
-	// Budowa.
-	cmdRepairStructure // Naprawa uszkodzonego budynku
-	cmdBuildStructure  // Budowa nowego budynku
 )
 
 const (

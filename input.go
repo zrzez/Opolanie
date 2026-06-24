@@ -347,7 +347,7 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 					bState.CurrentMessage.Text = "Wskaż budynek do naprawy"
 					bState.CurrentMessage.Duration = 60
 
-				case cmdMagicShower:
+				case cmdCastSpell:
 					bState.MouseState = mouseStateCasting
 					bState.CurrentCommands[0] = action.Cmd
 					bState.CurrentMessage.Text = "Wskaż cel czaru"
@@ -766,7 +766,7 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 			return true
 		}
 
-		spellActionType := cmdMagicShower
+		spellActionType := cmdCastSpell
 
 		// Dodajemy rozkaz do kolejki
 		selectedUnit.addUnitCommand(spellActionType, tileX, tileY, 0, bState)
@@ -830,7 +830,7 @@ func handleBoardDrag(input inputState, bState *battleState) bool {
 
 // @todo: ogarnij czemu to nie działa jako przekazanie STOP do wszystkich
 // zaznaczonych jednostek!
-func sendUnitCommand(bState *battleState, units []*unit, command uint16, x, y uint8, targetID uint, ctrlDown bool) {
+func sendUnitCommand(bState *battleState, units []*unit, command commandType, x, y uint8, targetID uint, ctrlDown bool) {
 	log.Printf("INFO: input.go wysłano rozkaz.")
 
 	for _, u := range units {

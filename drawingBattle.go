@@ -1681,13 +1681,21 @@ func drawButtons(bState *battleState, ps *programState) {
 		case cmdProduce:
 			tex = ps.Assets.getAtlas(def.atlasID, bState.PlayerID)
 			iconScale = 0.8
-		case cmdBuildStructure, cmdStop, cmdMagicShield, cmdMagicSight, cmdRepairStructure:
+		case cmdBuildStructure, cmdStop, cmdRepairStructure:
 			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
 			iconScale = 1
-		case cmdMagicShower:
-			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
-			drawTripleIcon(tex, def, rect)
-			continue
+		case cmdCastSpell:
+			switch action.Cmd.Spell {
+			case spellMagicShower:
+				tex = ps.Assets.getAtlas(def.atlasID, colorNone)
+				drawTripleIcon(tex, def, rect)
+				continue
+			case spellMagicShield, spellMagicSight:
+				tex = ps.Assets.getAtlas(def.atlasID, colorNone)
+				iconScale = 1
+			default:
+				panic("nieobsługiwany rodzaj czaru. drawingBattle.go drawingButtons się wykrzaczyło")
+			}
 
 		default:
 			// 4. Napis (Label)

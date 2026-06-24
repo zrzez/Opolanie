@@ -274,7 +274,7 @@ func (u *unit) returnToBarnArea(bState *battleState) {
 }
 
 // Pomocnik do wykonania ruchu
-func (u *unit) addAndMove(cmd uint16, x, y uint8, id uint, bState *battleState, logMsg string) {
+func (u *unit) addAndMove(cmd commandType, x, y uint8, id uint, bState *battleState, logMsg string) {
 	if u.Command != cmd || u.TargetX != x || u.TargetY != y {
 		// Tu naprawiamy błąd "unused parameter": używamy logMsg
 		if logMsg != "" {
