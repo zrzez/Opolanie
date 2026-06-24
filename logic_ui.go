@@ -47,7 +47,7 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 
 			// === ROZGAŁĘZIENIE LOGIKI ===
 			// Sprawdzamy, czy przepis dotyczy budowy struktury, czy produkcji jednostki.
-
+			// @todo: czemu wykluczam nieistniejący buildingType? Nie pamiętam, ale źle to wygląda.
 			if recipe.BuildingType != 0 {
 				// PRZYPADEK 1: BUDOWA (np. Nowa Obora, Droga)
 				// TargetBuildingID pełni tu rolę nośnika TYPU budynku (buildingType),
@@ -55,7 +55,6 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 				cmd = command{
 					ActionType:          cmdBuildStructure,
 					InteractionTargetID: uint(recipe.BuildingType),
-					CommandCategory:     categoryBuilding, // 5 = brak konkretnego celu (tryb myszy)
 				}
 			} else {
 				// PRZYPADEK 2: PRODUKCJA (np. Krowa, Drwal)
@@ -64,7 +63,6 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 					ActionType:          cmdProduce,
 					InteractionTargetID: bld.ID,
 					ProduceType:         recipe.UnitType,
-					CommandCategory:     categoryBuilding, // 0 = budynek wykonujący rozkaz
 				}
 			}
 
