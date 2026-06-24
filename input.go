@@ -333,7 +333,7 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 				switch action.Cmd.ActionType {
 				case cmdBuildStructure:
 					// To jest tryb myszy. Nie wysyłamy rozkazu, lecz zmieniamy stan kursora.
-					bState.MouseCommandMode = cmdBuildStructure
+					bState.MouseState = mouseStateBuilding
 					// Zapisujemy rodzaj budynku do "plecaka" w battleState
 					bState.PendingBuildingType = buildingType(action.Cmd.InteractionTargetID)
 
@@ -343,12 +343,12 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 					// Opcjonalnie: czyścimy zaznaczenie jednostek, by nie przeszkadzały
 					clearSelection(bState)
 				case cmdRepairStructure:
-					bState.MouseCommandMode = cmdRepairStructure
+					bState.MouseState = mouseStateRepairing
 					bState.CurrentMessage.Text = "Wskaż budynek do naprawy"
 					bState.CurrentMessage.Duration = 60
 
 				case cmdMagicShower:
-					bState.MouseCommandMode = cmdCastSpell
+					bState.MouseState = mouseStateCasting
 					bState.CurrentCommands[0] = action.Cmd
 					bState.CurrentMessage.Text = "Wskaż cel czaru"
 					bState.CurrentMessage.Duration = 60
@@ -443,7 +443,7 @@ func handleGameShortcuts(bState *battleState) bool {
 			if firstUnitInGroup {
 				clearSelection(bState)
 			}
-			bState.MouseCommandMode = 1
+			bState.MouseState = mouseStateNormal
 			return true
 		}
 	}
@@ -464,7 +464,7 @@ func handleGameShortcuts(bState *battleState) bool {
 			if (selectedUnit.Type == unitPriestess || selectedUnit.Type == unitPriest ||
 				selectedUnit.Type == unitMage) && selectedUnit.Mana >= spellBufferMagicShower {
 				log.Println("SKRÓT: Wejście w tryb rzucania czaru bojowego")
-				bState.MouseCommandMode = cmdCastSpell
+				bState.MouseState = mouseStateCasting
 				return true
 			}
 		}
@@ -586,15 +586,15 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 			bState.IsSelectingBox = false
 			bState.SelectionStart = rl.NewVector2(0, 0)
 			bState.InitialClickPos = rl.NewVector2(0, 0)
-			bState.MouseCommandMode = 1
+			bState.MouseState = mouseStateNormal
 
 			return true
 		}
 
-		if bState.MouseCommandMode > 1 {
+		if bState.MouseState > mouseStateNormal {
 			log.Println("INPUT: Anulowano tryb celowania prawym przyciskiem.")
 
-			bState.MouseCommandMode = cmdIdle
+			bState.MouseState = mouseStateNormal
 			bState.PendingBuildingType = 0
 			bState.CurrentMessage.Text = "Anulowano"
 			bState.CurrentMessage.Duration = 30
@@ -662,8 +662,8 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 			return true
 		}
 
-		if bState.MouseCommandMode != 1 {
-			bState.MouseCommandMode = 1
+		if bState.MouseState != mouseStateNormal {
+			bState.MouseState = mouseStateNormal
 
 			return true
 		}
@@ -682,22 +682,22 @@ const dragThresholdPixels float32 = 3.0
 // dodane to mam problem. Dodatkowo jest problem mieszania kontekstu bojowego z gospodarczym.
 func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY uint8) bool {
 	bState.InitialClickPos = input.MousePosition
-	log.Printf("DBG_LCLICK: Kliknięto kafelek (%d, %d). Tryb myszy: %d", tileX, tileY, bState.MouseCommandMode)
+	log.Printf("DBG_LCLICK: Kliknięto kafelek (%d, %d). Tryb myszy: %d", tileX, tileY, bState.MouseState)
 
-	switch bState.MouseCommandMode {
+	switch bState.MouseState {
 
 	// === 1. TRYB BUDOWANIA ===
-	case cmdBuildStructure:
+	case mouseStateBuilding:
 		log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bState.PendingBuildingType)
 
 		tryBuildStructure(bState, tileX, tileY)
 
-		bState.MouseCommandMode = cmdIdle
+		bState.MouseState = mouseStateNormal
 		bState.PendingBuildingType = 0
 
 		return true
 
-	case cmdRepairStructure:
+	case mouseStateRepairing:
 		// === NAPRAWA BĄDŹ NOWA BUDOWA ===
 		// Tutaj jest pierwsza okazja, aby dowiedzieć się, czy naprawiamy, czy budujemy
 		// wcześniej nie znaliśmy celu. Dlatego nie dało się wybrać. Od tej chwili rozdzielamy.
@@ -724,7 +724,7 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 		if !canBeRepaired {
 			bState.CurrentMessage.Text = "Nie możesz naprawiać wrogich budynków!"
 			bState.CurrentMessage.Duration = 60
-			bState.MouseCommandMode = cmdIdle
+			bState.MouseState = mouseStateNormal
 			// Niech stoją bezczynnie
 			return true
 		}
@@ -743,7 +743,7 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 		if len(repairCrew) == 0 {
 			bState.CurrentMessage.Text = "Brak Toporników w zaznaczeniu!"
 			bState.CurrentMessage.Duration = 60
-			bState.MouseCommandMode = cmdIdle
+			bState.MouseState = mouseStateNormal
 
 			return true
 		}
@@ -752,17 +752,17 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 		log.Printf("INPUT: Wysłano %d Toporników do naprawy budynku ID %d.", len(repairCrew), targetBld.ID)
 
 		// Zmieniamy stan myszki i wracamy
-		bState.MouseCommandMode = cmdIdle
+		bState.MouseState = mouseStateNormal
 
 		return true
 
 	// === 2. RZUCANIE CZARÓW ===
-	case cmdCastSpell:
+	case mouseStateCasting:
 		log.Println("DBG_LCLICK: Tryb rzucania czaru ofensywnego.")
 
 		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
 		if !ok || !selectedUnit.Exists {
-			bState.MouseCommandMode = cmdIdle
+			bState.MouseState = mouseStateNormal
 			return true
 		}
 
@@ -772,7 +772,7 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 		selectedUnit.addUnitCommand(spellActionType, tileX, tileY, 0, bState)
 		log.Printf("DBG_LCLICK: Wydano rozkaz czaru %d na (%d,%d).", spellActionType, tileX, tileY)
 
-		bState.MouseCommandMode = cmdIdle
+		bState.MouseState = mouseStateNormal
 		return true
 
 	// === 3. DOMYŚLNY TRYB (SELEKCJA I RUCH) ===
@@ -812,7 +812,7 @@ func handleBoardDrag(input inputState, bState *battleState) bool {
 		return false
 	}
 
-	if bState.IsSelectingBox || bState.MouseCommandMode != 1 || bState.CurrentSelection.IsUnit || bState.CurrentSelection.BuildingID != 0 {
+	if bState.IsSelectingBox || bState.MouseState != mouseStateNormal || bState.CurrentSelection.IsUnit || bState.CurrentSelection.BuildingID != 0 {
 		return false
 	}
 
@@ -843,7 +843,7 @@ func sendUnitCommand(bState *battleState, units []*unit, command uint16, x, y ui
 		units[0].addUnitCommand(command, x, y, targetID, bState)
 	}
 
-	bState.MouseCommandMode = 1
+	bState.MouseState = mouseStateNormal
 }
 
 func handleBoardInteraction(input inputState, bState *battleState, ps *programState) {
@@ -944,7 +944,7 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 
 		if !found {
 			clearSelection(bState)
-			bState.MouseCommandMode = 1
+			bState.MouseState = mouseStateNormal
 
 			return
 		}
@@ -965,7 +965,7 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 			}
 			bState.CurrentMessage.Text = fmt.Sprintf("Wroga jednostka: %v", currentUnit.Type)
 			bState.CurrentMessage.Duration = 20
-			bState.MouseCommandMode = 1
+			bState.MouseState = mouseStateNormal
 
 			return
 		}
@@ -1013,7 +1013,7 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 			}
 			bState.CurrentMessage.Duration = 20
 		}
-		bState.MouseCommandMode = 1
+		bState.MouseState = mouseStateNormal
 
 	} else if bld != nil && bld.Exists {
 		log.Printf("DBG_SELECTOBJECT: Znaleziono budynek ID %d.", bld.ID)
@@ -1027,7 +1027,7 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 			UnitID:     0,
 			BuildingID: bld.ID,
 		}
-		bState.MouseCommandMode = 1
+		bState.MouseState = mouseStateNormal
 
 		if bld.Owner == bState.PlayerID {
 			bState.CurrentMessage.Text = fmt.Sprintf("Moja budowla: %v", bld.Type)
@@ -1037,7 +1037,7 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 		bState.CurrentMessage.Duration = 20
 	} else {
 		clearSelection(bState)
-		bState.MouseCommandMode = 1
+		bState.MouseState = mouseStateNormal
 	}
 }
 
@@ -1226,7 +1226,7 @@ func handleMinimapRightMouse(
 	}
 
 	sendUnitCommand(bState, selectedUnits, cmd, tileX, tileY, targetID, input.IsCtrlKeyDown)
-	bState.MouseCommandMode = 1
+	bState.MouseState = mouseStateNormal
 
 	return true
 }

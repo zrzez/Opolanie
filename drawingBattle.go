@@ -1883,7 +1883,7 @@ func drawMinimapUnits(bState *battleState, minimapX, minimapY, minimapWidth, min
 // ========= DEBUGOWANIE ZASADZANIA BUDOWLI
 
 func drawConstructionValidationBox(bState *battleState, ps *programState) {
-	if bState.MouseCommandMode != cmdBuildStructure {
+	if bState.MouseState != mouseStateBuilding {
 		return
 	}
 

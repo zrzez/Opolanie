@@ -86,7 +86,7 @@ func checkScreenCursor(mousePos rl.Vector2, viewW, totalW, viewH float32) uint16
 
 func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner int, targetBuilding *building, iState inputState) uint16 {
 	// Naprawa
-	if bState.MouseCommandMode == cmdRepairStructure {
+	if bState.MouseState == mouseStateRepairing {
 		if canRepair(targetBuilding, bState.PlayerID) {
 			return spriteBtnRepair
 		}
@@ -96,7 +96,7 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 
 	// Gromobicie/deszcz ognia
 	// @todo: sprawdź, czy w pierwowzorze można było tym zaatakować wszystko - 22.06.2026
-	if bState.MouseCommandMode == cmdCastSpell {
+	if bState.MouseState == mouseStateCasting {
 		return spriteCursorCrossRed
 	}
 

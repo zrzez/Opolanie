@@ -19,6 +19,9 @@ type inputState struct {
 	IsCtrlKeyDown              bool       // Czy ctrl jest przyciśnięty
 }
 
+// mouseState określa stan kursora
+type mouseState uint8
+
 // unitState opisuje usposobienie jednostki.
 type unitState int
 
@@ -57,12 +60,6 @@ const (
 	stateWaiting                       // oczekiwanie, jeżeli przytkana jest droga
 	stateMilking                       // dojenie krowy, ew. oczekiwanie w kolejce na dojenie
 )
-
-type activeEffect struct {
-	Name     string
-	Duration int     // klatki/ticki
-	Power    float32 // np. magiczna tarcza
-}
 
 // unit określa pojedynczą jednostkę podczas bitwy.
 type unit struct {
@@ -417,7 +414,7 @@ type battleState struct {
 	CurrentSelection        selectionState   // Bieżące zaznaczenie
 	SelectionStart          rl.Vector2       // Miejsce gdzie zaczęto zaznaczanie
 	ControlGroups           [10]controlGroup // Zarządzane zespoły
-	MouseCommandMode        uint16           // Tryb kursora
+	MouseState              mouseState       // Tryb kursora
 	IsSelectingBox          bool             // Czy gracz rysuje prostokąt zaznaczający
 	InitialClickPos         rl.Vector2       // Pozycja myszy w chwili początkowego naciśnięcia
 	Map                     bool             // Czy mapa jest widoczna

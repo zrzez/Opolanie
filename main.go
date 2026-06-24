@@ -810,7 +810,7 @@ func newBattleState(pState *programState) *battleState {
 		NextUniqueObjectID: 1,
 		Board:              &boardData{},
 		CurrentSelection:   selectionState{},
-		MouseCommandMode:   1,
+		MouseState:         mouseStateNormal,
 		IsSelectingBox:     false,
 		InitialClickPos:    rl.Vector2{X: 0, Y: 0},
 		SelectionStart:     rl.Vector2{X: 0, Y: 0},

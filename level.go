@@ -134,7 +134,7 @@ func (l *jsonLevelLoader) clearGameState(bState *battleState) {
 	bState.AIEnemyState.CurrentBuildings = 0
 
 	bState.CurrentSelection = selectionState{}
-	bState.MouseCommandMode = 1
+	bState.MouseState = mouseStateNormal
 	bState.IsSelectingBox = false
 
 	// Zerowanie liczników animacji

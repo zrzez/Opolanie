@@ -127,6 +127,14 @@ const (
 )
 
 const (
+	// stany kursora w nakładce (UI)
+	mouseStateNormal    mouseState = iota // Nic konkretnego, można zaznaczać itd.
+	mouseStateBuilding                    // Czekam na wskazanie miejsca budowy
+	mouseStateRepairing                   // Czekam na wskazanie budynku do naprawy
+	mouseStateCasting                     // Czekam na wskazanie celu czaru
+)
+
+const (
 	// Rozkazy dla jednostek.
 	cmdIdle   = uint16(iota) // Bezczynność
 	cmdMove                  // Ruch
