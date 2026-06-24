@@ -238,14 +238,14 @@ func tryBuildStructure(bState *battleState, tileX, tileY uint8) {
 	}
 
 	switch pendingType {
-	// @reminder: dodaj tutaj drogę
 	case buildingRoad:
 		// nie możemy stawiać drogi na drodze i moście, musi sąsiadować z inną drogą
-		if isPath(bState.Board.Tiles[tileX][tileY].TextureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) {
+		textureID := bState.Board.Tiles[tileX][tileY].TextureID
+		if isPath(textureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) || isWater(textureID) {
 			return
 		}
 	case buildingBridge:
-		if !isWaterTileOnly(bState.Board.Tiles[tileX][tileY].TextureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) {
+		if !isWater(bState.Board.Tiles[tileX][tileY].TextureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) {
 			return
 		}
 

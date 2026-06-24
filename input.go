@@ -680,8 +680,8 @@ const dragThresholdPixels float32 = 3.0
 // do przycisków „rodzajowych”. Chyba muszę podobnie zrobić, bo mam miejsce tylko na
 // pięć przycisków: atak(0), stop(1), czar1(2), czar2(3),naprawa(4) jeżeli coś innego będzie
 // dodane to mam problem. Dodatkowo jest problem mieszania kontekstu bojowego z gospodarczym.
-func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY uint8) bool {
-	bState.InitialClickPos = input.MousePosition
+func handleBoardLeftClick(iState inputState, bState *battleState, tileX, tileY uint8) bool {
+	bState.InitialClickPos = iState.MousePosition
 	log.Printf("DBG_LCLICK: Kliknięto kafelek (%d, %d). Tryb myszy: %d", tileX, tileY, bState.MouseState)
 
 	switch bState.MouseState {
@@ -692,8 +692,14 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 
 		tryBuildStructure(bState, tileX, tileY)
 
-		bState.MouseState = mouseStateNormal
-		bState.PendingBuildingType = 0
+		switch bState.PendingBuildingType {
+		case buildingRoad, buildingPalisade, buildingBridge:
+			// nic, bo chcemy móc dalej budować.
+		default:
+			// Postawiliśmy „prawdziwy budynek” i kończymy, bo pewnie nie ma więcej mleka.
+			bState.MouseState = mouseStateNormal
+			bState.PendingBuildingType = 0
+		}
 
 		return true
 
@@ -748,7 +754,7 @@ func handleBoardLeftClick(input inputState, bState *battleState, tileX, tileY ui
 			return true
 		}
 		// 4. Rozkaz gotowy, wiadomo kto, co, można przekazać dalej
-		sendUnitCommand(bState, repairCrew, cmd, tileX, tileY, targetBld.ID, input.IsCtrlKeyDown)
+		sendUnitCommand(bState, repairCrew, cmd, tileX, tileY, targetBld.ID, iState.IsCtrlKeyDown)
 		log.Printf("INPUT: Wysłano %d Toporników do naprawy budynku ID %d.", len(repairCrew), targetBld.ID)
 
 		// Zmieniamy stan myszki i wracamy

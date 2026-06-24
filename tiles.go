@@ -56,18 +56,18 @@ func isPalisade(tileTexID uint16) bool {
 }
 
 // Sprawdza, czy tekstura jest wodą. Stan animacji nie ma znaczenia.
-func isWaterTileOnly(tileTexID uint16) bool {
+func isWater(tileTexID uint16) bool {
 	return tileTexID >= spriteWaterStart && tileTexID <= spriteWaterEnd
 }
 
 // Sprawdza, czy tekstura jest wodą lub ukończonym mostem.
 func isWaterOrBridgeForMasking(tileTexID uint16) bool {
-	return isWaterTileOnly(tileTexID) || isCompletedBridge(tileTexID) || tileTexID == spriteBridgeConstruction
+	return isWater(tileTexID) || isCompletedBridge(tileTexID) || tileTexID == spriteBridgeConstruction
 }
 
 // Sprawdza, czy tekstura jest „lądowa”, czyli nie woda, nie mosty.
 func isLandOrOther(tileTexID uint16) bool {
-	return !isWaterTileOnly(tileTexID) && !isCompletedBridge(tileTexID) && tileTexID != spriteBridgeConstruction
+	return !isWater(tileTexID) && !isCompletedBridge(tileTexID) && tileTexID != spriteBridgeConstruction
 }
 
 // Sprawdza, czy tekstura jest to teren pod budynkami lub placem budowy.
@@ -151,7 +151,7 @@ func (t *tile) isBurntTree() bool {
 // Płomienie
 
 func (t *tile) setOnFire(fireSize uint16, bState *battleState) {
-	if isWaterTileOnly(t.TextureID) {
+	if isWater(t.TextureID) {
 		return
 	}
 

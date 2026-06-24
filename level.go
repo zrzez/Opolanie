@@ -154,7 +154,7 @@ func configureTile(currentTile *tile, graphicID uint16) {
 	// ↓↓↓ bo niektóre wartości są domyślnie ustawiane prawidłowo
 	// currentTile.treeState = noTree
 
-	if isWaterTileOnly(graphicID) {
+	if isWater(graphicID) {
 		currentTile.IsWalkable = false
 	}
 

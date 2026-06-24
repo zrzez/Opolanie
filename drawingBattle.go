@@ -157,7 +157,7 @@ func processMapTiles(bState *battleState) {
 				applyRoadProcessing(x, y, bState.Board)
 			case isPalisade(id):
 				applyPalisadeProcessing(x, y, bState.Board)
-			case isWaterTileOnly(id):
+			case isWater(id):
 				applyWaterProcessing(x, y, bState.Board, snapshot)
 			case isHealingShire(id):
 				bState.HealingShrines = append(bState.HealingShrines, point{X: x, Y: y})
@@ -170,7 +170,7 @@ func processMapTiles(bState *battleState) {
 
 func applyWaterProcessing(x, y uint8, board *boardData, snapshot [boardMaxX][boardMaxY]uint16) {
 	currentTile := board.Tiles[x][y].TextureID
-	if !isWaterTileOnly(currentTile) {
+	if !isWater(currentTile) {
 		return
 	}
 
@@ -817,7 +817,7 @@ func getMapColor(tileID uint16) rl.Color {
 		return rl.LightGray
 	case isTree(tileID):
 		return rl.DarkGreen
-	case isWaterTileOnly(tileID):
+	case isWater(tileID):
 		return rl.DarkBlue
 	case tileID == spriteEffectHeal00 || tileID == spriteEffectHeal01:
 		return rl.Blue
@@ -883,7 +883,7 @@ func drawSoil(startX, startY, endX, endY uint8, bState *battleState, ps *program
 				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
 			}
 
-			if isWaterTileOnly(texID) {
+			if isWater(texID) {
 				animationOffset := bState.WaterAnimationFrame * 13
 				drawSprite(ps.Assets, texID+animationOffset, xPos, yPos, colorNone)
 			}
@@ -1969,7 +1969,7 @@ func validationBoxColor(tileX, tileY uint8, bState *battleState) rl.Color {
 	switch bState.PendingBuildingType {
 	case buildingBridge:
 		isValid = isWithinBoard(tileX, tileY, bState) &&
-			isWaterTileOnly(bState.Board.Tiles[tileX][tileY].TextureID)
+			isWater(bState.Board.Tiles[tileX][tileY].TextureID)
 
 	case buildingRoad:
 		isValid = !isPath(bState.Board.Tiles[tileX][tileY].TextureID) &&
