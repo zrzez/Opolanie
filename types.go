@@ -63,22 +63,23 @@ const (
 
 // unit określa pojedynczą jednostkę podczas bitwy.
 type unit struct {
-	ID         uint      // Unikatowy numer jednostki
-	Exists     bool      // Czy jednostka nie została jeszcze zabita
-	X, Y       uint8     // Współrzędne jednostki
-	Owner      uint8     // Kto jest właścicielem. colorRed gracz, inne SI
-	Type       unitType  // Rodzaj jednostki (Drwal = unitAxeman itd.)
-	HP         uint16    // Bieżący wskaźnik życia
-	MaxHP      uint16    // Górna granica wskaźnika życia
-	Command    uint16    // Bieżący rozkaz (cmdMove, cmdAttack itd.)
-	TargetID   uint      // Identyfikator przedmiotu (jednostka bądź budynek) rozkazu
-	TargetX    uint8     // Współrzędna X celu (dla cmdMove. cmdAttack)
-	TargetY    uint8     // Współrzędna Y celu (dla cmdMove. cmdAttack)
-	Experience uint8     // Miara doświadczenia jednostki
-	Level      uint8     // Poziom doświadczenia jednostki
-	IsSelected bool      // Określa czy dana jednostka jest wybrana przez gracza
-	BelongsTo  *building // Określa do którego budynku jest przywiązana dana jednostka
-	IsInQueue  bool      // Wskaźnik, by wiedzieć, czy jednostka jest w kolejce
+	ID           uint        // Unikatowy numer jednostki
+	Exists       bool        // Czy jednostka nie została jeszcze zabita
+	X, Y         uint8       // Współrzędne jednostki
+	Owner        uint8       // Kto jest właścicielem. colorRed gracz, inne SI
+	Type         unitType    // Rodzaj jednostki (Drwal = unitAxeman itd.)
+	HP           uint16      // Bieżący wskaźnik życia
+	MaxHP        uint16      // Górna granica wskaźnika życia
+	Command      commandType // Bieżący rozkaz (cmdMove, cmdAttack itd.)
+	CurrentSpell spellID     // Jaki czar ma rzucić
+	TargetID     uint        // Identyfikator przedmiotu (jednostka bądź budynek) rozkazu
+	TargetX      uint8       // Współrzędna X celu (dla cmdMove. cmdAttack)
+	TargetY      uint8       // Współrzędna Y celu (dla cmdMove. cmdAttack)
+	Experience   uint8       // Miara doświadczenia jednostki
+	Level        uint8       // Poziom doświadczenia jednostki
+	IsSelected   bool        // Określa czy dana jednostka jest wybrana przez gracza
+	BelongsTo    *building   // Określa do którego budynku jest przywiązana dana jednostka
+	IsInQueue    bool        // Wskaźnik, by wiedzieć, czy jednostka jest w kolejce
 	// Do obsługi atakowania drzew, być może zbędne - 20.04.2026
 	interactionTargetX, interactionTargetY uint8
 	// Dodawalibyśmy jednostkę do określonego budynku i w ten sposób śledzimy
@@ -212,19 +213,28 @@ type playerState struct {
 	// Brakuje określenia górnych granic liczby budynków tudzież jednostek
 }
 
+type (
+	commandCategory uint8
+	commandType     uint8
+	spellID         uint8
+)
+
 // command przechowuje rozkazy dla jednostki lub budynku.
 type command struct {
 	// === KTO? (Adresat rozkazu) ===
 	// 0 = Wykonawcą jest Budynek (np. produkcja) → idzie do handleBuildingCommand
 	// 1 = Wykonawcą jest Jednostka (np. ruch, atak) → idzie do handleUnitCommand
-	CommandCategory int
+	CommandCategory commandCategory
 
 	// ExecutorID - ID konkretnego obiektu, który MA WYKONAĆ rozkaz.
 	// Jeśli Category=0, to jest to ID Budynku. Jeśli Category=1, to ID Jednostki.
 	ExecutorID uint
 
 	// === CO? ===
-	ActionType uint16 // Co ma zostać zrobione (cmdMove, cmdAttack, cmdRepairStructure)
+	ActionType commandType // Co ma zostać zrobione (cmdMove, cmdAttack, cmdRepairStructure)
+
+	// == JAKI CZAR @reminder: jeszcze nie wiem, czy tak powinno być!
+	Spell spellID
 
 	// === GDZIE / NA KIM? (Cel działania) ===
 

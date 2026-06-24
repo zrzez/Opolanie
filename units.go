@@ -19,7 +19,7 @@ const (
 	maxMovementHistory    = 6
 )
 
-func (u *unit) initUnit(unitType unitType, x, y uint8, command uint16, bState *battleState) {
+func (u *unit) initUnit(unitType unitType, x, y uint8, command commandType, bState *battleState) {
 	u.ID = bState.NextUniqueObjectID
 	bState.NextUniqueObjectID++
 	u.Exists = true
@@ -318,22 +318,28 @@ func (u *unit) executeStandardUnitCommand(bState *battleState) {
 
 			u.move(bState)
 		}
-	case cmdMagicShield:
-		u.castMagicShield()
-	case cmdMagicShower:
-		if u.canCastSpellFromCurrentPosition() {
-			u.State = stateCastingSpell
-			u.AnimationType = "fight"
-			u.clearPath()
-			u.castSpell(bState)
-		} else {
-			u.State = stateMoving
-			u.AnimationType = "walk"
-			u.move(bState)
+	case cmdCastSpell:
+		if u.CurrentSpell == spellMagicShield {
+			u.castMagicShield()
 		}
 
-	case cmdMagicSight:
-		u.castMagicSight(bState)
+		if u.CurrentSpell == spellMagicShower {
+			if u.canCastSpellFromCurrentPosition() {
+				u.State = stateCastingSpell
+				u.AnimationType = "fight"
+				u.clearPath()
+				u.castSpell(bState)
+			} else {
+				u.State = stateMoving
+				u.AnimationType = "walk"
+				u.move(bState)
+			}
+		}
+
+		if u.CurrentSpell == spellMagicSight {
+			u.castMagicSight(bState)
+		}
+
 	case cmdIdle, cmdStop:
 		u.actOnIdle(bState)
 	default:
@@ -359,7 +365,7 @@ func (u *unit) determineActiveStateFromCommand() unitState {
 		return stateGrazing
 	case cmdRepairStructure:
 		return stateRepairing
-	case cmdMagicShield, cmdMagicShower, cmdMagicSight:
+	case cmdCastSpell:
 		return stateCastingSpell
 	default:
 		return stateIdle
@@ -484,7 +490,7 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bState *battl
 	return bestX, bestY, true
 }
 
-func (u *unit) addUnitCommand(command uint16, targetX, targetY uint8, targetID uint, bState *battleState) {
+func (u *unit) addUnitCommand(command commandType, targetX, targetY uint8, targetID uint, bState *battleState) {
 	log.Printf("INFO: unit.go dodano rozkaz %d.", command)
 
 	if u.shouldSkipDuplicate(command, targetX, targetY, targetID) {
@@ -509,18 +515,18 @@ func (u *unit) addUnitCommand(command uint16, targetX, targetY uint8, targetID u
 	u.applyCommandState(command)
 }
 
-func (u *unit) shouldSkipDuplicate(command uint16, targetX, targetY uint8, targetID uint) bool {
+func (u *unit) shouldSkipDuplicate(command commandType, targetX, targetY uint8, targetID uint) bool {
 	return u.Command == command && u.TargetX == targetX &&
 		u.TargetY == targetY && u.TargetID == targetID
 }
 
-func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command uint16, targetID uint, bState *battleState) error {
+func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command commandType, targetID uint, bState *battleState) error {
 	if !isInteractionCommand(command) {
 		return nil
 	}
 
 	// Gromobicie oraz deszcz ognia
-	if command == cmdMagicShower {
+	if u.CurrentSpell == spellMagicShower {
 		// Zapamiętujemy faktyczny cel czaru
 		u.interactionTargetX, u.interactionTargetY = *targetX, *targetY
 
@@ -549,16 +555,16 @@ func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command uint16,
 	return nil
 }
 
-func isInteractionCommand(command uint16) bool {
+func isInteractionCommand(command commandType) bool {
 	switch command {
-	case cmdAttack, cmdRepairStructure, cmdBuildStructure, cmdMagicShower:
+	case cmdAttack, cmdRepairStructure, cmdBuildStructure, cmdCastSpell:
 		return true
 	default:
 		return false
 	}
 }
 
-func (u *unit) validateCommand(command uint16, targetID uint, bState *battleState) bool {
+func (u *unit) validateCommand(command commandType, targetID uint, bState *battleState) bool {
 	switch command {
 	case cmdAttack:
 		return u.canAttack(targetID, bState)
@@ -648,7 +654,7 @@ func (u *unit) canAttack(targetID uint, bState *battleState) bool {
 	return false
 }
 
-func (u *unit) prepareForNewCommand(command uint16, targetX, targetY uint8, targetID uint) {
+func (u *unit) prepareForNewCommand(command commandType, targetX, targetY uint8, targetID uint) {
 	u.clearPath()
 	u.History = nil
 	u.LoopCount = 0
@@ -661,7 +667,7 @@ func (u *unit) prepareForNewCommand(command uint16, targetX, targetY uint8, targ
 	u.Delay = 0
 }
 
-func (u *unit) applyCommandState(command uint16) {
+func (u *unit) applyCommandState(command commandType) {
 	switch command {
 	case cmdAttack:
 		log.Printf("INFO: units.go applyCommandState cmdAttack")
@@ -678,7 +684,7 @@ func (u *unit) applyCommandState(command uint16) {
 		u.AnimationType = "walk"
 		u.AnimationFrame = 0
 		u.Command = cmdIdle
-	case cmdMagicSight, cmdMagicShield, cmdMagicShower:
+	case cmdCastSpell:
 		u.State = stateCastingSpell
 	case cmdGraze:
 		u.State = stateGrazing
@@ -1036,7 +1042,7 @@ func (u *unit) handleTargetReached(bState *battleState) {
 
 		u.State = stateAttacking
 		u.attack(bState)
-	case cmdMagicShower:
+	case cmdCastSpell:
 		u.State = stateCastingSpell
 	case cmdRepairStructure:
 		u.State = stateRepairing
@@ -1047,7 +1053,7 @@ func (u *unit) handleTargetReached(bState *battleState) {
 }
 
 func (bState *battleState) assignGroupCommand(
-	command uint16, mainTargetX, mainTargetY uint8, mainTargetID uint,
+	command commandType, mainTargetX, mainTargetY uint8, mainTargetID uint,
 	selectedUnits []*unit,
 ) {
 	if len(selectedUnits) == 0 {
@@ -1085,13 +1091,13 @@ func (bState *battleState) resolveActualTarget(mainTargetX, mainTargetY uint8, m
 	return mainTargetX, mainTargetY
 }
 
-func (bState *battleState) assignSmallGroupTargets(units []*unit, command uint16, targetX, targetY uint8, targetID uint) {
+func (bState *battleState) assignSmallGroupTargets(units []*unit, command commandType, targetX, targetY uint8, targetID uint) {
 	for _, unit := range units {
 		unit.addUnitCommand(command, targetX, targetY, targetID, bState)
 	}
 }
 
-func (bState *battleState) assignScatteredGroupTargets(units []*unit, command uint16, targetX, targetY uint8, targetID uint) {
+func (bState *battleState) assignScatteredGroupTargets(units []*unit, command commandType, targetX, targetY uint8, targetID uint) {
 	positions := bState.generateFormationPositions(targetX, targetY, uint8(len(units)))
 
 	for i, unit := range units {

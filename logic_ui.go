@@ -55,7 +55,7 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 				cmd = command{
 					ActionType:          cmdBuildStructure,
 					InteractionTargetID: uint(recipe.BuildingType),
-					CommandCategory:     5, // 5 = brak konkretnego celu (tryb myszy)
+					CommandCategory:     categoryBuilding, // 5 = brak konkretnego celu (tryb myszy)
 				}
 			} else {
 				// PRZYPADEK 2: PRODUKCJA (np. Krowa, Drwal)
@@ -64,7 +64,7 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 					ActionType:          cmdProduce,
 					InteractionTargetID: bld.ID,
 					ProduceType:         recipe.UnitType,
-					CommandCategory:     0, // 0 = budynek wykonujący rozkaz
+					CommandCategory:     categoryBuilding, // 0 = budynek wykonujący rozkaz
 				}
 			}
 
@@ -96,7 +96,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 		Cmd: command{
 			ActionType:      cmdStop,
 			ExecutorID:      currentUnit.ID,
-			CommandCategory: 1,
+			CommandCategory: categoryUnit,
 		},
 	}
 	// @todo: podejrzewam, że zamiast if-ów będzie potrzebny switch później
@@ -108,7 +108,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Cmd: command{
 				ActionType:      cmdRepairStructure,
 				ExecutorID:      unitID,
-				CommandCategory: 1,
+				CommandCategory: categoryUnit,
 			},
 		}
 	}
@@ -119,9 +119,10 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Magiczna tarcza",
 			IconID:   spriteBtnSpellMagicShield,
 			Cmd: command{
-				ActionType:      cmdMagicShield,
+				ActionType:      cmdCastSpell,
+				Spell:           spellMagicShield,
 				ExecutorID:      unitID,
-				CommandCategory: 1,
+				CommandCategory: categoryUnit,
 			},
 		}
 	}
@@ -132,9 +133,10 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Gromobicie",
 			IconID:   spriteBtnSpellMagicLighting,
 			Cmd: command{
-				ActionType:      cmdMagicShower,
+				ActionType:      cmdCastSpell,
+				Spell:           spellMagicShower,
 				ExecutorID:      unitID,
-				CommandCategory: 5,
+				CommandCategory: categoryUnit,
 			},
 		}
 	}
@@ -145,9 +147,10 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Dalekie widzenie",
 			IconID:   spriteBtnSpellVision,
 			Cmd: command{
-				ActionType:      cmdMagicSight,
+				ActionType:      cmdCastSpell,
+				Spell:           spellMagicSight,
 				ExecutorID:      unitID,
-				CommandCategory: 1,
+				CommandCategory: categoryUnit,
 			},
 		}
 	}
@@ -158,9 +161,10 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Deszcz ognia",
 			IconID:   spriteBtnSpellMagicFire,
 			Cmd: command{
-				ActionType:      cmdMagicShower,
+				ActionType:      cmdCastSpell,
+				Spell:           spellMagicShower,
 				ExecutorID:      unitID,
-				CommandCategory: 5,
+				CommandCategory: categoryUnit,
 			},
 		}
 	}
