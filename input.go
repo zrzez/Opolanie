@@ -376,7 +376,7 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 func handleGameShortcuts(bState *battleState) bool {
 	if rl.IsKeyPressed(rl.KeyKpSubtract) || rl.IsKeyPressed(rl.KeyMinus) {
 		if bState.GameSpeed < 5 {
-			bState.GameSpeed++
+			bState.GameSpeed--
 			log.Printf("SKRÓT: Prędkość gry zmniejszona do %d", bState.GameSpeed)
 			return true
 		}
@@ -384,7 +384,7 @@ func handleGameShortcuts(bState *battleState) bool {
 
 	if rl.IsKeyPressed(rl.KeyKpAdd) || rl.IsKeyPressed(rl.KeyEqual) {
 		if bState.GameSpeed > 0 {
-			bState.GameSpeed--
+			bState.GameSpeed++
 			log.Printf("SKRÓT: Prędkość gry zwiększona do %d", bState.GameSpeed)
 			return true
 		}
@@ -403,9 +403,9 @@ func handleGameShortcuts(bState *battleState) bool {
 
 				log.Printf("SKRÓT: Zapamiętywanie grupy %d", i)
 				var selectedUnitIDs []uint
-				for _, unit := range bState.Units {
-					if unit.Exists && unit.Owner == bState.PlayerID && unit.IsSelected {
-						selectedUnitIDs = append(selectedUnitIDs, unit.ID)
+				for _, currentUnit := range bState.Units {
+					if currentUnit.Exists && currentUnit.Owner == bState.PlayerID && currentUnit.IsSelected {
+						selectedUnitIDs = append(selectedUnitIDs, currentUnit.ID)
 					}
 				}
 				bState.ControlGroups[i] = controlGroup{}
@@ -426,14 +426,14 @@ func handleGameShortcuts(bState *battleState) bool {
 
 			firstUnitInGroup := true
 			for _, groupUnit := range bState.ControlGroups[i].Units {
-				unit, ok := getUnitByID(groupUnit.UnitID, bState)
-				if ok && unit.Exists && unit.Owner == bState.PlayerID {
-					unit.IsSelected = true
+				currentUnit, ok := getUnitByID(groupUnit.UnitID, bState)
+				if ok && currentUnit.Exists && currentUnit.Owner == bState.PlayerID {
+					currentUnit.IsSelected = true
 					if firstUnitInGroup {
 						bState.CurrentSelection = selectionState{
-							OwnerID:    unit.Owner,
+							OwnerID:    currentUnit.Owner,
 							IsUnit:     true,
-							UnitID:     unit.ID,
+							UnitID:     currentUnit.ID,
 							BuildingID: 0,
 						}
 						firstUnitInGroup = false
@@ -674,143 +674,166 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 
 const dragThresholdPixels float32 = 3.0
 
+// @todo: czemu mam tileX, tileY a nie konkretny *tile? Czy to kolejne miejsce, które powinienem
+// przepisać, bo jest sprzed *tile?
+// @todo: czemu niektóre funkcje nie biorą iState? Śmierdzi mi to.
+func handleBoardLeftClick(iState inputState, bState *battleState, tileX, tileY uint8) bool {
+	switch bState.MouseState {
+	case mouseStateBuilding:
+		return handleMouseStateBuilding(tileX, tileY, bState)
+
+	case mouseStateRepairing:
+		return handleMouseStateRepairing(tileX, tileY, bState, iState)
+
+	case mouseStateCasting:
+		return handleMouseStateCasting(tileX, tileY, bState)
+
+	case mouseStateNormal:
+		return handleMouseStateNormal(tileX, tileY, bState, iState)
+
+	// Coś poszło bardzo źle i wpadamy w „niemożliwy” przypadek.
+	default:
+		log.Printf("BŁĄD KRYTYCZNY: Nieobsługiwany stan myszy: %d", bState.MouseState)
+		return false
+	}
+}
+
+func handleMouseStateBuilding(tileX, tileY uint8, bState *battleState) bool {
+	log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bState.PendingBuildingType)
+
+	tryBuildStructure(bState, tileX, tileY)
+
+	switch bState.PendingBuildingType {
+	case buildingRoad, buildingPalisade, buildingBridge:
+		// nic, bo chcemy móc dalej budować.
+	default:
+		// Postawiliśmy „prawdziwy budynek” i kończymy, bo pewnie nie ma więcej mleka.
+		bState.MouseState = mouseStateNormal
+		bState.PendingBuildingType = 0
+	}
+
+	return true
+}
+
+func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState inputState) bool {
+	// === NAPRAWA BĄDŹ NOWA BUDOWA ===
+	// Tutaj jest pierwsza okazja, aby dowiedzieć się, czy naprawiamy, czy budujemy
+	// wcześniej nie znaliśmy celu. Dlatego nie dało się wybrać. Od tej chwili rozdzielamy.
+	log.Println("DBG_LCLICK: Tryb naprawy. Typ z pamięci")
+	// 1. Ponieważ nacisnęliśmy lewy przycisk myszy, to bierzemy współrzędne z planszy
+	currentTile := &bState.Board.Tiles[tileX][tileY]
+	targetBld := currentTile.Building
+
+	// Idziemy dalej tylko jeżeli jako cel obraliśmy budynek
+	if targetBld == nil {
+		bState.CurrentMessage.Text = "Wskaż budynek!"
+		bState.CurrentMessage.Duration = 40
+		// Nie powinno być drugiej szansy, ale musimy wyjść z tej funkcji
+		// O ile dobrze pamiętam, to musi być true, inaczej jest przeciąganie
+		return true
+	}
+
+	cmd := cmdRepairStructure
+
+	// 2. Możemy naprawiać tylko palisady oraz swoje budynki, które są uszkodzone
+	canBeRepaired := ((targetBld.Owner == bState.PlayerID) || (targetBld.Type == buildingPalisade) ||
+		targetBld.Type == buildingBridge) && targetBld.HP < targetBld.MaxHP
+
+	if !canBeRepaired {
+		bState.CurrentMessage.Text = "Nie możesz naprawiać wrogich budynków!"
+		bState.CurrentMessage.Duration = 60
+		bState.MouseState = mouseStateNormal
+		// Niech stoją bezczynnie
+		return true
+	}
+
+	// 3. Odsianie jednostek, które nie są UNIT_AXEMAN z całej zaznaczonej drużyny
+	selectedUnits := getSelectedUnits(bState)
+
+	var repairCrew []*unit
+
+	for _, u := range selectedUnits {
+		if u.Type == unitAxeman {
+			repairCrew = append(repairCrew, u)
+		}
+	}
+
+	if len(repairCrew) == 0 {
+		bState.CurrentMessage.Text = "Brak Toporników w zaznaczeniu!"
+		bState.CurrentMessage.Duration = 60
+		bState.MouseState = mouseStateNormal
+
+		return true
+	}
+	// 4. Rozkaz gotowy, wiadomo kto, co, można przekazać dalej
+	sendUnitCommand(bState, repairCrew, cmd, tileX, tileY, targetBld.ID, iState.IsCtrlKeyDown)
+	log.Printf("INPUT: Wysłano %d Toporników do naprawy budynku ID %d.", len(repairCrew), targetBld.ID)
+
+	// Zmieniamy stan myszki i wracamy
+	bState.MouseState = mouseStateNormal
+
+	return true
+}
+
+func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) bool {
+	log.Println("DBG_LCLICK: Tryb rzucania czaru ofensywnego.")
+
+	selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
+	if !ok || !selectedUnit.Exists {
+		bState.MouseState = mouseStateNormal
+		return true
+	}
+
+	spellActionType := cmdCastSpell
+
+	// Dodajemy rozkaz do kolejki
+	selectedUnit.addUnitCommand(spellActionType, tileX, tileY, 0, bState)
+	log.Printf("DBG_LCLICK: Wydano rozkaz czaru %d na (%d,%d).", spellActionType, tileX, tileY)
+
+	bState.MouseState = mouseStateNormal
+	return true
+}
+
 // @todo: tymczasowe ogarnianie drużynowych rozkazów. Muszę wrócić i poprawić!
 // @todo: jak poprawnie obsługiwać całe drużyny? Jak dobierać, które przyciski dozwolone?
 // w W3 była możliwość „tab” pomiędzy rodzajami jednostek w drużynie i dostawania dostępu
 // do przycisków „rodzajowych”. Chyba muszę podobnie zrobić, bo mam miejsce tylko na
 // pięć przycisków: atak(0), stop(1), czar1(2), czar2(3),naprawa(4) jeżeli coś innego będzie
 // dodane to mam problem. Dodatkowo jest problem mieszania kontekstu bojowego z gospodarczym.
-func handleBoardLeftClick(iState inputState, bState *battleState, tileX, tileY uint8) bool {
+func handleMouseStateNormal(tileX, tileY uint8, bState *battleState, iState inputState) bool {
 	bState.InitialClickPos = iState.MousePosition
 	log.Printf("DBG_LCLICK: Kliknięto kafelek (%d, %d). Tryb myszy: %d", tileX, tileY, bState.MouseState)
+	// Sprawdzamy, czy kliknięto w obiekt (Jednostkę lub Budynek)
+	tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
+	targetID := uint(0)
 
-	switch bState.MouseState {
-
-	// === 1. TRYB BUDOWANIA ===
-	case mouseStateBuilding:
-		log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bState.PendingBuildingType)
-
-		tryBuildStructure(bState, tileX, tileY)
-
-		switch bState.PendingBuildingType {
-		case buildingRoad, buildingPalisade, buildingBridge:
-			// nic, bo chcemy móc dalej budować.
-		default:
-			// Postawiliśmy „prawdziwy budynek” i kończymy, bo pewnie nie ma więcej mleka.
-			bState.MouseState = mouseStateNormal
-			bState.PendingBuildingType = 0
-		}
-
-		return true
-
-	case mouseStateRepairing:
-		// === NAPRAWA BĄDŹ NOWA BUDOWA ===
-		// Tutaj jest pierwsza okazja, aby dowiedzieć się, czy naprawiamy, czy budujemy
-		// wcześniej nie znaliśmy celu. Dlatego nie dało się wybrać. Od tej chwili rozdzielamy.
-		log.Println("DBG_LCLICK: Tryb naprawy. Typ z pamięci")
-		// 1. Ponieważ nacisnęliśmy lewy przycisk myszy, to bierzemy współrzędne z planszy
-		currentTile := &bState.Board.Tiles[tileX][tileY]
-		targetBld := currentTile.Building
-
-		// Idziemy dalej tylko jeżeli jako cel obraliśmy budynek
-		if targetBld == nil {
-			bState.CurrentMessage.Text = "Wskaż budynek!"
-			bState.CurrentMessage.Duration = 40
-			// Nie powinno być drugiej szansy, ale musimy wyjść z tej funkcji
-			// O ile dobrze pamiętam, to musi być true, inaczej jest przeciąganie
-			return true
-		}
-
-		cmd := cmdRepairStructure
-
-		// 2. Możemy naprawiać tylko palisady oraz swoje budynki, które są uszkodzone
-		canBeRepaired := ((targetBld.Owner == bState.PlayerID) || (targetBld.Type == buildingPalisade) ||
-			targetBld.Type == buildingBridge) && targetBld.HP < targetBld.MaxHP
-
-		if !canBeRepaired {
-			bState.CurrentMessage.Text = "Nie możesz naprawiać wrogich budynków!"
-			bState.CurrentMessage.Duration = 60
-			bState.MouseState = mouseStateNormal
-			// Niech stoją bezczynnie
-			return true
-		}
-
-		// 3. Odsianie jednostek, które nie są UNIT_AXEMAN z całej zaznaczonej drużyny
-		selectedUnits := getSelectedUnits(bState)
-
-		var repairCrew []*unit
-
-		for _, u := range selectedUnits {
-			if u.Type == unitAxeman {
-				repairCrew = append(repairCrew, u)
-			}
-		}
-
-		if len(repairCrew) == 0 {
-			bState.CurrentMessage.Text = "Brak Toporników w zaznaczeniu!"
-			bState.CurrentMessage.Duration = 60
-			bState.MouseState = mouseStateNormal
-
-			return true
-		}
-		// 4. Rozkaz gotowy, wiadomo kto, co, można przekazać dalej
-		sendUnitCommand(bState, repairCrew, cmd, tileX, tileY, targetBld.ID, iState.IsCtrlKeyDown)
-		log.Printf("INPUT: Wysłano %d Toporników do naprawy budynku ID %d.", len(repairCrew), targetBld.ID)
-
-		// Zmieniamy stan myszki i wracamy
-		bState.MouseState = mouseStateNormal
-
-		return true
-
-	// === 2. RZUCANIE CZARÓW ===
-	case mouseStateCasting:
-		log.Println("DBG_LCLICK: Tryb rzucania czaru ofensywnego.")
-
-		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
-		if !ok || !selectedUnit.Exists {
-			bState.MouseState = mouseStateNormal
-			return true
-		}
-
-		spellActionType := cmdCastSpell
-
-		// Dodajemy rozkaz do kolejki
-		selectedUnit.addUnitCommand(spellActionType, tileX, tileY, 0, bState)
-		log.Printf("DBG_LCLICK: Wydano rozkaz czaru %d na (%d,%d).", spellActionType, tileX, tileY)
-
-		bState.MouseState = mouseStateNormal
-		return true
-
-	// === 3. DOMYŚLNY TRYB (SELEKCJA I RUCH) ===
-	default:
-		// Sprawdzamy, czy kliknięto w obiekt (Jednostkę lub Budynek)
-		tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
-		targetID := uint(0)
-
-		if tileUnderCursor.Unit != nil {
-			targetID = tileUnderCursor.Unit.ID
-		} else if tileUnderCursor.Building != nil {
-			targetID = tileUnderCursor.Building.ID
-		}
-
-		if targetID != 0 {
-			log.Println("DBG_LCLICK: Kliknięto na OBIEKT. Wywołuję selectObjectByClick.")
-			selectObjectByClick(tileX, tileY, bState)
-
-			return true
-		}
-
-		// Kliknięto w puste pole -> Początek rysowania prostokąta zaznaczenia (Drag Selection)
-		log.Println("DBG_LCLICK: Kliknięto na puste pole. Początek zaznaczania.")
-
-		// @todo: sprawdź, czy to w ogóle działa!
-		if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
-			// Jeśli nie trzymamy Shift, czyścimy poprzednie zaznaczenie
-			clearSelection(bState)
-		}
-		// Zwracamy false, aby pozwolić funkcji nadrzędnej obsłużyć ciągnięcie myszy (drag) w handleBoardDrag
-		return false
+	if tileUnderCursor.Unit != nil {
+		targetID = tileUnderCursor.Unit.ID
+	} else if tileUnderCursor.Building != nil {
+		targetID = tileUnderCursor.Building.ID
 	}
+
+	if targetID != 0 {
+		// @todo: chyba tutaj powinienem dodać ułatwienie, że jeśli drwal(e), to można bezpośrednio
+		// budować budowę/naprawiać bez wybrania odpowiedniego rozkazu.
+		log.Println("DBG_LCLICK: Kliknięto na OBIEKT. Wywołuję selectObjectByClick.")
+		selectObjectByClick(tileX, tileY, bState)
+
+		return true
+	}
+
+	// Kliknięto w puste pole -> Początek rysowania prostokąta zaznaczenia (Drag Selection)
+	log.Println("DBG_LCLICK: Kliknięto na puste pole. Początek zaznaczania.")
+
+	// @todo: sprawdź, czy to w ogóle działa! - 24.06.2026 działa, ale ŹLE
+	// 1) miesza się budynki z jednostkami, a raczej nie powinno
+	// 2) pomijamy iState i bezpośrednio gadamy z rl. Jest to niespójne.
+	if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
+		// Jeśli nie trzymamy Shift, czyścimy poprzednie zaznaczenie
+		clearSelection(bState)
+	}
+	// Zwracamy false, aby pozwolić funkcji nadrzędnej obsłużyć ciągnięcie myszy (drag) w handleBoardDrag
+	return false
 }
 
 func handleBoardDrag(input inputState, bState *battleState) bool {
