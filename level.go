@@ -135,7 +135,7 @@ func (l *jsonLevelLoader) clearGameState(bState *battleState) {
 
 	bState.CurrentSelection = selectionState{}
 	bState.MouseState = mouseStateNormal
-	bState.IsSelectingBox = false
+	bState.DragContext.IsActive = false
 
 	// Zerowanie liczników animacji
 	bState.GrassGrowthCycle = 0

@@ -777,7 +777,6 @@ func (ps *programState) loadSingleTexture(path string) (rl.Texture2D, error) {
 // w ogóle powinno się przenieść określenie battleState w miejsce, gdzie odpalamy bitwy.
 func newBattleState(pState *programState) *battleState {
 	return &battleState{
-		// Ustawiamy na NONE (0) - stan jest "nieuzbrojony"
 		PlayerID:   colorNone,
 		AIPlayerID: colorNone,
 
@@ -811,9 +810,7 @@ func newBattleState(pState *programState) *battleState {
 		Board:              &boardData{},
 		CurrentSelection:   selectionState{},
 		MouseState:         mouseStateNormal,
-		IsSelectingBox:     false,
-		InitialClickPos:    rl.Vector2{X: 0, Y: 0},
-		SelectionStart:     rl.Vector2{X: 0, Y: 0},
+		DragContext:        dragContext{},
 		Map:                false,
 
 		CurrentLevel:          0,

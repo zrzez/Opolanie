@@ -304,6 +304,7 @@ func pollInput(pState *programState) inputState {
 		IsRightMouseButtonPressed:  rl.IsMouseButtonPressed(rl.MouseButtonRight),
 		IsRightMouseButtonReleased: rl.IsMouseButtonReleased(rl.MouseButtonRight),
 		IsCtrlKeyDown:              rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl),
+		IsShiftKeyDown:             rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift),
 	}
 }
 
@@ -569,7 +570,7 @@ func handleBoardInitialChecks(input inputState, bState *battleState, ps *program
 	tileY := uint8(worldPos.Y / float32(tileHeight))
 
 	if tileX >= boardMaxX || tileY >= boardMaxY {
-		if input.IsLeftMouseButtonPressed && !bState.IsSelectingBox {
+		if input.IsLeftMouseButtonPressed && !bState.DragContext.IsActive {
 			clearSelection(bState)
 		}
 
@@ -582,20 +583,21 @@ func handleBoardInitialChecks(input inputState, bState *battleState, ps *program
 // @todo: tutaj muszę wyłapać przypadek palisady w budowie. Niedrwale i niekapłani będą chodzić a nie atakować
 func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY uint8) bool {
 	if input.IsRightMouseButtonPressed {
-		if bState.IsSelectingBox {
+		/*if bState.IsSelectingBox {
 			bState.IsSelectingBox = false
 			bState.SelectionStart = rl.NewVector2(0, 0)
 			bState.InitialClickPos = rl.NewVector2(0, 0)
 			bState.MouseState = mouseStateNormal
 
 			return true
-		}
+		}*/
 
 		if bState.MouseState > mouseStateNormal {
 			log.Println("INPUT: Anulowano tryb celowania prawym przyciskiem.")
 
 			bState.MouseState = mouseStateNormal
 			bState.PendingBuildingType = 0
+			bState.DragContext.IsActive = false
 			bState.CurrentMessage.Text = "Anulowano"
 			bState.CurrentMessage.Duration = 30
 
@@ -617,18 +619,18 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 				targetOwner = tileUnderCursor.Building.Owner
 			}
 
-			commandType := cmdMove
+			cmdType := cmdMove
 
 			// 1. Atak na wrogie jednostki/budynki
 			switch {
 			// @todo: muszę przepuszczać bratobójcie ataki
 			case targetID != 0 && (targetOwner != bState.PlayerID || input.IsCtrlKeyDown):
-				commandType = cmdAttack
+				cmdType = cmdAttack
 
 				// @reminder: chodzi o przypadek kliknięcia na zniszczoną palisadę w celu pójścia tam.
 				if tileUnderCursor.Building != nil && tileUnderCursor.Building.Type == buildingPalisade &&
 					tileUnderCursor.Building.IsUnderConstruction {
-					commandType = cmdMove
+					cmdType = cmdMove
 				}
 
 			case isTreeStump(tileUnderCursor.TextureID):
@@ -643,7 +645,7 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 				}
 
 				if canAttackTree {
-					commandType = cmdAttack
+					cmdType = cmdAttack
 					// targetID pozostaje 0; koordynaty ataku są przekazywane przez tileX, tileY
 				} else {
 					bState.CurrentMessage.Text = "Zaznaczone jednostki nie mogą atakować drzew!"
@@ -657,7 +659,7 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 				return true
 			}
 
-			sendUnitCommand(bState, selectedUnits, commandType, tileX, tileY, targetID, input.IsCtrlKeyDown)
+			sendUnitCommand(bState, selectedUnits, cmdType, tileX, tileY, targetID, input.IsCtrlKeyDown)
 
 			return true
 		}
@@ -673,30 +675,6 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 }
 
 const dragThresholdPixels float32 = 3.0
-
-// @todo: czemu mam tileX, tileY a nie konkretny *tile? Czy to kolejne miejsce, które powinienem
-// przepisać, bo jest sprzed *tile?
-// @todo: czemu niektóre funkcje nie biorą iState? Śmierdzi mi to.
-func handleBoardLeftClick(iState inputState, bState *battleState, tileX, tileY uint8) bool {
-	switch bState.MouseState {
-	case mouseStateBuilding:
-		return handleMouseStateBuilding(tileX, tileY, bState)
-
-	case mouseStateRepairing:
-		return handleMouseStateRepairing(tileX, tileY, bState, iState)
-
-	case mouseStateCasting:
-		return handleMouseStateCasting(tileX, tileY, bState)
-
-	case mouseStateNormal:
-		return handleMouseStateNormal(tileX, tileY, bState, iState)
-
-	// Coś poszło bardzo źle i wpadamy w „niemożliwy” przypadek.
-	default:
-		log.Printf("BŁĄD KRYTYCZNY: Nieobsługiwany stan myszy: %d", bState.MouseState)
-		return false
-	}
-}
 
 func handleMouseStateBuilding(tileX, tileY uint8, bState *battleState) bool {
 	log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bState.PendingBuildingType)
@@ -801,57 +779,85 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) bool {
 // pięć przycisków: atak(0), stop(1), czar1(2), czar2(3),naprawa(4) jeżeli coś innego będzie
 // dodane to mam problem. Dodatkowo jest problem mieszania kontekstu bojowego z gospodarczym.
 func handleMouseStateNormal(tileX, tileY uint8, bState *battleState, iState inputState) bool {
-	bState.InitialClickPos = iState.MousePosition
-	log.Printf("DBG_LCLICK: Kliknięto kafelek (%d, %d). Tryb myszy: %d", tileX, tileY, bState.MouseState)
-	// Sprawdzamy, czy kliknięto w obiekt (Jednostkę lub Budynek)
-	tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
-	targetID := uint(0)
+	// 0. Puszczamy lewy klawisz myszy, kończymy ramkę
+	if iState.IsLeftMouseButtonReleased && bState.DragContext.IsActive && bState.MouseState != mouseStateBoxSelecting {
+		bState.DragContext.IsActive = false
 
-	if tileUnderCursor.Unit != nil {
-		targetID = tileUnderCursor.Unit.ID
-	} else if tileUnderCursor.Building != nil {
-		targetID = tileUnderCursor.Building.ID
+		return false
 	}
 
-	if targetID != 0 {
-		// @todo: chyba tutaj powinienem dodać ułatwienie, że jeśli drwal(e), to można bezpośrednio
-		// budować budowę/naprawiać bez wybrania odpowiedniego rozkazu.
-		log.Println("DBG_LCLICK: Kliknięto na OBIEKT. Wywołuję selectObjectByClick.")
-		selectObjectByClick(tileX, tileY, bState)
+	if bState.MouseState == mouseStateBoxSelecting && iState.IsLeftMouseButtonReleased {
+		performBoxSelection(bState, bState.DragContext.AnchorPos, iState.MousePosition)
+
+		bState.MouseState = mouseStateNormal
+		bState.DragContext.IsActive = false
 
 		return true
 	}
 
-	// Kliknięto w puste pole -> Początek rysowania prostokąta zaznaczenia (Drag Selection)
-	log.Println("DBG_LCLICK: Kliknięto na puste pole. Początek zaznaczania.")
-
-	// @todo: sprawdź, czy to w ogóle działa! - 24.06.2026 działa, ale ŹLE
-	// 1) miesza się budynki z jednostkami, a raczej nie powinno
-	// 2) pomijamy iState i bezpośrednio gadamy z rl. Jest to niespójne.
-	if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
-		// Jeśli nie trzymamy Shift, czyścimy poprzednie zaznaczenie
-		clearSelection(bState)
-	}
-	// Zwracamy false, aby pozwolić funkcji nadrzędnej obsłużyć ciągnięcie myszy (drag) w handleBoardDrag
-	return false
-}
-
-func handleBoardDrag(input inputState, bState *battleState) bool {
-	if !input.IsLeftMouseButtonDown {
-		return false
-	}
-
-	if bState.IsSelectingBox || bState.MouseState != mouseStateNormal || bState.CurrentSelection.IsUnit || bState.CurrentSelection.BuildingID != 0 {
-		return false
-	}
-
-	distance := rl.Vector2Distance(bState.InitialClickPos, input.MousePosition)
-
-	if distance > dragThresholdPixels {
-		bState.IsSelectingBox = true
-		bState.SelectionStart = bState.InitialClickPos
+	if bState.MouseState == mouseStateBoxSelecting && iState.IsLeftMouseButtonDown {
+		bState.DragContext.CurrentPos = iState.MousePosition
 
 		return true
+	}
+
+	if iState.IsLeftMouseButtonPressed {
+		log.Printf("DBG_LCLICK: Kliknięto kafelek (%d, %d). Tryb myszy: %d", tileX, tileY, bState.MouseState)
+		// Sprawdzamy, czy kliknięto w obiekt (Jednostkę lub Budynek)
+		tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
+		targetID := uint(0)
+
+		// ↓↓↓↓ TUTAJ ROZGAŁĘZIENIE, BO CHCĘ ROZBUDOWAĆ PRZYPADEK DRWALI
+		if tileUnderCursor.Unit != nil {
+			targetID = tileUnderCursor.Unit.ID
+		} else if tileUnderCursor.Building != nil {
+			targetID = tileUnderCursor.Building.ID
+		}
+
+		if targetID != 0 {
+			// @todo: chyba tutaj powinienem dodać ułatwienie, że jeśli drwal(e), to można bezpośrednio
+			// budować budowę/naprawiać bez wybrania odpowiedniego rozkazu.
+			log.Println("DBG_LCLICK: Kliknięto na OBIEKT. Wywołuję selectObjectByClick.")
+			selectObjectByClick(tileX, tileY, bState)
+
+			return true
+		}
+
+		// Kliknięto w puste pole -> Początek rysowania prostokąta zaznaczenia (Drag Selection)
+		log.Println("DBG_LCLICK: Kliknięto na puste pole. Początek zaznaczania.")
+		bState.DragContext.IsActive = true
+		bState.DragContext.AnchorPos = iState.MousePosition
+
+		// @todo: sprawdź, czy to w ogóle działa! - 24.06.2026 działa, ale ŹLE
+		// 1) miesza się budynki z jednostkami, a raczej nie powinno
+		// 2) pomijamy iState i bezpośrednio gadamy z rl. Jest to niespójne.
+		if !iState.IsShiftKeyDown {
+			// Jeśli nie trzymamy Shift, czyścimy poprzednie zaznaczenie
+			clearSelection(bState)
+		}
+		// Zwracamy false, aby pozwolić funkcji nadrzędnej obsłużyć ciągnięcie myszy (drag) w handleBoardDrag
+		return false
+	}
+
+	if iState.IsLeftMouseButtonDown {
+		if !bState.DragContext.IsActive {
+			return false
+		}
+
+		if bState.MouseState != mouseStateNormal || bState.CurrentSelection.IsUnit || bState.CurrentSelection.BuildingID != 0 {
+			return false
+		}
+
+		distance := rl.Vector2Distance(bState.DragContext.AnchorPos, iState.MousePosition)
+
+		if distance > dragThresholdPixels {
+			bState.MouseState = mouseStateBoxSelecting
+			bState.DragContext.CurrentPos = iState.MousePosition
+
+			return true
+		}
+
+		return false
 	}
 
 	return false
@@ -875,32 +881,39 @@ func sendUnitCommand(bState *battleState, units []*unit, command commandType, x,
 	bState.MouseState = mouseStateNormal
 }
 
-func handleBoardInteraction(input inputState, bState *battleState, ps *programState) {
+func handleBoardInteraction(iState inputState, bState *battleState, ps *programState) {
 	// Przekazujemy ps do checks
-	handledInitial, tileX, tileY := handleBoardInitialChecks(input, bState, ps)
+	handledInitial, tileX, tileY := handleBoardInitialChecks(iState, bState, ps)
 	if handledInitial {
 		return
 	}
 
-	if bState.IsSelectingBox && input.IsLeftMouseButtonReleased {
-		bState.IsSelectingBox = false
-		performBoxSelection(bState, bState.SelectionStart, input.MousePosition)
-		bState.SelectionStart = rl.NewVector2(0, 0)
-		bState.InitialClickPos = rl.NewVector2(0, 0)
-
+	if handleBoardRightClick(iState, bState, tileX, tileY) {
 		return
 	}
 
-	if handleBoardRightClick(input, bState, tileX, tileY) {
+	if handleMouseStateNormal(tileX, tileY, bState, iState) {
 		return
 	}
 
-	if input.IsLeftMouseButtonPressed && handleBoardLeftClick(input, bState, tileX, tileY) {
-		return
-	}
-
-	if input.IsLeftMouseButtonDown {
-		handleBoardDrag(input, bState)
+	if iState.IsLeftMouseButtonPressed {
+		switch bState.MouseState {
+		case mouseStateBuilding:
+			if handleMouseStateBuilding(tileX, tileY, bState) {
+				return
+			}
+		case mouseStateRepairing:
+			if handleMouseStateRepairing(tileX, tileY, bState, iState) {
+				return
+			}
+		case mouseStateCasting:
+			if handleMouseStateCasting(tileX, tileY, bState) {
+				return
+			}
+		// Coś poszło bardzo źle i wpadamy w „niemożliwy” przypadek.
+		default:
+			log.Printf("BŁĄD KRYTYCZNY: Nieobsługiwany stan myszy: %d", bState.MouseState)
+		}
 	}
 }
 
