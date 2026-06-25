@@ -700,8 +700,8 @@ const (
 
 // Rzeczy związane z budynkami.
 const (
-	initialConstructionHP = 30
-	buildingArmor         = 10
+	initialConstructionHP uint16 = 30
+	buildingArmor         uint8  = 10
 )
 
 // Jest to lewy górny róg tekstury, 135 prawy dolny.
