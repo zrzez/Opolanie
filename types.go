@@ -17,6 +17,7 @@ type inputState struct {
 	IsRightMouseButtonPressed  bool       // Czy prawy przycisk myszy został przyciśnięty
 	IsRightMouseButtonReleased bool       // Czy prawy przycisk myszy został zwolniony
 	IsCtrlKeyDown              bool       // Czy ctrl jest przyciśnięty
+	IsShiftKeyDown             bool       //
 }
 
 // mouseState określa stan kursora
@@ -392,6 +393,12 @@ type boardData struct {
 	Tiles [boardMaxX][boardMaxY]tile
 }
 
+type dragContext struct {
+	IsActive   bool       // Czy mamy punkt początkowy
+	AnchorPos  rl.Vector2 // Punkt początkowy
+	CurrentPos rl.Vector2 // Gdzie jest teraz mysz
+}
+
 // battleState przechowuje opis bitwy
 // @todo: czemu nazywamy to „battle” skoro powinien przechowywać też dane o całej wyprawie?
 type battleState struct {
@@ -422,12 +429,10 @@ type battleState struct {
 	// === UI I INTERAKCJA ===
 	GameCamera              rl.Camera2D      // Kamera widoku gry
 	CurrentSelection        selectionState   // Bieżące zaznaczenie
-	SelectionStart          rl.Vector2       // Miejsce gdzie zaczęto zaznaczanie
 	ControlGroups           [10]controlGroup // Zarządzane zespoły
 	MouseState              mouseState       // Tryb kursora
-	IsSelectingBox          bool             // Czy gracz rysuje prostokąt zaznaczający
-	InitialClickPos         rl.Vector2       // Pozycja myszy w chwili początkowego naciśnięcia
-	Map                     bool             // Czy mapa jest widoczna
+	DragContext             dragContext      // Przeciąganie
+	Map                     bool             // Czy mapa jest widoczna @todo: czy w ogóle tego używam?!
 	IsMapDragging           bool
 	MapInitialClickPos      rl.Vector2
 	CameraTargetOnDragStart rl.Vector2

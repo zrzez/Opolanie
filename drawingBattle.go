@@ -1376,7 +1376,7 @@ func (bState *battleState) updateRenderCache() {
 
 // drawSelectionBox odpowiada za rysowanie prostokąta do zaznaczania jednostek.
 func drawSelectionBox(bState *battleState, ps *programState) {
-	if !bState.IsSelectingBox {
+	if !bState.DragContext.IsActive {
 		return
 	}
 
@@ -1389,7 +1389,7 @@ func drawSelectionBox(bState *battleState, ps *programState) {
 	// Dzięki temu, że jesteśmy w BeginMode2D, rysujemy wprost na mapie.
 
 	// Start zaznaczania (zapamiętany w input.go jako wirtualny ekran) → Świat
-	worldStart := rl.GetScreenToWorld2D(bState.SelectionStart, bState.GameCamera)
+	worldStart := rl.GetScreenToWorld2D(bState.DragContext.AnchorPos, bState.GameCamera)
 
 	// Obecna mysz (wirtualny ekran) → Świat
 	worldEnd := rl.GetScreenToWorld2D(currentVirtualMouse, bState.GameCamera)
