@@ -156,11 +156,10 @@ const (
 
 const (
 	// stany kursora w nakładce (UI)
-	mouseStateNormal       mouseState = iota // Nic konkretnego, można zaznaczać itd.
-	mouseStateBoxSelecting                   // Zaznaczam ramką
-	mouseStateBuilding                       // Czekam na wskazanie miejsca budowy
-	mouseStateRepairing                      // Czekam na wskazanie budynku do naprawy
-	mouseStateCasting                        // Czekam na wskazanie celu czaru
+	mouseStateNormal    mouseState = iota // Nic konkretnego, można zaznaczać itd.
+	mouseStateBuilding                    // Czekam na wskazanie miejsca budowy
+	mouseStateRepairing                   // Czekam na wskazanie budynku do naprawy
+	mouseStateCasting                     // Czekam na wskazanie celu czaru
 )
 
 const (

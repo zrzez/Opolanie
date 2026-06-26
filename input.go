@@ -676,7 +676,7 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 
 const dragThresholdPixels float32 = 3.0
 
-func handleMouseStateBuilding(tileX, tileY uint8, bState *battleState) bool {
+func handleMouseStateBuilding(tileX, tileY uint8, bState *battleState) {
 	log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bState.PendingBuildingType)
 
 	tryBuildStructure(bState, tileX, tileY)
@@ -690,10 +690,10 @@ func handleMouseStateBuilding(tileX, tileY uint8, bState *battleState) bool {
 		bState.PendingBuildingType = 0
 	}
 
-	return true
+	return
 }
 
-func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState inputState) bool {
+func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState inputState) {
 	// === NAPRAWA BĄDŹ NOWA BUDOWA ===
 	// Tutaj jest pierwsza okazja, aby dowiedzieć się, czy naprawiamy, czy budujemy
 	// wcześniej nie znaliśmy celu. Dlatego nie dało się wybrać. Od tej chwili rozdzielamy.
@@ -708,7 +708,7 @@ func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState i
 		bState.CurrentMessage.Duration = 40
 		// Nie powinno być drugiej szansy, ale musimy wyjść z tej funkcji
 		// O ile dobrze pamiętam, to musi być true, inaczej jest przeciąganie
-		return true
+		return
 	}
 
 	cmd := cmdRepairStructure
@@ -722,7 +722,7 @@ func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState i
 		bState.CurrentMessage.Duration = 60
 		bState.MouseState = mouseStateNormal
 		// Niech stoją bezczynnie
-		return true
+		return
 	}
 
 	// 3. Odsianie jednostek, które nie są UNIT_AXEMAN z całej zaznaczonej drużyny
@@ -741,7 +741,7 @@ func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState i
 		bState.CurrentMessage.Duration = 60
 		bState.MouseState = mouseStateNormal
 
-		return true
+		return
 	}
 	// 4. Rozkaz gotowy, wiadomo kto, co, można przekazać dalej
 	sendUnitCommand(bState, repairCrew, cmd, tileX, tileY, targetBld.ID, iState.IsCtrlKeyDown)
@@ -750,16 +750,16 @@ func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState i
 	// Zmieniamy stan myszki i wracamy
 	bState.MouseState = mouseStateNormal
 
-	return true
+	return
 }
 
-func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) bool {
+func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
 	log.Println("DBG_LCLICK: Tryb rzucania czaru ofensywnego.")
 
 	selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
 	if !ok || !selectedUnit.Exists {
 		bState.MouseState = mouseStateNormal
-		return true
+		return
 	}
 
 	spellActionType := cmdCastSpell
@@ -769,7 +769,7 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) bool {
 	log.Printf("DBG_LCLICK: Wydano rozkaz czaru %d na (%d,%d).", spellActionType, tileX, tileY)
 
 	bState.MouseState = mouseStateNormal
-	return true
+	return
 }
 
 // @todo: tymczasowe ogarnianie drużynowych rozkazów. Muszę wrócić i poprawić!
@@ -778,89 +778,59 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) bool {
 // do przycisków „rodzajowych”. Chyba muszę podobnie zrobić, bo mam miejsce tylko na
 // pięć przycisków: atak(0), stop(1), czar1(2), czar2(3),naprawa(4) jeżeli coś innego będzie
 // dodane to mam problem. Dodatkowo jest problem mieszania kontekstu bojowego z gospodarczym.
-func handleMouseStateNormal(tileX, tileY uint8, bState *battleState, iState inputState) bool {
-	// 0. Puszczamy lewy klawisz myszy, kończymy ramkę
-	if iState.IsLeftMouseButtonReleased && bState.DragContext.IsActive && bState.MouseState != mouseStateBoxSelecting {
-		bState.DragContext.IsActive = false
+func handleMouseStateNormalPressed(tileX, tileY uint8, bState *battleState, iState inputState, ps *programState) {
+	log.Printf("DBG_LCLICK: Naciśnięto kafelek (%d,%d). Tryb myszy: Normal", tileX, tileY)
 
-		return false
+	tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
+	targetID := uint(0)
+
+	if tileUnderCursor.Unit != nil {
+		targetID = tileUnderCursor.Unit.ID
+	} else if tileUnderCursor.Building != nil {
+		targetID = tileUnderCursor.Building.ID
 	}
 
-	if bState.MouseState == mouseStateBoxSelecting && iState.IsLeftMouseButtonReleased {
-		performBoxSelection(bState, bState.DragContext.AnchorPos, iState.MousePosition)
-
-		bState.MouseState = mouseStateNormal
-		bState.DragContext.IsActive = false
-
-		return true
-	}
-
-	if bState.MouseState == mouseStateBoxSelecting && iState.IsLeftMouseButtonDown {
-		bState.DragContext.CurrentPos = iState.MousePosition
-
-		return true
-	}
-
-	if iState.IsLeftMouseButtonPressed {
-		log.Printf("DBG_LCLICK: Kliknięto kafelek (%d, %d). Tryb myszy: %d", tileX, tileY, bState.MouseState)
-		// Sprawdzamy, czy kliknięto w obiekt (Jednostkę lub Budynek)
-		tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
-		targetID := uint(0)
-
-		// ↓↓↓↓ TUTAJ ROZGAŁĘZIENIE, BO CHCĘ ROZBUDOWAĆ PRZYPADEK DRWALI
-		if tileUnderCursor.Unit != nil {
-			targetID = tileUnderCursor.Unit.ID
-		} else if tileUnderCursor.Building != nil {
-			targetID = tileUnderCursor.Building.ID
-		}
-
-		if targetID != 0 {
-			// @todo: chyba tutaj powinienem dodać ułatwienie, że jeśli drwal(e), to można bezpośrednio
-			// budować budowę/naprawiać bez wybrania odpowiedniego rozkazu.
-			log.Println("DBG_LCLICK: Kliknięto na OBIEKT. Wywołuję selectObjectByClick.")
-			selectObjectByClick(tileX, tileY, bState)
-
-			return true
-		}
-
-		// Kliknięto w puste pole -> Początek rysowania prostokąta zaznaczenia (Drag Selection)
-		log.Println("DBG_LCLICK: Kliknięto na puste pole. Początek zaznaczania.")
-		bState.DragContext.IsActive = true
-		bState.DragContext.AnchorPos = iState.MousePosition
-
-		// @todo: sprawdź, czy to w ogóle działa! - 24.06.2026 działa, ale ŹLE
-		// 1) miesza się budynki z jednostkami, a raczej nie powinno
-		// 2) pomijamy iState i bezpośrednio gadamy z rl. Jest to niespójne.
+	if targetID != 0 {
+		selectObjectByClick(tileX, tileY, bState)
+	} else {
 		if !iState.IsShiftKeyDown {
-			// Jeśli nie trzymamy Shift, czyścimy poprzednie zaznaczenie
 			clearSelection(bState)
 		}
-		// Zwracamy false, aby pozwolić funkcji nadrzędnej obsłużyć ciągnięcie myszy (drag) w handleBoardDrag
-		return false
+
+		bState.DragContext.IsActive = true
+		bState.DragContext.AnchorPos = clampDragPosition(iState.MousePosition, ps)
+		// ↓↓↓ bez tego poprzednie współrzędne zaśmiecają rysowanie ramki.
+		bState.DragContext.CurrentPos = bState.DragContext.AnchorPos
+	}
+}
+
+// Obsługuje chwilę zwolnienia przycisku. Zatwierdzamy ramkę zaznaczania jeśli była stworzona.
+func handleMouseStateNormalReleased(bState *battleState) {
+	// 0. Gracz nie przeciągał, nie ma ramki do domknięcia.
+	if !bState.DragContext.IsActive {
+		return
 	}
 
-	if iState.IsLeftMouseButtonDown {
-		if !bState.DragContext.IsActive {
-			return false
-		}
+	// @reminder: trzeba wywalić bezpośrednie odwołanie do rl!
+	distance := rl.Vector2Distance(bState.DragContext.AnchorPos, bState.DragContext.CurrentPos)
 
-		if bState.MouseState != mouseStateNormal || bState.CurrentSelection.IsUnit || bState.CurrentSelection.BuildingID != 0 {
-			return false
-		}
-
-		distance := rl.Vector2Distance(bState.DragContext.AnchorPos, iState.MousePosition)
-
-		if distance > dragThresholdPixels {
-			bState.MouseState = mouseStateBoxSelecting
-			bState.DragContext.CurrentPos = iState.MousePosition
-
-			return true
-		}
-
-		return false
+	if distance > dragThresholdPixels {
+		log.Println("DBG_LCLICK: Kończę ramkę zaznaczania.")
+		performBoxSelection(bState, bState.DragContext.AnchorPos, bState.DragContext.CurrentPos)
+	} else {
+		log.Println("DGB_LCLICK: Zbyt mały ruch, nie jest to zaznaczanie ramką.")
 	}
 
-	return false
+	// Zwolniony przycisk myszy, obsłużyliśmy udane i nieudane zaznaczanie, kończymy.
+	bState.DragContext.IsActive = false
+}
+
+// Obsługuje aktywne przeciąganie ramki, czyli trzymamy wciśnięty przycisk myszy.
+// Dzięki temu aktywnie śledzimy pozycję myszy.
+func handleMouseStateNormalHeld(bState *battleState, iState inputState) {
+	if bState.DragContext.IsActive {
+		bState.DragContext.CurrentPos = iState.MousePosition
+	}
 }
 
 // @todo: ogarnij czemu to nie działa jako przekazanie STOP do wszystkich
@@ -882,8 +852,8 @@ func sendUnitCommand(bState *battleState, units []*unit, command commandType, x,
 }
 
 func handleBoardInteraction(iState inputState, bState *battleState, ps *programState) {
-	// Przekazujemy ps do checks
 	handledInitial, tileX, tileY := handleBoardInitialChecks(iState, bState, ps)
+
 	if handledInitial {
 		return
 	}
@@ -892,48 +862,78 @@ func handleBoardInteraction(iState inputState, bState *battleState, ps *programS
 		return
 	}
 
-	if handleMouseStateNormal(tileX, tileY, bState, iState) {
-		return
-	}
-
 	if iState.IsLeftMouseButtonPressed {
 		switch bState.MouseState {
 		case mouseStateBuilding:
-			if handleMouseStateBuilding(tileX, tileY, bState) {
-				return
-			}
+			handleMouseStateBuilding(tileX, tileY, bState)
 		case mouseStateRepairing:
-			if handleMouseStateRepairing(tileX, tileY, bState, iState) {
-				return
-			}
+			handleMouseStateRepairing(tileX, tileY, bState, iState)
 		case mouseStateCasting:
-			if handleMouseStateCasting(tileX, tileY, bState) {
-				return
-			}
-		// Coś poszło bardzo źle i wpadamy w „niemożliwy” przypadek.
+			handleMouseStateCasting(tileX, tileY, bState)
+		case mouseStateNormal:
+			handleMouseStateNormalPressed(tileX, tileY, bState, iState, ps) // Dodano ps
 		default:
 			log.Printf("BŁĄD KRYTYCZNY: Nieobsługiwany stan myszy: %d", bState.MouseState)
 		}
+		return
 	}
+}
+
+// clampDragPosition ogranicza pozycję ramki do obszaru planszy
+func clampDragPosition(pos rl.Vector2, ps *programState) rl.Vector2 {
+	clamped := pos
+
+	// Ograniczenie do lewej/górnej krawędzi
+	if clamped.X < 0 {
+		clamped.X = 0
+	}
+	if clamped.Y < 0 {
+		clamped.Y = 0
+	}
+
+	// Ograniczenie do prawej krawędzi (granica z UI)
+	if clamped.X > ps.GameViewWidth {
+		clamped.X = ps.GameViewWidth
+	}
+
+	// Ograniczenie do dolnej krawędzi
+	if clamped.Y > ps.VirtualHeight {
+		clamped.Y = ps.VirtualHeight
+	}
+
+	return clamped
 }
 
 func handleGameInput(bState *battleState, pState *programState, iState inputState) {
 	virtualMouse := iState.MousePosition
 
-	//  if handleCheats(bs) {
-	//	return
-	//  }
-
 	handleCameraScroll(iState, bState, pState)
 
+	// Obsługa przeciągania ramki zaznaczania
+	if bState.DragContext.IsActive {
+		// Zawsze aktualizuj pozycję końca ramki
+		bState.DragContext.CurrentPos = clampDragPosition(virtualMouse, pState)
+
+		// Obsługa zwolnienia przycisku myszy
+		if iState.IsLeftMouseButtonReleased {
+			handleMouseStateNormalReleased(bState)
+			return
+		}
+
+		// Blokuj inne zdarzenia podczas przeciągania
+		return
+	}
+
+	// Obsługa UI
 	if isMouseOverUI(pState, virtualMouse) {
-		if iState.IsLeftMouseButtonPressed || iState.IsRightMouseButtonPressed || iState.IsLeftMouseButtonDown ||
-			iState.IsLeftMouseButtonReleased {
+		if iState.IsLeftMouseButtonPressed || iState.IsRightMouseButtonPressed ||
+			iState.IsLeftMouseButtonDown || iState.IsLeftMouseButtonReleased {
 			if handleGameUIClicks(iState, bState, pState) {
 				return
 			}
 		}
 	} else {
+		// Obsługa planszy
 		handleGameShortcuts(bState)
 		handleBoardInteraction(iState, bState, pState)
 	}

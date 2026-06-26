@@ -485,7 +485,7 @@ func (ps *programState) changeState(newState screenState, bState *battleState) {
 }
 
 // Odpowiada za rysowanie urojonego płótna, które później ma być skalowane do docelowej wielkości.
-func drawSceneToVirtualScreen(bState *battleState, ps *programState) {
+func drawSceneToVirtualScreen(bState *battleState, ps *programState, iState inputState) {
 	rl.BeginTextureMode(ps.ScreenTarget)
 	rl.ClearBackground(rl.Black)
 
@@ -994,7 +994,7 @@ func main() {
 
 		rl.BeginDrawing()
 		logVirtualMouseCoordinates(pState)
-		drawSceneToVirtualScreen(bState, pState)
+		drawSceneToVirtualScreen(bState, pState, iState)
 		drawSceneToActualScreen(bState, pState, iState)
 		rl.EndDrawing()
 	}
