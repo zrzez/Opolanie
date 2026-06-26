@@ -1099,7 +1099,7 @@ func drawFallingOrFallenTree(boardColumn, boardRow uint8, t *tile, ps *programSt
 }
 
 // @todo: porozbijać na podfunkcje! Inaczej nie rozprawię się z tym potworem.
-func drawWorldAndUnits(bState *battleState, ps *programState) {
+func drawWorldAndUnits(bState *battleState, pState *programState) {
 	// 1. Aktualizacja podręcznych
 	// @todo: Przydałoby się dokładniej opisać, co jest co, bo ciężko się rozeznać - 24.04.2026
 	bState.updateRenderCache()
@@ -1108,8 +1108,8 @@ func drawWorldAndUnits(bState *battleState, ps *programState) {
 	// @todo: Sprawdź, czy mam rację: world… to część planszy, którą widzimy
 	worldLeft := cam.Target.X - (cam.Offset.X / cam.Zoom)
 	worldTop := cam.Target.Y - (cam.Offset.Y / cam.Zoom)
-	worldRight := worldLeft + (ps.GameViewWidth / cam.Zoom)
-	worldBottom := worldTop + (ps.VirtualHeight / cam.Zoom)
+	worldRight := worldLeft + (pState.GameViewWidth / cam.Zoom)
+	worldBottom := worldTop + (pState.VirtualHeight / cam.Zoom)
 
 	// @todo: Sprawdź, czy mam rację: start… to część planszy, którą widzimy przeliczona na kafelki
 	startXInt := int(worldLeft/float32(tileWidth)) - 1
@@ -1142,19 +1142,19 @@ func drawWorldAndUnits(bState *battleState, ps *programState) {
 	endY := uint8(endYInt)
 
 	// Przebieg 1: „płaskie” rzeczy, jak trawa, woda, mosty, sucha ziemia
-	drawSoil(startX, startY, endX, endY, bState, ps)
+	drawSoil(startX, startY, endX, endY, bState, pState)
 	// Przebieg 2: budynki, sucha ziemia, palisady
-	drawBuildings(startX, startY, endX, endY, bState, ps)
+	drawBuildings(startX, startY, endX, endY, bState, pState)
 	// Przebieg 3: zwłoki, jednostki, drzewa
-	drawCorpsesUnitsTrees(startX, startY, endX, endY, bState, ps)
+	drawCorpsesUnitsTrees(startX, startY, endX, endY, bState, pState)
 
 	// Przebieg 4: efekty oraz nakładki
-	drawEffectsAndInterfaces(startY, endY, bState, ps)
+	drawEffectsAndInterfaces(startY, endY, bState, pState)
 
 	// @reminder: wydaje mi się, że pociski powinny być pod nakładkami.
 	// inaczej będą przesłaniać pasek życia.
-	drawProjectiles(bState, ps)
-	drawSelectionBox(bState, ps)
+	drawProjectiles(bState, pState)
+	drawSelectionBox(bState)
 }
 
 // @todo: rozdziel logikę od rysowania, bo to zwyczajne pomieszanie z poplątaniem.
@@ -1375,24 +1375,37 @@ func (bState *battleState) updateRenderCache() {
 }
 
 // drawSelectionBox odpowiada za rysowanie prostokąta do zaznaczania jednostek.
-func drawSelectionBox(bState *battleState, ps *programState) {
+func drawSelectionBox(bState *battleState) {
 	if !bState.DragContext.IsActive {
 		return
 	}
 
 	// 1. Pobieramy obecną mysz i zamieniamy ją na WIRTUALNĄ (bo takiej używa logika gry)
 	// Bez tego, na dużym monitorze kursor "ucieknie" od ramki.
-	currentScreenMouse := rl.GetMousePosition()
-	currentVirtualMouse := screenToVirtualCoords(ps, currentScreenMouse)
+	currentScreenMouse := bState.DragContext.CurrentPos
 
-	// 2. Konwertujemy OBA punkty (Start i Koniec) z Wirtualnego Ekranu na Świat Gry
-	// Dzięki temu, że jesteśmy w BeginMode2D, rysujemy wprost na mapie.
+	// 2. Konwertujemy punkty z Wirtualnego Ekranu na Świat Gry
+	worldMaxX := float32(boardMaxX) * float32(tileWidth)
+	worldMaxY := float32(boardMaxY) * float32(tileHeight)
 
 	// Start zaznaczania (zapamiętany w input.go jako wirtualny ekran) → Świat
 	worldStart := rl.GetScreenToWorld2D(bState.DragContext.AnchorPos, bState.GameCamera)
 
 	// Obecna mysz (wirtualny ekran) → Świat
-	worldEnd := rl.GetScreenToWorld2D(currentVirtualMouse, bState.GameCamera)
+	worldEnd := rl.GetScreenToWorld2D(currentScreenMouse, bState.GameCamera)
+
+	if worldEnd.X < 0 {
+		worldEnd.X = 0
+	}
+	if worldEnd.X > worldMaxX {
+		worldEnd.X = worldMaxX
+	}
+	if worldEnd.Y < 0 {
+		worldEnd.Y = 0
+	}
+	if worldEnd.Y > worldMaxY {
+		worldEnd.Y = worldMaxY
+	}
 
 	// 3. Obliczamy wymiary w Świecie Gry
 	x := float32(math.Min(float64(worldStart.X), float64(worldEnd.X)))
