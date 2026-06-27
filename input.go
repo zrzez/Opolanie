@@ -580,8 +580,9 @@ func handleBoardInitialChecks(input inputState, bState *battleState, ps *program
 	return false, tileX, tileY
 }
 
-func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY uint8) bool {
-	if !input.IsRightMouseButtonPressed {
+// Odpowiada za ustawienie odpowiedniego rozkazu dla jednostki jeśli użyto prawego przycisku myszy.
+func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY uint8) (clickHandled bool) {
+	if !iState.IsRightMouseButtonPressed {
 		return false
 	}
 
@@ -603,26 +604,42 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 		return false
 	}
 
-	tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
-	targetID, targetOwner := tileUnderCursor.getTargetFromTile()
+	targetTile := &bState.Board.Tiles[tileX][tileY]
+	targetID, targetOwner := targetTile.getTargetFromTile()
 
-	cmdType := cmdUMove
+	cmdType, isCommandValid := resolveRightClickCommandType(targetTile, targetID, targetOwner, selectedUnits, bState, iState)
+
+	if !isCommandValid {
+		return true
+	}
+
+	sendUnitCommand(bState, selectedUnits, cmdType, tileX, tileY, targetID, iState.IsCtrlKeyDown)
+
+	return true
+}
+
+func resolveRightClickCommandType(
+	targetTile *tile, targetID uint, targetOwner uint8,
+	selectedUnits []*unit, bState *battleState, iState inputState,
+) (cmdType commandType, isCommandValid bool) {
+	cmdType = cmdUMove
+	isCommandValid = true
 
 	switch {
 	// 0. Chodzenie po zniszczonej/nie wybudowanej palisadzie
-	case tileUnderCursor.Building != nil && tileUnderCursor.Building.Type == buildingPalisade &&
-		tileUnderCursor.Building.IsUnderConstruction:
+	case targetTile.Building != nil && targetTile.Building.Type == buildingPalisade &&
+		targetTile.Building.IsUnderConstruction:
 		cmdType = cmdUMove
 
 	// 1. Atak na wrogie jednostki/budynki
-	case targetID != 0 && (targetOwner != bState.PlayerID || input.IsCtrlKeyDown):
+	case targetID != 0 && (targetOwner != bState.PlayerID || iState.IsCtrlKeyDown):
 		cmdType = cmdUAttack
 	// 2. Ścinanie drzewa
-	case isTreeStump(tileUnderCursor.TextureID):
+	case isTreeStump(targetTile.TextureID):
 		canAttackTree := false
 
 		for _, u := range selectedUnits {
-			if u.canDamageTree(tileX, tileY, bState) {
+			if u.canDamageTree(targetTile.X, targetTile.Y, bState) {
 				canAttackTree = true
 
 				break
@@ -636,13 +653,13 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 			bState.CurrentMessage.Text = "Zaznaczone jednostki nie mogą atakować drzew!"
 			bState.CurrentMessage.Duration = 60
 
-			return true
+			isCommandValid = false
 		}
 	// 3. Nasz drwal najeżdża na naszą budowę
 	// a) w zaznaczonych jednostkach mamy drwala
 	// b) najechaliśmy na naszą budowę
 	// Najprostszy przypadek: jedna jednostka zaznaczona i jest to drwal
-	case selectedUnits[0].Type == unitAxeman && tileUnderCursor.Building != nil && tileUnderCursor.Building.IsUnderConstruction && targetOwner == bState.PlayerID:
+	case selectedUnits[0].Type == unitAxeman && targetTile.Building != nil && targetTile.Building.IsUnderConstruction && targetOwner == bState.PlayerID:
 		// drwal dostaje rozkaz budowy
 		// @reminder: pamiętaj o rysowaniu kursora
 		// cmdType = cmdBuild
@@ -650,16 +667,14 @@ func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY u
 		cmdType = cmdUWork
 
 	// 4. Nieudane wydanie rozaku pójścia w jakieś miejsce
-	case !tileUnderCursor.IsWalkable:
+	case !targetTile.IsWalkable:
 		bState.CurrentMessage.Text = "Nieprzechodnie!"
 		bState.CurrentMessage.Duration = 60
 
-		return true
+		isCommandValid = false
 	}
 
-	sendUnitCommand(bState, selectedUnits, cmdType, tileX, tileY, targetID, input.IsCtrlKeyDown)
-
-	return true
+	return cmdType, isCommandValid
 }
 
 const dragThresholdPixels float32 = 3.0
@@ -677,8 +692,6 @@ func handleMouseStateBuilding(tileX, tileY uint8, bState *battleState) {
 		bState.MouseState = mouseStateNormal
 		bState.PendingBuildingType = 0
 	}
-
-	return
 }
 
 func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState inputState) {
