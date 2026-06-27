@@ -133,18 +133,18 @@ const (
 )
 
 const (
-	cmdIdle            commandType = iota // Bezczynność
-	cmdMove                               // Ruch
-	cmdGoto                               // Idź do, teleportacja maga
-	cmdFlee                               // Ucieczka, krowa
-	cmdGraze                              // Wypasaj
-	cmdAttack                             // Napad
-	cmdStop                               // Zatrzymaj się @todo: potrzeba też „waruj”
-	cmdCastSpell                          // Rzuć czar
-	cmdProduce                            // Wytwarzaj
-	cmdMilking                            // Dój krowę
-	cmdRepairStructure                    // Napraw uszkodzoną budowlę
-	cmdBuildStructure                     // Budowa
+	cmdUIdle              commandType = iota // Bezczynność
+	cmdUMove                                 // Ruch
+	cmdUGoto                                 // Idź do, teleportacja maga
+	cmdUFlee                                 // Ucieczka, krowa
+	cmdUGraze                                // Wypasaj
+	cmdUAttack                               // Napad
+	cmdUStop                                 // Zatrzymaj się @todo: potrzeba też „waruj”
+	cmdUCastSpell                            // Rzuć czar
+	cmdBProduce                              // Wytwarzaj
+	cmdBMilking                              // Dój krowę
+	cmdUWork                                 // Napraw uszkodzoną budowlę
+	cmdBPlaceConstruction                    // Budowa
 )
 
 const (

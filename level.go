@@ -343,7 +343,7 @@ func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) 
 
 		newUnit := &unit{}
 		// Inicjalizacja nowej jednostki
-		newUnit.initUnit(uType, unitData.Position.X, unitData.Position.Y, cmdIdle, bState)
+		newUnit.initUnit(uType, unitData.Position.X, unitData.Position.Y, cmdUIdle, bState)
 		newUnit.Owner = ownerID
 
 		// Wstawienie na mapę

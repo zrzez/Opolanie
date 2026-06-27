@@ -100,7 +100,7 @@ func (econ *economyAI) produceCows(bState *battleState) bool {
 	// Wytwarzamy krowę
 	cmd := command{
 		CommandCategory:     0,
-		ActionType:          cmdProduce,
+		ActionType:          cmdBProduce,
 		InteractionTargetID: barn.ID,
 		ProduceType:         unitCow,
 	}
@@ -232,7 +232,7 @@ func aiMakeNewUnits(bState *battleState) {
 				}
 				randomUnitType := unitTypesForGenerator[rand.Intn(len(unitTypesForGenerator))]
 
-				newUnit.initUnit(randomUnitType, spawnX, spawnY, cmdIdle, bState)
+				newUnit.initUnit(randomUnitType, spawnX, spawnY, cmdUIdle, bState)
 				newUnit.Owner = bState.AIEnemyState.PlayerID
 				newUnit.Experience = uint8(20 + int(bState.DifficultyLevel)*20)
 
@@ -275,7 +275,7 @@ func aiMakeNewUnits(bState *battleState) {
 							targetIDForCommand = targetBuilding.ID
 						}
 
-						newUnit.addUnitCommand(cmdAttack, targetX, targetY, targetIDForCommand, bState)
+						newUnit.addUnitCommand(cmdUAttack, targetX, targetY, targetIDForCommand, bState)
 						log.Printf("SI (wytwórca): Nowa jednostka %d (%d) wysłana na cel (%d,%d) ID %d.",
 							newUnit.ID, newUnit.Type, targetX, targetY, targetIDForCommand)
 					} else {
@@ -325,7 +325,7 @@ func aiMakeNewUnits(bState *battleState) {
 				} else if targetBuilding != nil {
 					targetIDForCommand = targetBuilding.ID
 				}
-				generatorUnit.addUnitCommand(cmdAttack, targetX, targetY, targetIDForCommand, bState)
+				generatorUnit.addUnitCommand(cmdUAttack, targetX, targetY, targetIDForCommand, bState)
 			} else {
 				generatorUnit.setIdle()
 			}
@@ -508,7 +508,7 @@ func sendCowToBarn(cow *unit, bState *battleState) bool {
 					targetX, targetY, ok := building.getClosestWalkableTile(bState)
 
 					if ok {
-						cow.addUnitCommand(cmdMove, targetX, targetY, 0, bState)
+						cow.addUnitCommand(cmdUMove, targetX, targetY, 0, bState)
 						log.Printf("Krowa %d wraca do obory %d na pozycję (%d,%d).", cow.ID, building.ID, targetX, targetY)
 						return true
 					}

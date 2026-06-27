@@ -446,18 +446,18 @@ func processAI(bState *battleState) {
 
 // processCommands przetwarza rozkazy
 func processCommands(bState *battleState) {
-	if bState.CurrentCommands[0].ActionType != cmdIdle {
+	if bState.CurrentCommands[0].ActionType != cmdUIdle {
 		log.Printf("ProcComm: Gracz wykonuje komendę. TargetObject: %d, ActionType: %d",
 			bState.CurrentCommands[0].CommandCategory, bState.CurrentCommands[0].ActionType)
 		bState.HumanPlayerState.setCommand(&bState.CurrentCommands[0], bState)
-		bState.CurrentCommands[0].ActionType = cmdIdle
+		bState.CurrentCommands[0].ActionType = cmdUIdle
 	}
 
-	if bState.CurrentCommands[1].ActionType != cmdIdle {
+	if bState.CurrentCommands[1].ActionType != cmdUIdle {
 		log.Printf("ProcComm: SI wykonuje komendę. TargetObject: %d, ActionType: %d",
 			bState.CurrentCommands[1].CommandCategory, bState.CurrentCommands[1].ActionType)
 		bState.AIEnemyState.setCommand(&bState.CurrentCommands[1], bState)
-		bState.CurrentCommands[1].ActionType = cmdIdle
+		bState.CurrentCommands[1].ActionType = cmdUIdle
 	}
 }
 
@@ -621,12 +621,12 @@ func handleLevelEvents(bState *battleState) {
 		bState.CampaignData.RescueTargetX != 0 && bState.CampaignData.RescueTargetY != 0 {
 
 		rx, ry := bState.CampaignData.RescueTargetX, bState.CampaignData.RescueTargetY
-		tile := &bState.Board.Tiles[rx][ry]
+		rescueTile := &bState.Board.Tiles[rx][ry]
 
 		// ZMIANA: Visibility i unit pointer
-		if tile.Visibility != visibilityUnexplored {
-			if tile.Unit != nil {
-				rescuedUnit := tile.Unit
+		if rescueTile.Visibility != visibilityUnexplored {
+			if rescueTile.Unit != nil {
+				rescuedUnit := rescueTile.Unit
 				if rescuedUnit.Exists &&
 					rescuedUnit.Owner == bState.PlayerID &&
 					rescuedUnit.Type == unitType(bState.CampaignData.TargetType) {

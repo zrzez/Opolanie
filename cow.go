@@ -29,14 +29,14 @@ func (u *unit) handleCowBehavior(bState *battleState) {
 
 	// 1. Tryb: "Stać bezmyślnie", rozkaz od gracza
 	// @todo: muszę to wypróbować i zobaczyć, jak to wyłączyć, krowa nie może w nieskończoność stać bezczynnie
-	if u.Command == cmdStop {
+	if u.Command == cmdUStop {
 		u.idleCow()
 
 		return
 	}
 
 	// 2. Faza: Obora, pełne wymiona lub ucieczka
-	if u.Udder >= fullUdderAmount || u.Command == cmdMilking {
+	if u.Udder >= fullUdderAmount || u.Command == cmdBMilking {
 		u.milkCowPhase(bState)
 
 		return
@@ -86,7 +86,7 @@ func (u *unit) grazeCowPhase(bState *battleState) {
 	}
 
 	// Jeśli mamy rozkaz ruchu (np. gracz kliknął), a nie doszliśmy → idź
-	if u.Command == cmdMove && !u.isAtTarget() {
+	if u.Command == cmdUMove && !u.isAtTarget() {
 		u.move(bState)
 
 		return
@@ -166,7 +166,7 @@ func (u *unit) findNewPasture(bState *battleState) {
 	grassX, grassY, found := findReachableGrass(u, bState, originX, originY, grazingRadius)
 
 	if found {
-		u.addAndMove(cmdGraze, grassX, grassY, 0, bState, "Znalazłam trawę.")
+		u.addAndMove(cmdUGraze, grassX, grassY, 0, bState, "Znalazłam trawę.")
 	} else {
 		// Nie ma trawy -> Wróć pod oborę i czekaj
 		u.returnToBarnArea(bState)
@@ -177,7 +177,7 @@ func (u *unit) findNewPasture(bState *battleState) {
 func (u *unit) moveToBarnOrQueue(bState *battleState, barnX, barnY uint8, spotAvailable bool) {
 	if spotAvailable {
 		// Obora wolna -> Idź prosto do środka
-		u.addAndMove(cmdMove, barnX, barnY, 0, bState, "Idę do obory (wolne).")
+		u.addAndMove(cmdUMove, barnX, barnY, 0, bState, "Idę do obory (wolne).")
 		u.IsInQueue = false
 	} else {
 		// Zajęte -> Dołącz do kolejki
@@ -193,7 +193,7 @@ func (u *unit) joinMilkingQueue(bState *battleState, barnX, barnY uint8) {
 		// Jeśli krowa nie ma domu, a chce się doić, idzie pod najbliższą (awaryjnie)
 		// Ale nie może wejść do kolejki "bezdomnej".
 		// w takim wypadku po prostu idzie w pobliże znalezionego barnX/y.
-		u.addAndMove(cmdMove, barnX, barnY, 0, bState, "Idę pod oborę (bezdomna).")
+		u.addAndMove(cmdUMove, barnX, barnY, 0, bState, "Idę pod oborę (bezdomna).")
 
 		return
 	}
@@ -232,7 +232,7 @@ func (u *unit) joinMilkingQueue(bState *battleState, barnX, barnY uint8) {
 	distToWaitingSpot := int(math.Abs(float64(u.X-waitX)) + math.Abs(float64(u.Y-waitY)))
 	isAtWaitingSpot := u.X == waitX && u.Y == waitY
 
-	if isAtWaitingSpot || (distToWaitingSpot <= 1 && (u.BlockedCounter > 0 || u.Command == cmdIdle)) {
+	if isAtWaitingSpot || (distToWaitingSpot <= 1 && (u.BlockedCounter > 0 || u.Command == cmdUIdle)) {
 		// Stoi grzecznie i czeka
 		u.State = stateIdle
 		u.IsInQueue = true
@@ -241,11 +241,11 @@ func (u *unit) joinMilkingQueue(bState *battleState, barnX, barnY uint8) {
 	}
 
 	// 4. Idź do miejsca w kolejce
-	hasCorrectMoveCommand := u.Command == cmdMove && u.TargetX == waitX && u.TargetY == waitY
+	hasCorrectMoveCommand := u.Command == cmdUMove && u.TargetX == waitX && u.TargetY == waitY
 	if hasCorrectMoveCommand {
 		u.move(bState)
 	} else {
-		u.addAndMove(cmdMove, waitX, waitY, 0, bState, "Idę do poczekalni.")
+		u.addAndMove(cmdUMove, waitX, waitY, 0, bState, "Idę do poczekalni.")
 	}
 }
 
@@ -268,7 +268,7 @@ func (u *unit) returnToBarnArea(bState *battleState) {
 	if u.BelongsTo != nil {
 		bx, by, ok := u.BelongsTo.getClosestWalkableTile(bState)
 		if ok {
-			u.addAndMove(cmdMove, bx, by, 0, bState, "Wracam pod oborę (brak paszy).")
+			u.addAndMove(cmdUMove, bx, by, 0, bState, "Wracam pod oborę (brak paszy).")
 		}
 	}
 }
@@ -337,12 +337,12 @@ func (u *unit) performMilkingAction(bState *battleState) {
 			// Ustawiamy CMD_FLEE, aby handleCowBehavior w następnej klatce
 			// skierowało nas ponownie do milkCowPhase zamiast na pastwisko.
 			log.Printf("Krowa %d wciąż ma mleko %d. Zostaje na dalsze dojenie.", u.ID, u.Udder)
-			u.Command = cmdMilking
+			u.Command = cmdBMilking
 		}
 	} else {
 		if u.Udder > 0 {
 			// Ma mleko, ale nie może oddać → Czekaj w trybie "Obora"
-			u.Command = cmdMilking
+			u.Command = cmdBMilking
 			log.Printf("Krowa %d ma jeszcze mleko %d, ale nie ma miejsca na mleko %d", u.ID, u.Udder, bState.HumanPlayerState.Milk)
 		} else {
 			// Pusta → Pastwisko

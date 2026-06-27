@@ -332,7 +332,7 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 				log.Printf("UI: Wybrano akcję przycisku %d: %s (Typ: %d)", btnIndex, action.Label, action.Cmd.ActionType)
 
 				switch action.Cmd.ActionType {
-				case cmdBuildStructure:
+				case cmdBPlaceConstruction:
 					// To jest tryb myszy. Nie wysyłamy rozkazu, lecz zmieniamy stan kursora.
 					bState.MouseState = mouseStateBuilding
 					// Zapisujemy rodzaj budynku do "plecaka" w battleState
@@ -343,12 +343,12 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 
 					// Opcjonalnie: czyścimy zaznaczenie jednostek, by nie przeszkadzały
 					clearSelection(bState)
-				case cmdRepairStructure:
+				case cmdUWork:
 					bState.MouseState = mouseStateRepairing
 					bState.CurrentMessage.Text = "Wskaż budynek do naprawy"
 					bState.CurrentMessage.Duration = 60
 
-				case cmdCastSpell:
+				case cmdUCastSpell:
 					bState.MouseState = mouseStateCasting
 					bState.CurrentCommands[0] = action.Cmd
 					bState.CurrentMessage.Text = "Wskaż cel czaru"
@@ -458,7 +458,7 @@ func handleGameShortcuts(bState *battleState) bool {
 
 		if rl.IsKeyPressed(rl.KeyS) {
 			log.Println("SKRÓT: Komenda STOP dla jednostki")
-			selectedUnit.addUnitCommand(cmdStop, selectedUnit.X, selectedUnit.Y, 0, bState)
+			selectedUnit.addUnitCommand(cmdUStop, selectedUnit.X, selectedUnit.Y, 0, bState)
 			return true
 		}
 		if rl.IsKeyPressed(rl.KeyC) {
@@ -580,98 +580,86 @@ func handleBoardInitialChecks(input inputState, bState *battleState, ps *program
 	return false, tileX, tileY
 }
 
-// @todo: tutaj muszę wyłapać przypadek palisady w budowie. Niedrwale i niekapłani będą chodzić a nie atakować
 func handleBoardRightClick(input inputState, bState *battleState, tileX, tileY uint8) bool {
-	if input.IsRightMouseButtonPressed {
-		/*if bState.IsSelectingBox {
-			bState.IsSelectingBox = false
-			bState.SelectionStart = rl.NewVector2(0, 0)
-			bState.InitialClickPos = rl.NewVector2(0, 0)
-			bState.MouseState = mouseStateNormal
-
-			return true
-		}*/
-
-		if bState.MouseState > mouseStateNormal {
-			log.Println("INPUT: Anulowano tryb celowania prawym przyciskiem.")
-
-			bState.MouseState = mouseStateNormal
-			bState.PendingBuildingType = 0
-			bState.DragContext.IsActive = false
-			bState.CurrentMessage.Text = "Anulowano"
-			bState.CurrentMessage.Duration = 30
-
-			return true
-		}
-
-		selectedUnits := getSelectedUnits(bState)
-		if len(selectedUnits) > 0 {
-			tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
-			targetID := uint(0)
-
-			var targetOwner uint8
-
-			if tileUnderCursor.Unit != nil {
-				targetID = tileUnderCursor.Unit.ID
-				targetOwner = tileUnderCursor.Unit.Owner
-			} else if tileUnderCursor.Building != nil {
-				targetID = tileUnderCursor.Building.ID
-				targetOwner = tileUnderCursor.Building.Owner
-			}
-
-			cmdType := cmdMove
-
-			// 1. Atak na wrogie jednostki/budynki
-			switch {
-			// @todo: muszę przepuszczać bratobójcie ataki
-			case targetID != 0 && (targetOwner != bState.PlayerID || input.IsCtrlKeyDown):
-				cmdType = cmdAttack
-
-				// @reminder: chodzi o przypadek kliknięcia na zniszczoną palisadę w celu pójścia tam.
-				if tileUnderCursor.Building != nil && tileUnderCursor.Building.Type == buildingPalisade &&
-					tileUnderCursor.Building.IsUnderConstruction {
-					cmdType = cmdMove
-				}
-
-			case isTreeStump(tileUnderCursor.TextureID):
-				canAttackTree := false
-
-				for _, u := range selectedUnits {
-					if u.canDamageTree(tileX, tileY, bState) {
-						canAttackTree = true
-
-						break
-					}
-				}
-
-				if canAttackTree {
-					cmdType = cmdAttack
-					// targetID pozostaje 0; koordynaty ataku są przekazywane przez tileX, tileY
-				} else {
-					bState.CurrentMessage.Text = "Zaznaczone jednostki nie mogą atakować drzew!"
-					bState.CurrentMessage.Duration = 60
-
-					return true
-				}
-			case !tileUnderCursor.IsWalkable:
-				bState.CurrentMessage.Text = "Nieprzechodnie!"
-				bState.CurrentMessage.Duration = 60
-				return true
-			}
-
-			sendUnitCommand(bState, selectedUnits, cmdType, tileX, tileY, targetID, input.IsCtrlKeyDown)
-
-			return true
-		}
-
-		if bState.MouseState != mouseStateNormal {
-			bState.MouseState = mouseStateNormal
-
-			return true
-		}
+	if !input.IsRightMouseButtonPressed {
+		return false
 	}
 
-	return false
+	if bState.MouseState > mouseStateNormal {
+		log.Println("INPUT: Anulowano tryb celowania prawym przyciskiem.")
+
+		bState.MouseState = mouseStateNormal
+		bState.PendingBuildingType = 0
+		bState.DragContext.IsActive = false
+		bState.CurrentMessage.Text = "Anulowano"
+		bState.CurrentMessage.Duration = 30
+
+		return true
+	}
+
+	selectedUnits := getSelectedUnits(bState)
+
+	if len(selectedUnits) == 0 {
+		return false
+	}
+
+	tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
+	targetID, targetOwner := tileUnderCursor.getTargetFromTile()
+
+	cmdType := cmdUMove
+
+	switch {
+	// 0. Chodzenie po zniszczonej/nie wybudowanej palisadzie
+	case tileUnderCursor.Building != nil && tileUnderCursor.Building.Type == buildingPalisade &&
+		tileUnderCursor.Building.IsUnderConstruction:
+		cmdType = cmdUMove
+
+	// 1. Atak na wrogie jednostki/budynki
+	case targetID != 0 && (targetOwner != bState.PlayerID || input.IsCtrlKeyDown):
+		cmdType = cmdUAttack
+	// 2. Ścinanie drzewa
+	case isTreeStump(tileUnderCursor.TextureID):
+		canAttackTree := false
+
+		for _, u := range selectedUnits {
+			if u.canDamageTree(tileX, tileY, bState) {
+				canAttackTree = true
+
+				break
+			}
+		}
+
+		if canAttackTree {
+			cmdType = cmdUAttack
+			// targetID pozostaje 0; koordynaty ataku są przekazywane przez tileX, tileY
+		} else {
+			bState.CurrentMessage.Text = "Zaznaczone jednostki nie mogą atakować drzew!"
+			bState.CurrentMessage.Duration = 60
+
+			return true
+		}
+	// 3. Nasz drwal najeżdża na naszą budowę
+	// a) w zaznaczonych jednostkach mamy drwala
+	// b) najechaliśmy na naszą budowę
+	// Najprostszy przypadek: jedna jednostka zaznaczona i jest to drwal
+	case selectedUnits[0].Type == unitAxeman && tileUnderCursor.Building != nil && tileUnderCursor.Building.IsUnderConstruction && targetOwner == bState.PlayerID:
+		// drwal dostaje rozkaz budowy
+		// @reminder: pamiętaj o rysowaniu kursora
+		// cmdType = cmdBuild
+		// Nie wiem czemu cmdBuild nie działa, ale naprawa już tak
+		cmdType = cmdUWork
+
+	// 4. Nieudane wydanie rozaku pójścia w jakieś miejsce
+	case !tileUnderCursor.IsWalkable:
+		bState.CurrentMessage.Text = "Nieprzechodnie!"
+		bState.CurrentMessage.Duration = 60
+
+		return true
+	}
+
+	sendUnitCommand(bState, selectedUnits, cmdType, tileX, tileY, targetID, input.IsCtrlKeyDown)
+
+	return true
 }
 
 const dragThresholdPixels float32 = 3.0
@@ -711,7 +699,7 @@ func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState i
 		return
 	}
 
-	cmd := cmdRepairStructure
+	cmd := cmdUWork
 
 	// 2. Możemy naprawiać tylko palisady oraz swoje budynki, które są uszkodzone
 	canBeRepaired := ((targetBld.Owner == bState.PlayerID) || (targetBld.Type == buildingPalisade) ||
@@ -749,8 +737,6 @@ func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState i
 
 	// Zmieniamy stan myszki i wracamy
 	bState.MouseState = mouseStateNormal
-
-	return
 }
 
 func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
@@ -763,7 +749,7 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
 		return
 	}
 
-	spellActionType := cmdCastSpell
+	spellActionType := cmdUCastSpell
 
 	// Dodajemy rozkaz do kolejki
 	selectedUnit.addUnitCommand(spellActionType, tileX, tileY, 0, bState)
@@ -780,17 +766,11 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
 // do przycisków „rodzajowych”. Chyba muszę podobnie zrobić, bo mam miejsce tylko na
 // pięć przycisków: atak(0), stop(1), czar1(2), czar2(3),naprawa(4) jeżeli coś innego będzie
 // dodane to mam problem. Dodatkowo jest problem mieszania kontekstu bojowego z gospodarczym.
-func handleMouseStateNormalPressed(tileX, tileY uint8, bState *battleState, iState inputState, ps *programState) {
+func handleMouseStateNormalPressed(tileX, tileY uint8, bState *battleState, iState inputState, pState *programState) {
 	log.Printf("DBG_LCLICK: Naciśnięto kafelek (%d,%d). Tryb myszy: Normal", tileX, tileY)
 
 	tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
-	targetID := uint(0)
-
-	if tileUnderCursor.Unit != nil {
-		targetID = tileUnderCursor.Unit.ID
-	} else if tileUnderCursor.Building != nil {
-		targetID = tileUnderCursor.Building.ID
-	}
+	targetID, _ := tileUnderCursor.getTargetFromTile()
 
 	if targetID != 0 {
 		selectObjectByClick(tileX, tileY, bState)
@@ -800,7 +780,7 @@ func handleMouseStateNormalPressed(tileX, tileY uint8, bState *battleState, iSta
 		}
 
 		bState.DragContext.IsActive = true
-		bState.DragContext.AnchorPos = clampDragPosition(iState.MousePosition, ps)
+		bState.DragContext.AnchorPos = clampDragPosition(iState.MousePosition, pState)
 		// ↓↓↓ bez tego poprzednie współrzędne zaśmiecają rysowanie ramki.
 		bState.DragContext.CurrentPos = bState.DragContext.AnchorPos
 	}
@@ -825,14 +805,6 @@ func handleMouseStateNormalReleased(bState *battleState) {
 
 	// Zwolniony przycisk myszy, obsłużyliśmy udane i nieudane zaznaczanie, kończymy.
 	bState.DragContext.IsActive = false
-}
-
-// Obsługuje aktywne przeciąganie ramki, czyli trzymamy wciśnięty przycisk myszy.
-// Dzięki temu aktywnie śledzimy pozycję myszy.
-func handleMouseStateNormalHeld(bState *battleState, iState inputState) {
-	if bState.DragContext.IsActive {
-		bState.DragContext.CurrentPos = iState.MousePosition
-	}
 }
 
 // @todo: ogarnij czemu to nie działa jako przekazanie STOP do wszystkich
@@ -1232,11 +1204,11 @@ func handleMinimapLeftMouse(input inputState, bState *battleState, minimapRect r
 }
 
 func handleMinimapRightMouse(
-	input inputState,
+	iState inputState,
 	bState *battleState,
 	minimapRect rl.Rectangle,
 ) bool {
-	if !input.IsRightMouseButtonPressed {
+	if !iState.IsRightMouseButtonPressed {
 		return false
 	}
 
@@ -1248,27 +1220,18 @@ func handleMinimapRightMouse(
 	scaleX := float32(uint16(boardMaxX)*uint16(tileWidth)) / minimapDisplayWidth
 	scaleY := float32(uint16(boardMaxY)*uint16(tileHeight)) / minimapDisplayHeight
 
-	worldX := float64(input.MousePosition.X-minimapRect.X) * float64(scaleX)
-	worldY := float64(input.MousePosition.Y-minimapRect.Y) * float64(scaleY)
+	worldX := float64(iState.MousePosition.X-minimapRect.X) * float64(scaleX)
+	worldY := float64(iState.MousePosition.Y-minimapRect.Y) * float64(scaleY)
 	tileX := uint8(math.Min(math.Max(worldX/float64(tileWidth), 0), float64(boardMaxX-1)))
 	tileY := uint8(math.Min(math.Max(worldY/float64(tileHeight), 0), float64(boardMaxY-1)))
 
 	currentTile := &bState.Board.Tiles[tileX][tileY]
-	var targetID uint
-	var targetOwner uint8
+	targetID, targetOwner := currentTile.getTargetFromTile()
 
-	if currentTile.Unit != nil {
-		targetID = currentTile.Unit.ID
-		targetOwner = currentTile.Unit.Owner
-	} else if currentTile.Building != nil {
-		targetID = currentTile.Building.ID
-		targetOwner = currentTile.Building.Owner
-	}
+	cmd := cmdUMove
 
-	cmd := cmdMove
-
-	if targetID != 0 && (targetOwner != bState.PlayerID || input.IsCtrlKeyDown) {
-		cmd = cmdAttack
+	if targetID != 0 && (targetOwner != bState.PlayerID || iState.IsCtrlKeyDown) {
+		cmd = cmdUAttack
 	} else if !isWalkable(bState, tileX, tileY) {
 		bState.CurrentMessage.Text = "Nieprzechodnie!"
 		bState.CurrentMessage.Duration = 60
@@ -1276,7 +1239,7 @@ func handleMinimapRightMouse(
 		return true
 	}
 
-	sendUnitCommand(bState, selectedUnits, cmd, tileX, tileY, targetID, input.IsCtrlKeyDown)
+	sendUnitCommand(bState, selectedUnits, cmd, tileX, tileY, targetID, iState.IsCtrlKeyDown)
 	bState.MouseState = mouseStateNormal
 
 	return true

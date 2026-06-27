@@ -345,3 +345,15 @@ func (t *tile) ghost(ghostDamage uint16, bState *battleState) {
 	// w effects.go będzie osobna funkcja z logiką efektu ducha
 	bState.GhostsList = append(bState.GhostsList, t)
 }
+
+// Służy do zwrócenia ID celu z danego kafelka
+// @reminder: zwracanie właściciela „zero” jako brak będzie pewnie kłopotliwe.
+func (t *tile) getTargetFromTile() (targetID uint, targetOwner uint8) {
+	if t.Unit != nil {
+		return t.Unit.ID, t.Unit.Owner
+	} else if t.Building != nil {
+		return t.Building.ID, t.Building.Owner
+	}
+
+	return 0, 0
+}
