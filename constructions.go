@@ -231,7 +231,7 @@ func tryBuildStructure(bState *battleState, tileX, tileY uint8) {
 	}
 
 	if bState.HumanPlayerState.Milk < stats.Cost {
-		bState.CurrentMessage.Text = fmt.Sprintf("Brak mleka! (%d)", stats.Cost)
+		bState.CurrentMessage.Text = fmt.Sprintf("Niedobór mleka! (%d)", stats.Cost)
 		bState.CurrentMessage.Duration = 60
 
 		return
@@ -239,9 +239,12 @@ func tryBuildStructure(bState *battleState, tileX, tileY uint8) {
 
 	switch pendingType {
 	case buildingRoad:
-		// nie możemy stawiać drogi na drodze i moście, musi sąsiadować z inną drogą
+		// nie możemy stawiać drogi na ozdobnikach, budynkach, drodze i moście, musi sąsiadować z inną drogą
 		textureID := bState.Board.Tiles[tileX][tileY].TextureID
-		if isPath(textureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) || isWater(textureID) {
+
+		isConnected := isPath(textureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bState)
+
+		if isConnected || isWater(textureID) || !isWalkable(bState, tileX, tileY) {
 			return
 		}
 	case buildingBridge:
