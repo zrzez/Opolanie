@@ -759,6 +759,7 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
 	selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
 	if !ok || !selectedUnit.Exists {
 		bState.MouseState = mouseStateNormal
+
 		return
 	}
 
@@ -769,6 +770,7 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
 	log.Printf("DBG_LCLICK: Wydano rozkaz czaru %d na (%d,%d).", spellActionType, tileX, tileY)
 
 	bState.MouseState = mouseStateNormal
+
 	return
 }
 
@@ -911,12 +913,19 @@ func handleGameInput(bState *battleState, pState *programState, iState inputStat
 
 	// Obsługa przeciągania ramki zaznaczania
 	if bState.DragContext.IsActive {
+		// Jeśli chcemy anulować to PPMem.
+		if iState.IsRightMouseButtonPressed {
+			bState.DragContext.IsActive = false
+
+			return
+		}
 		// Zawsze aktualizuj pozycję końca ramki
 		bState.DragContext.CurrentPos = clampDragPosition(virtualMouse, pState)
 
 		// Obsługa zwolnienia przycisku myszy
 		if iState.IsLeftMouseButtonReleased {
 			handleMouseStateNormalReleased(bState)
+
 			return
 		}
 
