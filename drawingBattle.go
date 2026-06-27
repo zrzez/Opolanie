@@ -1677,7 +1677,7 @@ func drawButtons(bState *battleState, ps *programState) {
 		// wyliczamy ikonę na podstawie typu jednostki (np. "twarz" krowy)
 		// @todo: teraz wszystkie jednostki z tego korzystają, ale muszę to zmienić
 		// oby się udało wpisać „na sztywno”, co chcę wyświetlić. Bardzo uprości życie
-		if action.Cmd.ActionType == cmdProduce {
+		if action.Cmd.ActionType == cmdBProduce {
 			// Base (700) + Typ * 200 + Kierunek Dół (4) = Portret
 			iconID = uint16(int(spriteUnitBaseID + (uint16(action.Cmd.ProduceType) * spriteUnitStep) + 4))
 		}
@@ -1691,13 +1691,13 @@ func drawButtons(bState *battleState, ps *programState) {
 		var iconScale float32
 
 		switch action.Cmd.ActionType {
-		case cmdProduce:
+		case cmdBProduce:
 			tex = ps.Assets.getAtlas(def.atlasID, bState.PlayerID)
 			iconScale = 0.8
-		case cmdBuildStructure, cmdStop, cmdRepairStructure:
+		case cmdBPlaceConstruction, cmdUStop, cmdUWork:
 			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
 			iconScale = 1
-		case cmdCastSpell:
+		case cmdUCastSpell:
 			switch action.Cmd.Spell {
 			case spellMagicShower:
 				tex = ps.Assets.getAtlas(def.atlasID, colorNone)

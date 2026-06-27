@@ -54,7 +54,7 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 	}
 
 	switch cmd.ActionType {
-	case cmdProduce:
+	case cmdBProduce:
 		targetBuilding.produceUnit(cmd.ProduceType, bState)
 	default:
 		log.Printf("handleBuildingCommand: Niezaimplementowany ActionType %d dla budynku %d.",
@@ -80,21 +80,21 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	}
 
 	switch cmd.ActionType {
-	case cmdMove:
+	case cmdUMove:
 		log.Printf("INFO: castle.go wydano cmdMove.")
 		playerS.handleMoveCommand(cmd, targetUnit, bState)
-	case cmdAttack:
+	case cmdUAttack:
 		log.Printf("INFO: castle.go wydano cmdAttack.")
-		targetUnit.addUnitCommand(cmdAttack, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
-	case cmdStop:
-		targetUnit.addUnitCommand(cmdStop, cmd.TargetX, cmd.TargetY, 0, bState) // czemu targetID = 0? może nil?
-	case cmdRepairStructure:
-		targetUnit.addUnitCommand(cmdRepairStructure, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+		targetUnit.addUnitCommand(cmdUAttack, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+	case cmdUStop:
+		targetUnit.addUnitCommand(cmdUStop, cmd.TargetX, cmd.TargetY, 0, bState) // czemu targetID = 0? może nil?
+	case cmdUWork:
+		targetUnit.addUnitCommand(cmdUWork, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
-	case cmdCastSpell:
+	case cmdUCastSpell:
 		targetUnit.CurrentSpell = cmd.Spell
-		targetUnit.addUnitCommand(cmdCastSpell, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+		targetUnit.addUnitCommand(cmdUCastSpell, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
 	default:
 		log.Printf("handleUnitCommand: Nieznany ActionType %d dla jednostki %d.",
 			cmd.ActionType, targetUnit.ID)

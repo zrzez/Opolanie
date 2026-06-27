@@ -49,6 +49,7 @@ func determineCursorState(bState *battleState, mousePos rl.Vector2, viewW, total
 
 	hasSelection := bState.CurrentSelection.IsUnit && bState.CurrentSelection.OwnerID == bState.PlayerID
 
+	// @todo: przemyśl nazwy poniższych funkcji, bo są bardzo mylące.
 	if hasSelection {
 		return cursorForSelection(bState, tileUnderCursor, targetOwner, targetBuilding, iState)
 	}
@@ -107,6 +108,13 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 
 	// Swój
 	if targetOwner == int(bState.PlayerID) {
+		// chyba tutaj powinienem dodać warunek dla „szybkiej budowy”
+		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
+		if ok && selectedUnit.Type == unitAxeman && tileUnderCursor.Building != nil && tileUnderCursor.Building.IsUnderConstruction {
+			// co jeśli nie jest to prawidłowa zwrotka?!
+			return spriteBtnRepair
+		}
+
 		if !iState.IsCtrlKeyDown {
 			return spriteCursorFrameWhite
 		}

@@ -860,7 +860,7 @@ func (bld *building) canProduceUnit(unitType unitType, bState *battleState) bool
 
 func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *battleState) {
 	newUnit := &unit{}
-	newUnit.initUnit(unitType, spawnX, spawnY, cmdIdle, bState)
+	newUnit.initUnit(unitType, spawnX, spawnY, cmdUIdle, bState)
 	newUnit.Owner = bld.Owner
 	newUnit.BelongsTo = bld
 
@@ -968,54 +968,54 @@ func (bld *building) convertToTerrain(bState *battleState) {
 // Tłumaczy kliknięcie przycisku (actionIndex) na pełny rozkaz (command).
 func (bld *building) getButtonCommand(actionIndex int) command {
 	// Domyślny, pusty rozkaz
-	cmd := command{ActionType: cmdIdle}
+	cmd := command{ActionType: cmdUIdle}
 
 	switch bld.Type {
 	case buildingMain:
 		// Indeks 6: Budowa drogi/palisady (w zależności od kontekstu UI)
 		if actionIndex == 6 {
-			cmd.ActionType = cmdBuildStructure
+			cmd.ActionType = cmdBPlaceConstruction
 			cmd.InteractionTargetID = uint(buildingPalisade)
 		}
 
 	case buildingBarn:
 		// Indeks 5: Wytwarzanie Krowy
 		if actionIndex == 5 {
-			cmd.ActionType = cmdProduce
+			cmd.ActionType = cmdBProduce
 			cmd.ProduceType = unitCow
 		}
 		// Indeks 6: Budowa nowej Obory
 		if actionIndex == 6 {
-			cmd.ActionType = cmdBuildStructure
+			cmd.ActionType = cmdBPlaceConstruction
 			cmd.InteractionTargetID = uint(buildingBarn)
 		}
 
 	case buildingBarracks:
 		// Indeks 4: Wytwarzanie Łucznika
 		if actionIndex == 4 {
-			cmd.ActionType = cmdProduce
+			cmd.ActionType = cmdBProduce
 			cmd.ProduceType = unitArcher
 		}
 		// Indeks 5: Wytwarzanie Drwala
 		if actionIndex == 5 {
-			cmd.ActionType = cmdProduce
+			cmd.ActionType = cmdBProduce
 			cmd.ProduceType = unitAxeman
 		}
 		// Indeks 6: Budowa Chaty Mieszkalnej
 		if actionIndex == 6 {
-			cmd.ActionType = cmdBuildStructure
+			cmd.ActionType = cmdBPlaceConstruction
 			cmd.InteractionTargetID = uint(buildingBarracks)
 		}
 
 	case buildingTemple:
 		// Indeks 4: Wytwarzanie Kapłana
 		if actionIndex == 4 {
-			cmd.ActionType = cmdProduce
+			cmd.ActionType = cmdBProduce
 			cmd.ProduceType = unitPriest
 		}
 		// Indeks 5: Wytwarzanie Kapłanki
 		if actionIndex == 5 {
-			cmd.ActionType = cmdProduce
+			cmd.ActionType = cmdBProduce
 			cmd.ProduceType = unitPriestess
 		}
 		// Indeks 6: Tutaj był stary CMD_PRODUCE bez typu, zakładam, że to błąd starego kodu
@@ -1024,30 +1024,30 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 	case buildingBarracks2:
 		// Indeks 4: Wytwarzanie Włócznika
 		if actionIndex == 4 {
-			cmd.ActionType = cmdProduce
+			cmd.ActionType = cmdBProduce
 			cmd.ProduceType = unitSpearman
 		}
 		// Indeks 5: Wytwarzanie Miecznika
 		if actionIndex == 5 {
-			cmd.ActionType = cmdProduce
+			cmd.ActionType = cmdBProduce
 			cmd.ProduceType = unitSwordsman
 		}
 		// Indeks 6: Pusty w starym kodzie (zwracał gołe CMD_PRODUCE)
 		// Indeks 7: Budowa Palisady (stare CMD_BUILD_FENCE)
 		if actionIndex == 7 {
-			cmd.ActionType = cmdBuildStructure
+			cmd.ActionType = cmdBPlaceConstruction
 			cmd.InteractionTargetID = uint(buildingPalisade)
 		}
 
 	case buildingAcademy:
 		// Indeks 4: Wytwarzanie Kusznika
 		if actionIndex == 4 {
-			cmd.ActionType = cmdProduce
+			cmd.ActionType = cmdBProduce
 			cmd.ProduceType = unitCrossbowman
 		}
 		// Indeks 5: Wytwarzanie Dowódcy
 		if actionIndex == 5 {
-			cmd.ActionType = cmdProduce
+			cmd.ActionType = cmdBProduce
 			cmd.ProduceType = unitCommander
 		}
 		// Indeks 6: Pusty

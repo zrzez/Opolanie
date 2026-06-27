@@ -53,14 +53,14 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 				// TargetBuildingID pełni tu rolę nośnika TYPU budynku (buildingType),
 				// który zostanie przekazany do bs.PendingBuildingType w input.go.
 				cmd = command{
-					ActionType:          cmdBuildStructure,
+					ActionType:          cmdBPlaceConstruction,
 					InteractionTargetID: uint(recipe.BuildingType),
 				}
 			} else {
 				// PRZYPADEK 2: PRODUKCJA (np. Krowa, Drwal)
 				// TargetBuildingID wskazuje na INSTANCJĘ budynku, który ma produkować (bld.ID).
 				cmd = command{
-					ActionType:          cmdProduce,
+					ActionType:          cmdBProduce,
 					InteractionTargetID: bld.ID,
 					ProduceType:         recipe.UnitType,
 				}
@@ -92,7 +92,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 		Label:    "Stop",
 		IconID:   spriteBtnShield,
 		Cmd: command{
-			ActionType:      cmdStop,
+			ActionType:      cmdUStop,
 			ExecutorID:      currentUnit.ID,
 			CommandCategory: categoryUnit,
 		},
@@ -104,7 +104,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Napraw",
 			IconID:   spriteBtnRepair,
 			Cmd: command{
-				ActionType:      cmdRepairStructure,
+				ActionType:      cmdUWork,
 				ExecutorID:      unitID,
 				CommandCategory: categoryUnit,
 			},
@@ -117,7 +117,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Magiczna tarcza",
 			IconID:   spriteBtnSpellMagicShield,
 			Cmd: command{
-				ActionType:      cmdCastSpell,
+				ActionType:      cmdUCastSpell,
 				Spell:           spellMagicShield,
 				ExecutorID:      unitID,
 				CommandCategory: categoryUnit,
@@ -131,7 +131,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Gromobicie",
 			IconID:   spriteBtnSpellMagicLighting,
 			Cmd: command{
-				ActionType:      cmdCastSpell,
+				ActionType:      cmdUCastSpell,
 				Spell:           spellMagicShower,
 				ExecutorID:      unitID,
 				CommandCategory: categoryUnit,
@@ -145,7 +145,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Dalekie widzenie",
 			IconID:   spriteBtnSpellVision,
 			Cmd: command{
-				ActionType:      cmdCastSpell,
+				ActionType:      cmdUCastSpell,
 				Spell:           spellMagicSight,
 				ExecutorID:      unitID,
 				CommandCategory: categoryUnit,
@@ -159,7 +159,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Deszcz ognia",
 			IconID:   spriteBtnSpellMagicFire,
 			Cmd: command{
-				ActionType:      cmdCastSpell,
+				ActionType:      cmdUCastSpell,
 				Spell:           spellMagicShower,
 				ExecutorID:      unitID,
 				CommandCategory: categoryUnit,

@@ -287,9 +287,9 @@ func (u *unit) executeCommandAction(bState *battleState) {
 
 func (u *unit) executeStandardUnitCommand(bState *battleState) {
 	switch u.Command {
-	case cmdMove:
+	case cmdUMove:
 		u.move(bState)
-	case cmdAttack:
+	case cmdUAttack:
 		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.State = stateAttacking
 			u.clearPath()
@@ -298,7 +298,7 @@ func (u *unit) executeStandardUnitCommand(bState *battleState) {
 			u.State = stateMoving
 			u.move(bState)
 		}
-	case cmdRepairStructure:
+	case cmdUWork:
 		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.State = stateRepairing
 
@@ -318,7 +318,7 @@ func (u *unit) executeStandardUnitCommand(bState *battleState) {
 
 			u.move(bState)
 		}
-	case cmdCastSpell:
+	case cmdUCastSpell:
 		if u.CurrentSpell == spellMagicShield {
 			u.castMagicShield()
 		}
@@ -340,7 +340,7 @@ func (u *unit) executeStandardUnitCommand(bState *battleState) {
 			u.castMagicSight(bState)
 		}
 
-	case cmdIdle, cmdStop:
+	case cmdUIdle, cmdUStop:
 		u.actOnIdle(bState)
 	default:
 		panic("unhandled default case")
@@ -357,15 +357,15 @@ func (u *unit) resetDelayIfActive() {
 
 func (u *unit) determineActiveStateFromCommand() unitState {
 	switch u.Command {
-	case cmdMove:
+	case cmdUMove:
 		return stateMoving
-	case cmdAttack:
+	case cmdUAttack:
 		return stateAttacking
-	case cmdGraze:
+	case cmdUGraze:
 		return stateGrazing
-	case cmdRepairStructure:
+	case cmdUWork:
 		return stateRepairing
-	case cmdCastSpell:
+	case cmdUCastSpell:
 		return stateCastingSpell
 	default:
 		return stateIdle
@@ -557,7 +557,7 @@ func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command command
 
 func isInteractionCommand(command commandType) bool {
 	switch command {
-	case cmdAttack, cmdRepairStructure, cmdBuildStructure, cmdCastSpell:
+	case cmdUAttack, cmdUWork, cmdBPlaceConstruction, cmdUCastSpell:
 		return true
 	default:
 		return false
@@ -566,7 +566,7 @@ func isInteractionCommand(command commandType) bool {
 
 func (u *unit) validateCommand(command commandType, targetID uint, bState *battleState) bool {
 	switch command {
-	case cmdAttack:
+	case cmdUAttack:
 		return u.canAttack(targetID, bState)
 	default:
 		return true
@@ -669,28 +669,28 @@ func (u *unit) prepareForNewCommand(command commandType, targetX, targetY uint8,
 
 func (u *unit) applyCommandState(command commandType) {
 	switch command {
-	case cmdAttack:
+	case cmdUAttack:
 		log.Printf("INFO: units.go applyCommandState cmdAttack")
 
 		u.State = stateAttacking
 		u.AnimationType = "fight"
 		u.AnimationFrame = 3
 		u.AnimationCounter = 0
-	case cmdMove, cmdFlee:
+	case cmdUMove, cmdUFlee:
 		u.State = stateMoving
 		u.AnimationType = "walk"
-	case cmdStop:
+	case cmdUStop:
 		u.State = stateIdle
 		u.AnimationType = "walk"
 		u.AnimationFrame = 0
-		u.Command = cmdIdle
-	case cmdCastSpell:
+		u.Command = cmdUIdle
+	case cmdUCastSpell:
 		u.State = stateCastingSpell
-	case cmdGraze:
+	case cmdUGraze:
 		u.State = stateGrazing
-	case cmdRepairStructure, cmdBuildStructure:
+	case cmdUWork, cmdBPlaceConstruction:
 		u.State = stateRepairing
-	case cmdMilking:
+	case cmdBMilking:
 		u.State = stateMilking
 	default:
 		fmt.Println("DUUUUPA NIE MA TAKIEJ KOMENDY W PRZEŁĄCZNIKU")
@@ -703,7 +703,7 @@ func (u *unit) isAtTarget() bool {
 }
 
 func (u *unit) move(bState *battleState) {
-	if u.Command == cmdAttack {
+	if u.Command == cmdUAttack {
 		log.Printf("INFO: units.go move rozkaz to cmdAttack")
 
 		if u.canAttackTargetFromCurrentPosition(bState) {
@@ -1017,7 +1017,7 @@ func (u *unit) setIdleWithReason(reason string) {
 	log.Printf("unit %d going IDLE: %s", u.ID, reason)
 	u.State = stateIdle
 	u.AnimationType = "idle"
-	u.Command = cmdIdle
+	u.Command = cmdUIdle
 	u.clearPath()
 	u.BlockedCounter = 0
 	u.AllowFriendlyFire = false
@@ -1037,14 +1037,14 @@ func (u *unit) handleTargetReached(bState *battleState) {
 	u.clearPath()
 
 	switch u.Command {
-	case cmdAttack:
+	case cmdUAttack:
 		log.Printf("INFO: units.go handleTargetReached cmdAttack jesteśmy u celu")
 
 		u.State = stateAttacking
 		u.attack(bState)
-	case cmdCastSpell:
+	case cmdUCastSpell:
 		u.State = stateCastingSpell
-	case cmdRepairStructure:
+	case cmdUWork:
 		u.State = stateRepairing
 		u.repair(bState)
 	default:
@@ -1196,7 +1196,7 @@ func (u *unit) executeMove(x, y uint8, bState *battleState) {
 func (u *unit) setIdle() {
 	u.State = stateIdle
 	u.AnimationType = "idle"
-	u.Command = cmdIdle
+	u.Command = cmdUIdle
 	u.clearPath()
 	u.BlockedCounter = 0
 	u.RetryAttempts = 0
@@ -1505,13 +1505,17 @@ func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
 }
 
 func (u *unit) repair(bState *battleState) {
+	// 0. Tylko drwale mogą naprawiać!
+	if u.Type != unitAxeman {
+		return
+	}
 	// 1. Sprawdzamy, czy istnieje
 	_, targetBuilding := getObjectByID(u.TargetID, bState)
 
 	if targetBuilding == nil || !targetBuilding.Exists || targetBuilding.HP >= targetBuilding.MaxHP {
 		u.State = stateIdle
 		u.AnimationType = "idle"
-		u.Command = cmdIdle
+		u.Command = cmdUIdle
 
 		return
 	}
@@ -1550,7 +1554,7 @@ func (u *unit) castMagicShield() {
 
 	u.State = stateIdle
 	u.AnimationType = "idle"
-	u.Command = cmdIdle
+	u.Command = cmdUIdle
 }
 
 // Metoda odpowiedzialna za gromobicie i deszcz ognia.
@@ -1567,7 +1571,7 @@ func (u *unit) magicShower(targetX, targetY uint8, bState *battleState) bool {
 	// 2. Skończyliśmy czarowanie, stoimy bezczynnie
 	u.State = stateIdle
 	u.AnimationType = "idle"
-	u.Command = cmdIdle
+	u.Command = cmdUIdle
 
 	log.Printf("INFO: Jednostka %d rzuciła czar na (%d, %d)", u.ID, targetX, targetY)
 
@@ -1677,7 +1681,7 @@ func (u *unit) castSpell(bState *battleState) {
 	} else {
 		u.State = stateIdle
 		u.AnimationType = "idle"
-		u.Command = cmdIdle
+		u.Command = cmdUIdle
 	}
 }
 
@@ -1703,7 +1707,7 @@ func (u *unit) castMagicSight(bState *battleState) {
 
 	u.State = stateIdle
 	u.AnimationType = "idle"
-	u.Command = cmdIdle
+	u.Command = cmdUIdle
 }
 
 func (u *unit) takeDamage(damage uint16, bState *battleState) {
@@ -1762,10 +1766,10 @@ func (u *unit) takeDamage(damage uint16, bState *battleState) {
 	}
 
 	if u.Type == unitCow && u.Exists {
-		if u.Udder < 100 && u.Command != cmdFlee {
+		if u.Udder < 100 && u.Command != cmdUFlee {
 			barnX, barnY, foundBarn := findNearestBarnMilkingSpot(u, bState)
 			if foundBarn {
-				u.addUnitCommand(cmdFlee, barnX, barnY, 0, bState)
+				u.addUnitCommand(cmdUFlee, barnX, barnY, 0, bState)
 				log.Printf("unit %d (COW): Otrzymała obrażenia, uciekam do obory na (%d,%d).", u.ID, barnX, barnY)
 			} else {
 				log.Printf("unit %d (COW): Otrzymała obrażenia, ale nie znalazła obory do ucieczki. "+
@@ -1888,11 +1892,11 @@ func (u *unit) shouldSearchForTarget(bState *battleState) bool {
 }
 
 func (u *unit) isReadyToAct(bState *battleState) bool {
-	if u.State == stateIdle && u.Command == cmdIdle {
+	if u.State == stateIdle && u.Command == cmdUIdle {
 		return true
 	}
 
-	if u.Command == cmdAttack {
+	if u.Command == cmdUAttack {
 		_, err := u.validateTargetExists(bState)
 		if err != nil {
 			return true
@@ -2240,7 +2244,7 @@ func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bState *battl
 		}
 	}
 
-	u.addUnitCommand(cmdAttack, realTargetX, realTargetY, u.TargetID, bState)
+	u.addUnitCommand(cmdUAttack, realTargetX, realTargetY, u.TargetID, bState)
 
 	u.State = stateAttacking
 	u.AnimationType = "fight"
@@ -2274,7 +2278,7 @@ func (bld *building) getClosestOccupiedTile(fromX, fromY uint8) (uint8, uint8, b
 }
 
 func (u *unit) startMoveToAttack(bState *battleState) {
-	u.addUnitCommand(cmdAttack, u.TargetX, u.TargetY, u.TargetID, bState)
+	u.addUnitCommand(cmdUAttack, u.TargetX, u.TargetY, u.TargetID, bState)
 	u.State = stateMoving
 	u.AnimationType = "walk"
 
