@@ -298,7 +298,27 @@ func (u *unit) executeStandardUnitCommand(bState *battleState) {
 			u.State = stateMoving
 			u.move(bState)
 		}
-	case cmdUWork:
+	case cmdUBuild:
+		if u.canAttackTargetFromCurrentPosition(bState) {
+			u.State = stateBuilding
+
+			if u.AnimationType != "fight" {
+				u.AnimationType = "fight"
+				u.AnimationFrame = 0
+			}
+
+			u.clearPath()
+			u.build(bState)
+		} else {
+			u.State = stateMoving
+
+			if u.AnimationType != "walk" {
+				u.AnimationType = "walk"
+			}
+
+			u.move(bState)
+		}
+	case cmdURepair:
 		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.State = stateRepairing
 
@@ -363,7 +383,9 @@ func (u *unit) determineActiveStateFromCommand() unitState {
 		return stateAttacking
 	case cmdUGraze:
 		return stateGrazing
-	case cmdUWork:
+	case cmdUBuild:
+		return stateBuilding
+	case cmdURepair:
 		return stateRepairing
 	case cmdUCastSpell:
 		return stateCastingSpell
@@ -541,6 +563,11 @@ func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command command
 		return nil
 	}
 
+	if u.CurrentSpell == spellMagicShield || u.CurrentSpell == spellMagicSight {
+		*targetX, *targetY = u.X, u.Y
+		return nil
+	}
+
 	if targetID == 0 {
 		u.interactionTargetX, u.interactionTargetY = *targetX, *targetY
 	}
@@ -557,7 +584,7 @@ func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command command
 
 func isInteractionCommand(command commandType) bool {
 	switch command {
-	case cmdUAttack, cmdUWork, cmdBPlaceConstruction, cmdUCastSpell:
+	case cmdUAttack, cmdUBuild, cmdURepair, cmdBPlaceConstruction, cmdUCastSpell:
 		return true
 	default:
 		return false
@@ -688,7 +715,9 @@ func (u *unit) applyCommandState(command commandType) {
 		u.State = stateCastingSpell
 	case cmdUGraze:
 		u.State = stateGrazing
-	case cmdUWork, cmdBPlaceConstruction:
+	case cmdUBuild:
+		u.State = stateBuilding
+	case cmdURepair, cmdBPlaceConstruction: // @todo: czemu do cholery metoda u ma rozkazy B?
 		u.State = stateRepairing
 	case cmdBMilking:
 		u.State = stateMilking
@@ -1044,7 +1073,10 @@ func (u *unit) handleTargetReached(bState *battleState) {
 		u.attack(bState)
 	case cmdUCastSpell:
 		u.State = stateCastingSpell
-	case cmdUWork:
+	case cmdUBuild:
+		u.State = stateBuilding
+		u.build(bState)
+	case cmdURepair:
 		u.State = stateRepairing
 		u.repair(bState)
 	default:
@@ -1532,7 +1564,40 @@ func (u *unit) repair(bState *battleState) {
 	}
 
 	if distance == 1 {
-		targetBuilding.applyWork(amount, bState)
+		targetBuilding.repair(amount)
+	}
+}
+
+func (u *unit) build(bState *battleState) {
+	// 0. Tylk drwale mogą budować.
+	if u.Type != unitAxeman {
+		return
+	}
+
+	_, targetBuilding := getObjectByID(u.TargetID, bState)
+
+	if targetBuilding == nil || !targetBuilding.Exists || !targetBuilding.IsUnderConstruction {
+		u.State = stateIdle
+		u.AnimationType = "idle"
+		u.Command = cmdUIdle
+
+		return
+	}
+
+	// 2. Szukamy drogi do celu
+	distance := targetBuilding.getDistanceToUnit(u.X, u.Y)
+
+	var amount uint16
+
+	switch u.Owner {
+	case bState.PlayerID:
+		amount = repairAmountPlayer
+	case bState.AIPlayerID:
+		amount = repairAmountAI
+	}
+
+	if distance == 1 {
+		targetBuilding.build(amount, bState)
 	}
 }
 

@@ -56,6 +56,7 @@ const (
 	stateMoving                        // ruch
 	stateAttacking                     // napaść
 	stateRepairing                     // naprawa
+	stateBuilding                      // praca na budowie
 	stateGrazing                       // wypasanie, dotyczy tylko krów
 	stateCastingSpell                  // rzucanie czarów
 	stateWaiting                       // oczekiwanie, jeżeli przytkana jest droga
@@ -588,10 +589,11 @@ type uiAssets struct {
 
 // opisuje pojedyńcze działanie dostępne pod przyciskiem z nakładki, pomost pomiędzy rysowaniem a logiką.
 type uiAction struct {
-	IsActive bool    // widoczność
-	Label    string  // @todo: tymczasowy napis
-	IconID   uint16  // wskaźnik tekstury docelowej
-	Cmd      command // rozkaz do wykonania przez budynek lub jednostkę
+	IsActive bool       // widoczność
+	Label    string     // @todo: tymczasowy napis
+	IconID   uint16     // wskaźnik tekstury docelowej
+	Cmd      command    // rozkaz do wykonania przez budynek lub jednostkę
+	State    mouseState // tryb kursora (budowa, naprawa, celowanie)
 }
 
 type button struct {

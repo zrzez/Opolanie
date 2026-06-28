@@ -308,16 +308,17 @@ func pollInput(pState *programState) inputState {
 	}
 }
 
-func handleGameUIClicks(input inputState, bState *battleState, ps *programState) bool {
-	virtualMouse := input.MousePosition
+func handleGameUIClicks(iState inputState, bState *battleState, pState *programState) bool {
+	virtualMouse := iState.MousePosition
 
 	// 1. Najpierw sprawdzamy minimapę (to kluczowe, by nie klikać "przez" nią)
-	if handleMinimapInteraction(input, bState, ps) {
+	if handleMinimapInteraction(iState, bState, pState) {
 		return true
 	}
 
 	// 2. Obsługa kliknięć w przyciski akcji (panel boczny)
-	if input.IsLeftMouseButtonPressed {
+	// @todo: wydaje mi się, ze odwrócenie warunków powinno wypłaszyć tego ifoludka.
+	if iState.IsLeftMouseButtonPressed {
 		// Sprawdzamy każdy z 5 przycisków
 		for btnIndex := range uiActionMaxButtons {
 			action := bState.UI.CurrentActions[btnIndex]
@@ -331,10 +332,10 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 			if rl.CheckCollisionPointRec(virtualMouse, rect) {
 				log.Printf("UI: Wybrano akcję przycisku %d: %s (Typ: %d)", btnIndex, action.Label, action.Cmd.ActionType)
 
-				switch action.Cmd.ActionType {
-				case cmdBPlaceConstruction:
-					// To jest tryb myszy. Nie wysyłamy rozkazu, lecz zmieniamy stan kursora.
-					bState.MouseState = mouseStateBuilding
+				bState.MouseState = action.State // czy potrzebuję do tego ifa?
+				// Na podstawie stanu kursora ustalamy, jak rozumieć kliknięcie
+				switch action.State {
+				case mouseStatePlaceConstruction:
 					// Zapisujemy rodzaj budynku do "plecaka" w battleState
 					bState.PendingBuildingType = buildingType(action.Cmd.InteractionTargetID)
 
@@ -343,13 +344,11 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 
 					// Opcjonalnie: czyścimy zaznaczenie jednostek, by nie przeszkadzały
 					clearSelection(bState)
-				case cmdUWork:
-					bState.MouseState = mouseStateRepairing
+				case mouseStateWorking:
 					bState.CurrentMessage.Text = "Wskaż budynek do naprawy"
 					bState.CurrentMessage.Duration = 60
 
-				case cmdUCastSpell:
-					bState.MouseState = mouseStateCasting
+				case mouseStateCasting:
 					bState.CurrentCommands[0] = action.Cmd
 					bState.CurrentMessage.Text = "Wskaż cel czaru"
 					bState.CurrentMessage.Duration = 60
@@ -358,6 +357,9 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 					// Rozkazy natychmiastowe (CMD_PRODUCE, CMD_MILK, itp.)
 					// Wysyłamy je bezpośrednio do kolejki rozkazów.
 					bState.CurrentCommands[0] = action.Cmd
+
+					// bezpiecznik na wypadek gdybym coś przeoczył
+					bState.MouseState = mouseStateNormal
 				}
 
 				return true
@@ -365,7 +367,7 @@ func handleGameUIClicks(input inputState, bState *battleState, ps *programState)
 		}
 
 		// Logowanie kliknięcia w tło UI (pomocne przy debugowaniu wymiarów)
-		relativeX := virtualMouse.X - ps.GameViewWidth
+		relativeX := virtualMouse.X - pState.GameViewWidth
 		log.Printf("Klik w UI (tło) na: %.1f, %.1f", relativeX, virtualMouse.Y)
 
 		return true
@@ -475,7 +477,7 @@ func handleGameShortcuts(bState *battleState) bool {
 }
 
 // handleCameraScroll obsługuje przewijanie kamery.
-func handleCameraScroll(input inputState, bState *battleState, ps *programState) bool {
+func handleCameraScroll(iState inputState, bState *battleState, pState *programState) bool {
 	scrollSpeed := 200.0 * rl.GetFrameTime()
 	moved := false
 
@@ -533,19 +535,19 @@ func handleCameraScroll(input inputState, bState *battleState, ps *programState)
 	}
 
 	// --- 2. Obsługa Myszki (Krawędzie Ekranu) ---
-	if input.MousePosition.X < scrollZoneXThreshold && input.MousePosition.X >= 0 {
+	if iState.MousePosition.X < scrollZoneXThreshold && iState.MousePosition.X >= 0 {
 		bState.GameCamera.Target.X -= scrollSpeed
 		moved = true
 	}
-	if input.MousePosition.X > ps.VirtualWidth-scrollZoneXThreshold {
+	if iState.MousePosition.X > pState.VirtualWidth-scrollZoneXThreshold {
 		bState.GameCamera.Target.X += scrollSpeed
 		moved = true
 	}
-	if input.MousePosition.Y < scrollZoneYThreshold {
+	if iState.MousePosition.Y < scrollZoneYThreshold {
 		bState.GameCamera.Target.Y -= scrollSpeed
 		moved = true
 	}
-	if input.MousePosition.Y > ps.VirtualHeight-scrollZoneYThreshold {
+	if iState.MousePosition.Y > pState.VirtualHeight-scrollZoneYThreshold {
 		bState.GameCamera.Target.Y += scrollSpeed
 		moved = true
 	}
@@ -554,23 +556,23 @@ func handleCameraScroll(input inputState, bState *battleState, ps *programState)
 	fullMapWidth := float32(uint16(boardMaxX) * uint16(tileWidth))
 	fullMapHeight := float32(uint16(boardMaxY) * uint16(tileHeight))
 
-	clampCameraTarget(&bState.GameCamera, fullMapWidth, fullMapHeight, ps.GameViewWidth, ps.VirtualHeight)
+	clampCameraTarget(&bState.GameCamera, fullMapWidth, fullMapHeight, pState.GameViewWidth, pState.VirtualHeight)
 
 	return moved
 }
 
-func handleBoardInitialChecks(input inputState, bState *battleState, ps *programState) (bool, uint8, uint8) {
+func handleBoardInitialChecks(iState inputState, bState *battleState, pState *programState) (bool, uint8, uint8) {
 	// Sprawdzamy dynamiczną szerokość widoku
-	if input.MousePosition.X < 0 || input.MousePosition.X >= ps.GameViewWidth {
+	if iState.MousePosition.X < 0 || iState.MousePosition.X >= pState.GameViewWidth {
 		return true, 0, 0
 	}
 
-	worldPos := rl.GetScreenToWorld2D(input.MousePosition, bState.GameCamera)
+	worldPos := rl.GetScreenToWorld2D(iState.MousePosition, bState.GameCamera)
 	tileX := uint8(worldPos.X / float32(tileWidth))
 	tileY := uint8(worldPos.Y / float32(tileHeight))
 
 	if tileX >= boardMaxX || tileY >= boardMaxY {
-		if input.IsLeftMouseButtonPressed && !bState.DragContext.IsActive {
+		if iState.IsLeftMouseButtonPressed && !bState.DragContext.IsActive {
 			clearSelection(bState)
 		}
 
@@ -618,6 +620,7 @@ func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY 
 	return true
 }
 
+// Odpowiada za dopasowanie rozkazu dla jednostki do sytuacji na planszy.
 func resolveRightClickCommandType(
 	targetTile *tile, targetID uint, targetOwner uint8,
 	selectedUnits []*unit, bState *battleState, iState inputState,
@@ -659,12 +662,17 @@ func resolveRightClickCommandType(
 	// a) w zaznaczonych jednostkach mamy drwala
 	// b) najechaliśmy na naszą budowę
 	// Najprostszy przypadek: jedna jednostka zaznaczona i jest to drwal
-	case selectedUnits[0].Type == unitAxeman && targetTile.Building != nil && targetTile.Building.IsUnderConstruction && targetOwner == bState.PlayerID:
+	case selectedUnits[0].Type == unitAxeman && targetTile.Building != nil &&
+		targetTile.Building.IsUnderConstruction && targetOwner == bState.PlayerID:
 		// drwal dostaje rozkaz budowy
 		// @reminder: pamiętaj o rysowaniu kursora
 		// cmdType = cmdBuild
 		// Nie wiem czemu cmdBuild nie działa, ale naprawa już tak
-		cmdType = cmdUWork
+		cmdType = cmdUBuild
+	case selectedUnits[0].Type == unitAxeman && targetTile.Building != nil &&
+		!targetTile.Building.IsUnderConstruction && targetTile.Building.HP < targetTile.Building.MaxHP &&
+		targetOwner == bState.PlayerID:
+		cmdType = cmdURepair
 
 	// 4. Nieudane wydanie rozaku pójścia w jakieś miejsce
 	case !targetTile.IsWalkable:
@@ -679,7 +687,7 @@ func resolveRightClickCommandType(
 
 const dragThresholdPixels float32 = 3.0
 
-func handleMouseStateBuilding(tileX, tileY uint8, bState *battleState) {
+func handleMouseStatePlacingConstruction(tileX, tileY uint8, bState *battleState) {
 	log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bState.PendingBuildingType)
 
 	tryBuildStructure(bState, tileX, tileY)
@@ -694,7 +702,7 @@ func handleMouseStateBuilding(tileX, tileY uint8, bState *battleState) {
 	}
 }
 
-func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState inputState) {
+func handleMouseStateWorking(tileX, tileY uint8, bState *battleState, iState inputState) {
 	// === NAPRAWA BĄDŹ NOWA BUDOWA ===
 	// Tutaj jest pierwsza okazja, aby dowiedzieć się, czy naprawiamy, czy budujemy
 	// wcześniej nie znaliśmy celu. Dlatego nie dało się wybrać. Od tej chwili rozdzielamy.
@@ -712,14 +720,31 @@ func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState i
 		return
 	}
 
-	cmd := cmdUWork
+	var cmd commandType
+
+	if targetBld.IsUnderConstruction {
+		// plac budowy, należy ją ukończyć.
+		cmd = cmdUBuild
+	} else if targetBld.isRepairable(bState.PlayerID) { // @reminder: wydaje mi się, że metoda zamiast gołego HP
+		// uszkodzony budynek, należy go naprawić.
+		cmd = cmdURepair
+	} else {
+		// nic z powyższych, nie ma co robić.
+		bState.CurrentMessage.Text = "Ten budynek nie wymaga naprawy!"
+		bState.CurrentMessage.Duration = 60
+		bState.MouseState = mouseStateNormal
+
+		return
+	}
 
 	// 2. Możemy naprawiać tylko palisady oraz swoje budynki, które są uszkodzone
+	// @reminder: w tej chwili to metoda bld.IsRepairable spełnia tę samą funkcję!
+	// @todo: sprawdź, czy @reminder ma rację i można uprościć
 	canBeRepaired := ((targetBld.Owner == bState.PlayerID) || (targetBld.Type == buildingPalisade) ||
 		targetBld.Type == buildingBridge) && targetBld.HP < targetBld.MaxHP
 
 	if !canBeRepaired {
-		bState.CurrentMessage.Text = "Nie możesz naprawiać wrogich budynków!"
+		bState.CurrentMessage.Text = "Nie możesz przacować przy wrogich budynkach!"
 		bState.CurrentMessage.Duration = 60
 		bState.MouseState = mouseStateNormal
 		// Niech stoją bezczynnie
@@ -727,6 +752,8 @@ func handleMouseStateRepairing(tileX, tileY uint8, bState *battleState, iState i
 	}
 
 	// 3. Odsianie jednostek, które nie są UNIT_AXEMAN z całej zaznaczonej drużyny
+	// @todo: sprawdź, czy to w ogóle działa, raczej tak, i wyodrębnij osobną funkcję
+	// do tego. Przyda się to w kilku miejscach oraz być może przy zbiorowym rzucaniu czarów.
 	selectedUnits := getSelectedUnits(bState)
 
 	var repairCrew []*unit
@@ -838,8 +865,8 @@ func sendUnitCommand(bState *battleState, units []*unit, command commandType, x,
 	bState.MouseState = mouseStateNormal
 }
 
-func handleBoardInteraction(iState inputState, bState *battleState, ps *programState) {
-	handledInitial, tileX, tileY := handleBoardInitialChecks(iState, bState, ps)
+func handleBoardInteraction(iState inputState, bState *battleState, pState *programState) {
+	handledInitial, tileX, tileY := handleBoardInitialChecks(iState, bState, pState)
 
 	if handledInitial {
 		return
@@ -851,14 +878,14 @@ func handleBoardInteraction(iState inputState, bState *battleState, ps *programS
 
 	if iState.IsLeftMouseButtonPressed {
 		switch bState.MouseState {
-		case mouseStateBuilding:
-			handleMouseStateBuilding(tileX, tileY, bState)
-		case mouseStateRepairing:
-			handleMouseStateRepairing(tileX, tileY, bState, iState)
+		case mouseStatePlaceConstruction:
+			handleMouseStatePlacingConstruction(tileX, tileY, bState)
+		case mouseStateWorking:
+			handleMouseStateWorking(tileX, tileY, bState, iState)
 		case mouseStateCasting:
 			handleMouseStateCasting(tileX, tileY, bState)
 		case mouseStateNormal:
-			handleMouseStateNormalPressed(tileX, tileY, bState, iState, ps) // Dodano ps
+			handleMouseStateNormalPressed(tileX, tileY, bState, iState, pState) // Dodano ps
 		default:
 			log.Printf("BŁĄD KRYTYCZNY: Nieobsługiwany stan myszy: %d", bState.MouseState)
 		}
@@ -867,8 +894,8 @@ func handleBoardInteraction(iState inputState, bState *battleState, ps *programS
 }
 
 // clampDragPosition ogranicza pozycję ramki do obszaru planszy
-func clampDragPosition(pos rl.Vector2, ps *programState) rl.Vector2 {
-	clamped := pos
+func clampDragPosition(position rl.Vector2, pState *programState) rl.Vector2 {
+	clamped := position
 
 	// Ograniczenie do lewej/górnej krawędzi
 	if clamped.X < 0 {
@@ -879,13 +906,13 @@ func clampDragPosition(pos rl.Vector2, ps *programState) rl.Vector2 {
 	}
 
 	// Ograniczenie do prawej krawędzi (granica z UI)
-	if clamped.X > ps.GameViewWidth {
-		clamped.X = ps.GameViewWidth
+	if clamped.X > pState.GameViewWidth {
+		clamped.X = pState.GameViewWidth
 	}
 
 	// Ograniczenie do dolnej krawędzi
-	if clamped.Y > ps.VirtualHeight {
-		clamped.Y = ps.VirtualHeight
+	if clamped.Y > pState.VirtualHeight {
+		clamped.Y = pState.VirtualHeight
 	}
 
 	return clamped
@@ -1077,9 +1104,9 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 	}
 }
 
-func performBoxSelection(bState *battleState, startPos, endPos rl.Vector2) {
-	worldStart := rl.GetScreenToWorld2D(startPos, bState.GameCamera)
-	worldEnd := rl.GetScreenToWorld2D(endPos, bState.GameCamera)
+func performBoxSelection(bState *battleState, startPosition, endPosistion rl.Vector2) {
+	worldStart := rl.GetScreenToWorld2D(startPosition, bState.GameCamera)
+	worldEnd := rl.GetScreenToWorld2D(endPosistion, bState.GameCamera)
 
 	minX := uint8(min(worldStart.X, worldEnd.X) / float32(tileWidth))
 	maxX := uint8(max(worldStart.X, worldEnd.X) / float32(tileWidth))
@@ -1131,22 +1158,22 @@ func performBoxSelection(bState *battleState, startPos, endPos rl.Vector2) {
 	}
 }
 
-func handleMinimapInteraction(input inputState, bState *battleState, ps *programState) bool {
+func handleMinimapInteraction(iState inputState, bState *battleState, pState *programState) bool {
 	// Prostokąt minimapy obliczany dynamicznie!
 	// ps.GameViewWidth to początek panelu UI.
 	minimapRect := rl.NewRectangle(
-		ps.GameViewWidth+minimapOffsetX,
+		pState.GameViewWidth+minimapOffsetX,
 		float32(0)+minimapOffsetY,
 		minimapDisplayWidth,
 		minimapDisplayHeight,
 	)
 
 	isMouseOverMinimap := rl.CheckCollisionPointRec(
-		input.MousePosition,
+		iState.MousePosition,
 		minimapRect,
 	)
 
-	if input.IsLeftMouseButtonReleased && bState.MapInitialClickPos.X != 0.0 {
+	if iState.IsLeftMouseButtonReleased && bState.MapInitialClickPos.X != 0.0 {
 		bState.IsMapDragging = false
 		bState.MapInitialClickPos = rl.NewVector2(0.0, 0.0)
 		bState.CameraTargetOnDragStart = rl.NewVector2(0.0, 0.0)
@@ -1159,12 +1186,12 @@ func handleMinimapInteraction(input inputState, bState *battleState, ps *program
 	}
 
 	// Przekazujemy ps do clamping
-	if handleMinimapLeftMouse(input, bState, minimapRect, ps) {
+	if handleMinimapLeftMouse(iState, bState, minimapRect, pState) {
 		return true
 	}
 
 	if isMouseOverMinimap {
-		if handleMinimapRightMouse(input, bState, minimapRect) {
+		if handleMinimapRightMouse(iState, bState, minimapRect) {
 			return true
 		}
 	}
@@ -1172,42 +1199,42 @@ func handleMinimapInteraction(input inputState, bState *battleState, ps *program
 	return false
 }
 
-func handleMinimapLeftMouse(input inputState, bState *battleState, minimapRect rl.Rectangle, ps *programState) bool {
+func handleMinimapLeftMouse(iState inputState, bState *battleState, minimapRect rl.Rectangle, pState *programState) bool {
 	fullMapPixelWidth := float32(uint16(boardMaxX) * uint16(tileWidth))
 	fullMapPixelHeight := float32(uint16(boardMaxY) * uint16(tileHeight))
 	scaleX := fullMapPixelWidth / minimapDisplayWidth
 	scaleY := fullMapPixelHeight / minimapDisplayHeight
 
-	if input.IsLeftMouseButtonPressed {
-		clickedX := (input.MousePosition.X - minimapRect.X) * scaleX
-		clickedY := (input.MousePosition.Y - minimapRect.Y) * scaleY
+	if iState.IsLeftMouseButtonPressed {
+		clickedX := (iState.MousePosition.X - minimapRect.X) * scaleX
+		clickedY := (iState.MousePosition.Y - minimapRect.Y) * scaleY
 		bState.GameCamera.Target = rl.NewVector2(clickedX, clickedY)
 
 		// Clamping używa dynamicznych wymiarów
 		clampCameraTarget(&bState.GameCamera, fullMapPixelWidth, fullMapPixelHeight,
-			ps.GameViewWidth, ps.VirtualHeight)
+			pState.GameViewWidth, pState.VirtualHeight)
 
-		bState.MapInitialClickPos = input.MousePosition
+		bState.MapInitialClickPos = iState.MousePosition
 		bState.CameraTargetOnDragStart = bState.GameCamera.Target
 		bState.IsMapDragging = false
 		return true
 	}
 
-	if input.IsLeftMouseButtonDown && bState.MapInitialClickPos.X != 0.0 {
+	if iState.IsLeftMouseButtonDown && bState.MapInitialClickPos.X != 0.0 {
 		if !bState.IsMapDragging &&
-			rl.Vector2Distance(bState.MapInitialClickPos, input.MousePosition) > minimapClickDragThreshold {
+			rl.Vector2Distance(bState.MapInitialClickPos, iState.MousePosition) > minimapClickDragThreshold {
 			bState.IsMapDragging = true
 		}
 
 		if bState.IsMapDragging {
-			deltaX := (input.MousePosition.X - bState.MapInitialClickPos.X) * scaleX
-			deltaY := (input.MousePosition.Y - bState.MapInitialClickPos.Y) * scaleY
+			deltaX := (iState.MousePosition.X - bState.MapInitialClickPos.X) * scaleX
+			deltaY := (iState.MousePosition.Y - bState.MapInitialClickPos.Y) * scaleY
 			bState.GameCamera.Target.X = bState.CameraTargetOnDragStart.X + deltaX
 			bState.GameCamera.Target.Y = bState.CameraTargetOnDragStart.Y + deltaY
 
 			// Clamping używa dynamicznych wymiarów
 			clampCameraTarget(&bState.GameCamera, fullMapPixelWidth, fullMapPixelHeight,
-				ps.GameViewWidth, ps.VirtualHeight)
+				pState.GameViewWidth, pState.VirtualHeight)
 
 			return true
 		}

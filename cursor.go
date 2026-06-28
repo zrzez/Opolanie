@@ -87,8 +87,8 @@ func checkScreenCursor(mousePos rl.Vector2, viewW, totalW, viewH float32) uint16
 
 func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner int, targetBuilding *building, iState inputState) uint16 {
 	// Naprawa
-	if bState.MouseState == mouseStateRepairing {
-		if canRepair(targetBuilding, bState.PlayerID) {
+	if bState.MouseState == mouseStateWorking {
+		if targetBuilding.isRepairable(bState.PlayerID) {
 			return spriteBtnRepair
 		}
 
@@ -190,14 +190,6 @@ func cursorForEnemy(bState *battleState, tileUnderCursor *tile) uint16 {
 	}
 
 	return spriteCursorCrossRed
-}
-
-func canRepair(bld *building, playerID uint8) bool {
-	if bld == nil || bld.HP >= bld.MaxHP {
-		return false
-	}
-
-	return bld.Type == buildingPalisade || bld.Type == buildingBridge || bld.Owner == playerID
 }
 
 func animateCursorID(cursorID uint16) uint16 {

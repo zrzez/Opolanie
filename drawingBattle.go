@@ -1690,22 +1690,31 @@ func drawButtons(bState *battleState, ps *programState) {
 
 		var iconScale float32
 
-		switch action.Cmd.ActionType {
-		case cmdBProduce:
-			tex = ps.Assets.getAtlas(def.atlasID, bState.PlayerID)
-			iconScale = 0.8
-		case cmdBPlaceConstruction, cmdUStop, cmdUWork:
+		switch {
+		case action.Cmd.Spell == spellMagicShield:
 			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
 			iconScale = 1
-		case cmdUCastSpell:
+		case action.Cmd.Spell == spellMagicSight:
+			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
+			iconScale = 1
+		case action.Cmd.ActionType == cmdUStop:
+			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
+			iconScale = 1
+		case action.Cmd.ActionType == cmdBProduce:
+			tex = ps.Assets.getAtlas(def.atlasID, bState.PlayerID)
+			iconScale = 0.8
+		case action.State == mouseStatePlaceConstruction:
+			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
+			iconScale = 1
+		case action.State == mouseStateWorking:
+			tex = ps.Assets.getAtlas(def.atlasID, colorNone)
+			iconScale = 1
+		case action.State == mouseStateCasting:
 			switch action.Cmd.Spell {
 			case spellMagicShower:
 				tex = ps.Assets.getAtlas(def.atlasID, colorNone)
 				drawTripleIcon(tex, def, rect)
 				continue
-			case spellMagicShield, spellMagicSight:
-				tex = ps.Assets.getAtlas(def.atlasID, colorNone)
-				iconScale = 1
 			default:
 				panic("nieobsługiwany rodzaj czaru. drawingBattle.go drawingButtons się wykrzaczyło")
 			}
@@ -1904,7 +1913,7 @@ func drawMinimapUnits(bState *battleState, minimapX, minimapY, minimapWidth, min
 // ========= DEBUGOWANIE ZASADZANIA BUDOWLI
 
 func drawConstructionValidationBox(bState *battleState, ps *programState) {
-	if bState.MouseState != mouseStateBuilding {
+	if bState.MouseState != mouseStatePlaceConstruction {
 		return
 	}
 

@@ -29,50 +29,69 @@ func updateActionButtons(bState *battleState) {
 // Wypełnia przyciski na podstawie przepisu budynku.
 func fillBuildingActions(bState *battleState, buildingID uint) {
 	bld, ok := getBuildingByID(buildingID, bState)
+	// Jeśli budynek został zniszczony lub jest w trakcie budowy, to nie może działać.
 	if !ok || !bld.Exists || bld.IsUnderConstruction {
 		return
 	}
 
+	// Sprawdzamy, czy zdefiniowano dla budynku przyciski.
 	recipes, exists := buildingRecipes[bld.Type]
+	// jeśli nie, to niestety nie ma czym wypełnić.
 	if !exists {
 		return
 	}
 
+	// Przechodzimy przez wszystkie przepisy dla danego rodzaju budynków.
 	for rIndex := 0; rIndex < len(recipes) && rIndex < uiActionMaxButtons; rIndex++ {
 		recipe := recipes[rIndex]
 
-		// Warunek poziomu (np. Pastuch wymaga poziomu 26)
+		// Warunek poziomu. Np. Pastuch jest dostępny dopiero od 26 „misji”.
 		if recipe.MinLevel <= bState.CurrentLevel {
-			var cmd command
+			// var cmd command
+			action := uiAction{
+				IsActive: true,
+				Label:    recipe.Label,
+				IconID:   recipe.IconID,
+			}
 
 			// === ROZGAŁĘZIENIE LOGIKI ===
 			// Sprawdzamy, czy przepis dotyczy budowy struktury, czy produkcji jednostki.
 			// @todo: czemu wykluczam nieistniejący buildingType? Nie pamiętam, ale źle to wygląda.
 			if recipe.BuildingType != 0 {
-				// PRZYPADEK 1: BUDOWA (np. Nowa Obora, Droga)
-				// TargetBuildingID pełni tu rolę nośnika TYPU budynku (buildingType),
+				// PRZYPADEK 1: Zasadzenie nowej budowy
+				// Jest to rozkaz wymagający dodatkowej informacji z planszy.
+				// TargetBuildingID pełni tu rolę nośnika rodzaju budynku (buildingType),
 				// który zostanie przekazany do bs.PendingBuildingType w input.go.
-				cmd = command{
+				/*cmd = command{
 					ActionType:          cmdBPlaceConstruction,
 					InteractionTargetID: uint(recipe.BuildingType),
-				}
+				}*/
+				action.State = mouseStatePlaceConstruction
+				action.Cmd = command{InteractionTargetID: uint(recipe.BuildingType)}
 			} else {
 				// PRZYPADEK 2: PRODUKCJA (np. Krowa, Drwal)
 				// TargetBuildingID wskazuje na INSTANCJĘ budynku, który ma produkować (bld.ID).
-				cmd = command{
+				/*cmd = command{
 					ActionType:          cmdBProduce,
 					InteractionTargetID: bld.ID,
 					ProduceType:         recipe.UnitType,
+				}*/
+				// Jest to rozkaz możliwy do wykonania natychmiastowo.
+				// Niczego z planszy nie potrzebujemy, dlatego stan myszy jest zwyczajny
+				action.State = mouseStateNormal
+
+				action.Cmd = command{
+					ActionType: cmdBProduce, // cmdB oznacza, że to „budynkowy rozkaz”
+					// na wypadek gdyby categoryBuilding nie było widoczne w kodzie i powstała wątpliwość
+					ExecutorID:          bld.ID,           // tenże budynek ma wykonać rozkaz
+					CommandCategory:     categoryBuilding, // rozkaz „budynkowy”
+					InteractionTargetID: bld.ID,           // tenże budynek jest celem rozkazu „wytwórz jednostkę”
+					ProduceType:         recipe.UnitType,  // rodzaj jednostki do wytworzenia
 				}
 			}
 
 			// Przypisanie gotowego rozkazu do UI
-			bState.UI.CurrentActions[rIndex] = uiAction{
-				IsActive: true,
-				Label:    recipe.Label,
-				IconID:   recipe.IconID,
-				Cmd:      cmd,
-			}
+			bState.UI.CurrentActions[rIndex] = action
 		}
 	}
 }
@@ -91,6 +110,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 		IsActive: true,
 		Label:    "Stop",
 		IconID:   spriteBtnShield,
+		State:    mouseStateNormal, // rozkaz „natychmiastowy”
 		Cmd: command{
 			ActionType:      cmdUStop,
 			ExecutorID:      currentUnit.ID,
@@ -103,11 +123,13 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			IsActive: true,
 			Label:    "Napraw",
 			IconID:   spriteBtnRepair,
+			State:    mouseStateWorking, // rozkaz „złożony”
+			/* Nie jestem przekonany, czy mogę nie zacząć budować rozkaz
 			Cmd: command{
 				ActionType:      cmdUWork,
 				ExecutorID:      unitID,
 				CommandCategory: categoryUnit,
-			},
+			},*/
 		}
 	}
 
@@ -116,6 +138,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Magiczna tarcza",
 			IconID:   spriteBtnSpellMagicShield,
+			State:    mouseStateNormal, // rozkaz „natychmiastowy”
 			Cmd: command{
 				ActionType:      cmdUCastSpell,
 				Spell:           spellMagicShield,
@@ -130,6 +153,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Gromobicie",
 			IconID:   spriteBtnSpellMagicLighting,
+			State:    mouseStateCasting,
 			Cmd: command{
 				ActionType:      cmdUCastSpell,
 				Spell:           spellMagicShower,
@@ -144,6 +168,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Dalekie widzenie",
 			IconID:   spriteBtnSpellVision,
+			State:    mouseStateCasting,
 			Cmd: command{
 				ActionType:      cmdUCastSpell,
 				Spell:           spellMagicSight,
@@ -158,6 +183,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			IsActive: true, // @todo: czy powinien być widoczny również, gdy nie ma many?
 			Label:    "Deszcz ognia",
 			IconID:   spriteBtnSpellMagicFire,
+			State:    mouseStateCasting,
 			Cmd: command{
 				ActionType:      cmdUCastSpell,
 				Spell:           spellMagicShower,

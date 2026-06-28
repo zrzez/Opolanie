@@ -133,18 +133,23 @@ const (
 )
 
 const (
-	cmdUIdle              commandType = iota // Bezczynność
-	cmdUMove                                 // Ruch
-	cmdUGoto                                 // Idź do, teleportacja maga
-	cmdUFlee                                 // Ucieczka, krowa
-	cmdUGraze                                // Wypasaj
-	cmdUAttack                               // Napad
-	cmdUStop                                 // Zatrzymaj się @todo: potrzeba też „waruj”
-	cmdUCastSpell                            // Rzuć czar
-	cmdBProduce                              // Wytwarzaj
-	cmdBMilking                              // Dój krowę
-	cmdUWork                                 // Napraw uszkodzoną budowlę
-	cmdBPlaceConstruction                    // Budowa
+	cmdUIdle      commandType = iota // Bezczynność
+	cmdUMove                         // Ruch
+	cmdUGoto                         // Idź do, teleportacja maga
+	cmdUFlee                         // Ucieczka, krowa
+	cmdUGraze                        // Wypasaj
+	cmdUAttack                       // Napad
+	cmdUStop                         // Zatrzymaj się @todo: potrzeba też „waruj”
+	cmdUCastSpell                    // Rzuć czar
+	cmdBProduce                      // Wytwarzaj
+	cmdBMilking                      // Dój krowę
+	//cmdUWork                                 // Napraw uszkodzoną budowlę
+	//↓↓↓↓ Zastępujemy nieostre cmdUWork, które służyło do pracy na budowie i napraw
+	//↓↓↓↓ dwoma różnymi rozkazami. Dzięki temu nie mieszamy tych dwóch podobnych
+	//↓↓↓↓ pojęć
+	cmdUBuild             // Praca jednostki na budowie
+	cmdURepair            // Praca jednostki przy naprawie budynku
+	cmdBPlaceConstruction // Budowa
 )
 
 const (
@@ -156,10 +161,10 @@ const (
 
 const (
 	// stany kursora w nakładce (UI)
-	mouseStateNormal    mouseState = iota // Nic konkretnego, można zaznaczać itd.
-	mouseStateBuilding                    // Czekam na wskazanie miejsca budowy
-	mouseStateRepairing                   // Czekam na wskazanie budynku do naprawy
-	mouseStateCasting                     // Czekam na wskazanie celu czaru
+	mouseStateNormal            mouseState = iota // Nic konkretnego, można zaznaczać itd.
+	mouseStatePlaceConstruction                   // Czekam na wskazanie miejsca zasadzenia budowy
+	mouseStateWorking                             // Czekam na wskazanie budynku do naprawy/budowy
+	mouseStateCasting                             // Czekam na wskazanie celu czaru
 )
 
 const (

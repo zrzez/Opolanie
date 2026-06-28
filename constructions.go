@@ -95,7 +95,31 @@ func (bld *building) startConstruction(bState *battleState) {
 	}
 }
 
-func (bld *building) applyWork(amount uint16, bState *battleState) bool {
+func (bld *building) repair(amount uint16) {
+	if !bld.Exists || bld.HP >= bld.MaxHP {
+		return
+	}
+
+	bld.increaseHPBuilding(amount)
+}
+
+func (bld *building) build(amount uint16, bState *battleState) {
+	if !bld.Exists || !bld.IsUnderConstruction {
+		return
+	}
+
+	bld.increaseHPBuilding(amount)
+
+	if bld.HP >= bld.MaxHP/2 {
+		bld.applyPhase2Graphics(bState)
+	}
+
+	if bld.HP >= bld.MaxHP {
+		bld.completeConstruction(bState)
+	}
+}
+
+/*func (bld *building) applyWork(amount uint16, bState *battleState) bool {
 	if !bld.Exists {
 		return false
 	}
@@ -124,7 +148,7 @@ func (bld *building) applyWork(amount uint16, bState *battleState) bool {
 	}
 
 	return false
-}
+}*/
 
 // completeConstruction domyka budowę, zmienia flagi grafikę
 func (bld *building) completeConstruction(bState *battleState) {
@@ -1072,4 +1096,12 @@ func (bld *building) bounds() bounds {
 		WidthPx:  float32(widthTiles) * float32(tileWidth),
 		HeightPx: float32(heightTiles) * float32(tileHeight),
 	}
+}
+
+func (bld *building) isRepairable(playerID uint8) bool {
+	if bld == nil || bld.HP >= bld.MaxHP {
+		return false
+	}
+
+	return bld.Type == buildingPalisade || bld.Type == buildingBridge || bld.Owner == playerID
 }

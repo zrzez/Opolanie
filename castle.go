@@ -88,8 +88,12 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 		targetUnit.addUnitCommand(cmdUAttack, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
 	case cmdUStop:
 		targetUnit.addUnitCommand(cmdUStop, cmd.TargetX, cmd.TargetY, 0, bState) // czemu targetID = 0? może nil?
-	case cmdUWork:
-		targetUnit.addUnitCommand(cmdUWork, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+	case cmdUBuild:
+		targetUnit.addUnitCommand(cmdUBuild, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
+			targetUnit.ID, cmd.InteractionTargetID)
+	case cmdURepair:
+		targetUnit.addUnitCommand(cmdURepair, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
 	case cmdUCastSpell:
