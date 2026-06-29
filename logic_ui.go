@@ -62,9 +62,8 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 				// Jest to rozkaz wymagający dodatkowej informacji z planszy.
 				action.State = mouseStatePlaceConstruction
 				action.Cmd = command{
-					ActionType:          cmdBPlaceConstruction,
-					CommandCategory:     categoryBuilding,
-					InteractionTargetID: uint(recipe.BuildingType),
+					ActionType: cmdBPlaceConstruction,
+					CreateType: uint8(recipe.BuildingType),
 				}
 			} else {
 				// PRZYPADEK 2: PRODUKCJA (np. Krowa, Drwal)
@@ -74,10 +73,9 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 				action.Cmd = command{
 					ActionType: cmdBProduce, // cmdB oznacza, że to „budynkowy rozkaz”
 					// na wypadek gdyby categoryBuilding nie było widoczne w kodzie i powstała wątpliwość
-					CommandCategory:     categoryBuilding, // rozkaz „budynkowy”
-					ExecutorID:          bld.ID,           // tenże budynek ma wykonać rozkaz
-					InteractionTargetID: bld.ID,           // tenże budynek jest celem rozkazu „wytwórz jednostkę”
-					ProduceType:         recipe.UnitType,  // rodzaj jednostki do wytworzenia
+					ExecutorID:          bld.ID,                 // tenże budynek ma wykonać rozkaz
+					InteractionTargetID: bld.ID,                 // tenże budynek jest celem rozkazu „wytwórz jednostkę”
+					CreateType:          uint8(recipe.UnitType), // rodzaj jednostki do wytworzenia
 				}
 			}
 			// Przypisanie gotowego rozkazu do UI
@@ -102,9 +100,8 @@ func fillUnitActions(bState *battleState, unitID uint) {
 		IconID:   spriteBtnShield,
 		State:    mouseStateNormal, // rozkaz „natychmiastowy”
 		Cmd: command{
-			ActionType:      cmdUStop,
-			ExecutorID:      currentUnit.ID,
-			CommandCategory: categoryUnit,
+			ActionType: cmdUStop,
+			ExecutorID: currentUnit.ID,
 		},
 	}
 	// @todo: podejrzewam, że zamiast if-ów będzie potrzebny switch później
@@ -115,9 +112,8 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			IconID:   spriteBtnRepair,
 			State:    mouseStateWorking, // rozkaz „złożony”
 			Cmd: command{
-				ActionType:      cmdUWork, // cmdUWork, ponieważ tutaj nie możemy wiedzieć czy build czy repair
-				CommandCategory: categoryUnit,
-				ExecutorID:      0, // @reminder: sprawdzam, czy mogę znaleźć „dla każdego” rozkaz
+				ActionType: cmdUWork, // cmdUWork, ponieważ tutaj nie możemy wiedzieć czy build czy repair
+				ExecutorID: 0,        // @reminder: sprawdzam, czy mogę znaleźć „dla każdego” rozkaz
 			},
 		}
 	}
@@ -129,10 +125,9 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			IconID:   spriteBtnSpellMagicShield,
 			State:    mouseStateNormal, // rozkaz „natychmiastowy”
 			Cmd: command{
-				ActionType:      cmdUCastSpell,
-				Spell:           spellMagicShield,
-				ExecutorID:      unitID,
-				CommandCategory: categoryUnit,
+				ActionType: cmdUCastSpell,
+				Spell:      spellMagicShield,
+				ExecutorID: unitID,
 			},
 		}
 	}
@@ -144,10 +139,9 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			IconID:   spriteBtnSpellMagicLighting,
 			State:    mouseStateCasting,
 			Cmd: command{
-				ActionType:      cmdUCastSpell,
-				Spell:           spellMagicShower,
-				ExecutorID:      unitID,
-				CommandCategory: categoryUnit,
+				ActionType: cmdUCastSpell,
+				Spell:      spellMagicShower,
+				ExecutorID: unitID,
 			},
 		}
 	}
@@ -159,10 +153,9 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			IconID:   spriteBtnSpellVision,
 			State:    mouseStateCasting,
 			Cmd: command{
-				ActionType:      cmdUCastSpell,
-				Spell:           spellMagicSight,
-				ExecutorID:      unitID,
-				CommandCategory: categoryUnit,
+				ActionType: cmdUCastSpell,
+				Spell:      spellMagicSight,
+				ExecutorID: unitID,
 			},
 		}
 	}
@@ -174,10 +167,9 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			IconID:   spriteBtnSpellMagicFire,
 			State:    mouseStateCasting,
 			Cmd: command{
-				ActionType:      cmdUCastSpell,
-				Spell:           spellMagicShower,
-				ExecutorID:      unitID,
-				CommandCategory: categoryUnit,
+				ActionType: cmdUCastSpell,
+				Spell:      spellMagicShower,
+				ExecutorID: unitID,
 			},
 		}
 	}

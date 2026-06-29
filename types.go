@@ -216,18 +216,12 @@ type playerState struct {
 }
 
 type (
-	commandCategory uint8
-	commandType     uint8
-	spellID         uint8
+	commandType uint8
+	spellID     uint8
 )
 
 // command przechowuje rozkazy dla jednostki lub budynku.
 type command struct {
-	// === KTO? (Adresat rozkazu) ===
-	// 0 = Wykonawcą jest Budynek (np. produkcja) → idzie do handleBuildingCommand
-	// 1 = Wykonawcą jest Jednostka (np. ruch, atak) → idzie do handleUnitCommand
-	CommandCategory commandCategory
-
 	// ExecutorID - ID konkretnego obiektu, który MA WYKONAĆ rozkaz.
 	// Jeśli Category=0, to jest to ID Budynku. Jeśli Category=1, to ID Jednostki.
 	ExecutorID uint
@@ -249,8 +243,8 @@ type command struct {
 	TargetY uint8 // Współrzędna y kliknięcia w mapę
 
 	// === INNE ===
-	ProduceType  unitType // Tylko dla cmdProduce: co chcemy stworzyć
-	FriendlyFire bool     // @reminder: próbuję, czy się sprawdzi, być może usunę - 28.06.2026
+	CreateType   uint8 // Rodzaj obiektu, który stworzymy
+	FriendlyFire bool  // Określnik, czy bratobójczy napad
 }
 
 // aiState przechowuje usposobienie SI.

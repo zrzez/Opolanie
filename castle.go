@@ -19,20 +19,19 @@ func (playerS *playerState) init(factionID uint8, maxMilk uint16) {
 }
 
 // setCommand przetwarza rozkaz (np. wytwarzania, ruchu, ataku) dla gracza.
-// Dzieli logikę na podfunkcje dla lepszej czytelności i utrzymania zasady jednej odpowiedzialności.
+// @todo: wróć i posprzątaj
 func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 	if cmd == nil {
 		return
 	}
 
 	// @reminder: staram się tutaj przechwycić rozkazy dla wszystkich zaznaczonych jednsotek
-	if cmd.CommandCategory == categoryUnit && cmd.ExecutorID == 0 {
+	if cmd.ActionType < cmdDelimiter && cmd.ExecutorID == 0 {
 		selectedUnits := getSelectedUnits(bState)
 		for _, u := range selectedUnits {
 			unitCmd := *cmd
 			unitCmd.ExecutorID = u.ID
 
-			u.AllowFriendlyFire = cmd.FriendlyFire
 			playerS.handleUnitCommand(&unitCmd, bState)
 		}
 
@@ -40,10 +39,9 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 	}
 
 	// @reminder: tutaj obsługujemy rozkazy dla pojedynczych jednostek i budynków
-	switch cmd.CommandCategory {
-	case categoryBuilding: // Rozkaz dla budynku
+	if cmd.ActionType > cmdDelimiter { // Rozkaz dla budynku
 		playerS.handleBuildingCommand(cmd, bState)
-	case categoryUnit:
+	} else {
 		// @todo: czemu niby miałbym tutaj znowu walidować? Nie rozumiem, do tego ponowne sprawdzanie FF?
 		targetUnit, ok := getUnitByID(cmd.ExecutorID, bState)
 		if ok {
@@ -51,8 +49,6 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 		}
 
 		playerS.handleUnitCommand(cmd, bState)
-	default:
-		log.Printf("setCommand: Nieznany TargetObject w komendzie: %d", cmd.CommandCategory)
 	}
 }
 
@@ -81,7 +77,7 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 
 	switch cmd.ActionType {
 	case cmdBProduce:
-		targetBuilding.produceUnit(cmd.ProduceType, bState)
+		targetBuilding.produceUnit(unitType(cmd.CreateType), bState)
 	default:
 		log.Printf("handleBuildingCommand: Niezaimplementowany ActionType %d dla budynku %d.",
 			cmd.ActionType, targetBuilding.ID)
@@ -90,7 +86,7 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 
 func (playerS *playerState) handleConstructionCommand(cmd *command, bState *battleState) {
 	// 0. Poprawność
-	bType := buildingType(cmd.InteractionTargetID)
+	bType := buildingType(cmd.CreateType)
 
 	if bType == buildingType(0) {
 		bState.CurrentMessage.Text = "Błąd: nie określono typu budynku. " // nie powinno się wydarzyć nigdy…
@@ -103,7 +99,7 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 	tryBuildStructure(bType, cmd.TargetX, cmd.TargetY, playerS.PlayerID, bState)
 
 	// 2. Udało się
-	log.Printf("[castle.go] Przyjęto rozkaz budowy: %s (%d,%d)", bType, cmd.TargetX, cmd.TargetY)
+	log.Printf("[castle.go] Przyjęto rozkaz budowy: %d (%d,%d)", bType, cmd.TargetX, cmd.TargetY)
 	bState.PendingCommand = nil
 	bState.MouseState = mouseStateNormal
 }
@@ -144,7 +140,9 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
 	case cmdUCastSpell:
-		targetUnit.CurrentSpell = cmd.Spell
+		// @todo: dlaczego zakomentowanie tego psuje rzucanie czarów?
+		// Przecież to powinno tylko przepchnąć rozkaz we właściwe miejsce do sprawdzenia poprawności!
+		// targetUnit.CurrentSpell = cmd.Spell
 		targetUnit.addUnitCommand(cmd, bState)
 	default:
 		log.Printf("handleUnitCommand: Nieznany ActionType %d dla jednostki %d.",

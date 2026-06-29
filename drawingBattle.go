@@ -1679,7 +1679,7 @@ func drawButtons(bState *battleState, ps *programState) {
 		// oby się udało wpisać „na sztywno”, co chcę wyświetlić. Bardzo uprości życie
 		if action.Cmd.ActionType == cmdBProduce {
 			// Base (700) + Typ * 200 + Kierunek Dół (4) = Portret
-			iconID = uint16(int(spriteUnitBaseID + (uint16(action.Cmd.ProduceType) * spriteUnitStep) + 4))
+			iconID = uint16(int(spriteUnitBaseID + (uint16(action.Cmd.CreateType) * spriteUnitStep) + 4))
 		}
 
 		def := spriteRegistry[iconID]
@@ -1912,15 +1912,15 @@ func drawMinimapUnits(bState *battleState, minimapX, minimapY, minimapWidth, min
 
 // ========= DEBUGOWANIE ZASADZANIA BUDOWLI
 
-func drawConstructionValidationBox(bState *battleState, ps *programState) {
+func drawConstructionValidationBox(bState *battleState, pState *programState) {
 	if bState.MouseState != mouseStatePlaceConstruction {
 		return
 	}
 
 	screenMouse := rl.GetMousePosition()
-	virtualMouse := screenToVirtualCoords(ps, screenMouse)
+	virtualMouse := screenToVirtualCoords(pState, screenMouse)
 
-	if isMouseOverUI(ps, virtualMouse) {
+	if isMouseOverUI(pState, virtualMouse) {
 		return
 	}
 
@@ -1929,7 +1929,7 @@ func drawConstructionValidationBox(bState *battleState, ps *programState) {
 	startX := uint8(worldMousePos.X / float32(tileWidth))
 	startY := uint8(worldMousePos.Y / float32(tileHeight))
 
-	size := buildingDefs[buildingType(bState.PendingCommand.InteractionTargetID)].Width
+	size := buildingDefs[buildingType(bState.PendingCommand.CreateType)].Width
 
 	var tileStates [3][3]uint8
 	var hasRoadAccessAnywhere bool
@@ -1988,17 +1988,17 @@ func validationBoxColor(tileX, tileY uint8, bState *battleState) rl.Color {
 	// 1. Walidacja specyficzna dla typu budynku
 	var isValid bool
 
-	switch buildingType(bState.PendingCommand.InteractionTargetID) {
+	switch buildingType(bState.PendingCommand.CreateType) {
 	case buildingBridge:
 		isValid = isWithinBoard(tileX, tileY, bState) &&
 			isWater(bState.Board.Tiles[tileX][tileY].TextureID)
 
 	case buildingRoad:
 		isValid = !isPath(bState.Board.Tiles[tileX][tileY].TextureID) &&
-			canFitBuilding(tileX, tileY, smallBuildingSize, smallBuildingSize, buildingType(bState.PendingCommand.InteractionTargetID), bState)
+			canFitBuilding(tileX, tileY, smallBuildingSize, smallBuildingSize, buildingType(bState.PendingCommand.CreateType), bState)
 
 	default:
-		isValid = canFitBuilding(tileX, tileY, smallBuildingSize, smallBuildingSize, buildingType(bState.PendingCommand.InteractionTargetID), bState)
+		isValid = canFitBuilding(tileX, tileY, smallBuildingSize, smallBuildingSize, buildingType(bState.PendingCommand.CreateType), bState)
 	}
 
 	// 2. Jeśli miejsce jest nieważne, od razu zwracamy czerwień
@@ -2007,7 +2007,7 @@ func validationBoxColor(tileX, tileY uint8, bState *battleState) rl.Color {
 	}
 
 	// 3. Palisada nie wymaga dostępu do drogi, więc od razu jest zielona
-	if buildingType(bState.PendingCommand.InteractionTargetID) == buildingPalisade {
+	if buildingType(bState.PendingCommand.CreateType) == buildingPalisade {
 		return rl.DarkGreen
 	}
 

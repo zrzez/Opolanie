@@ -628,7 +628,6 @@ func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY 
 
 	cmd := command{
 		ActionType:          cmdType,
-		CommandCategory:     categoryUnit,
 		ExecutorID:          0,
 		TargetX:             tileX,
 		TargetY:             tileY,
@@ -1383,7 +1382,6 @@ func handleMinimapRightMouse(
 
 	cmd := command{
 		ActionType:          cmdType,
-		CommandCategory:     categoryUnit,
 		ExecutorID:          0,
 		TargetX:             tileX,
 		TargetY:             tileY,

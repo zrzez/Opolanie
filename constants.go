@@ -133,20 +133,31 @@ const (
 )
 
 const (
-	cmdUIdle              commandType = iota // Bezczynność
-	cmdUMove                                 // Ruch
-	cmdUGoto                                 // Idź do, teleportacja maga
-	cmdUFlee                                 // Ucieczka, krowa
-	cmdUGraze                                // Wypasaj
-	cmdUAttack                               // Napad
-	cmdUStop                                 // Zatrzymaj się @todo: potrzeba też „waruj”
-	cmdUCastSpell                            // Rzuć czar
-	cmdBProduce                              // Wytwarzaj
-	cmdBMilking                              // Dój krowę
-	cmdUWork                                 // Coś związanego z budową, ale UI nie zna szczegółów
-	cmdUBuild                                // Praca jednostki na budowie
-	cmdURepair                               // Praca jednostki przy naprawie budynku
-	cmdBPlaceConstruction                    // Budowa
+	/*
+		Zbiór rozkazów dla jednostek oraz budynków. Warunkiem koniecznym do poprawnego
+		działania rozkazów jest zachowanie ciągłości obu rodzajów.
+		Wnajsampierw cmdU, za nimi musi być cmdDelimiter.
+		Zaburzenie kolejności zniweczy działania metody setCommand
+	*/
+	cmdUIdle      commandType = iota // Bezczynność
+	cmdUMove                         // Ruch
+	cmdUGoto                         // Idź do, teleportacja maga
+	cmdUFlee                         // Ucieczka, krowa
+	cmdUGraze                        // Wypasaj
+	cmdUAttack                       // Napad
+	cmdUStop                         // Zatrzymaj się @todo: potrzeba też „waruj”
+	cmdUCastSpell                    // Rzuć czar
+	cmdUWork                         // Coś związanego z budową, ale UI nie zna szczegółów
+	cmdUBuild                        // Praca jednostki na budowie
+	cmdURepair                       // Praca jednostki przy naprawie budynku
+	// ↑↑↑↑ Powyżej tego komentarza tylko rozkazy
+	// ↑↑↑↑ dla jednostek
+	cmdDelimiter
+	// ↓↓↓↓ Poniżej tego komentarza tylko rozkazy
+	// ↓↓↓↓ dla budynków
+	cmdBProduce           // Wytwarzaj
+	cmdBMilking           // Dój krowę
+	cmdBPlaceConstruction // Budowa
 )
 
 const (

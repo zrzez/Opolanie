@@ -912,16 +912,16 @@ func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *
 }
 
 // produceUnit odpowiada za próbę wytworzenia jednostki.
-func (bld *building) produceUnit(unitType unitType, bState *battleState) {
+func (bld *building) produceUnit(newUnitType unitType, bState *battleState) {
 	// 1. Sprawdzamy, czy są jakieś przeszkody w stworzeniu jednostki
-	if !bld.canProduceUnit(unitType, bState) {
+	if !bld.canProduceUnit(newUnitType, bState) {
 		return
 	}
 
 	// 2. Weryfikujemy, czy taki rodzaj jednostki istnieje
-	stats, ok := unitDefs[unitType]
+	stats, ok := unitDefs[newUnitType]
 	if !ok {
-		panic(fmt.Sprintf("BŁĄD KRYTYCZNY: Brak definicji dla jednostki %d w unitDefs", unitType))
+		panic(fmt.Sprintf("BŁĄD KRYTYCZNY: Brak definicji dla jednostki %d w unitDefs", newUnitType))
 	}
 
 	// 3. Ustalamy właściciela
@@ -937,8 +937,8 @@ func (bld *building) produceUnit(unitType unitType, bState *battleState) {
 
 	spawnX, spawnY, ok := bld.getClosestWalkableTile(bState)
 	if ok {
-		bld.spawnUnit(unitType, spawnX, spawnY, bState)
-		log.Printf("INFO: Budynek ID %d zrobił jednostkę typu %v. Mleka gracza: %d.", bld.ID, unitType, owner.Milk)
+		bld.spawnUnit(unitType(newUnitType), spawnX, spawnY, bState)
+		log.Printf("INFO: Budynek ID %d zrobił jednostkę typu %v. Mleka gracza: %d.", bld.ID, newUnitType, owner.Milk)
 	}
 }
 
@@ -1008,7 +1008,7 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		// Indeks 5: Wytwarzanie Krowy
 		if actionIndex == 5 {
 			cmd.ActionType = cmdBProduce
-			cmd.ProduceType = unitCow
+			cmd.CreateType = uint8(unitCow)
 		}
 		// Indeks 6: Budowa nowej Obory
 		if actionIndex == 6 {
@@ -1020,12 +1020,12 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		// Indeks 4: Wytwarzanie Łucznika
 		if actionIndex == 4 {
 			cmd.ActionType = cmdBProduce
-			cmd.ProduceType = unitArcher
+			cmd.CreateType = uint8(unitArcher)
 		}
 		// Indeks 5: Wytwarzanie Drwala
 		if actionIndex == 5 {
 			cmd.ActionType = cmdBProduce
-			cmd.ProduceType = unitAxeman
+			cmd.CreateType = uint8(unitAxeman)
 		}
 		// Indeks 6: Budowa Chaty Mieszkalnej
 		if actionIndex == 6 {
@@ -1037,12 +1037,12 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		// Indeks 4: Wytwarzanie Kapłana
 		if actionIndex == 4 {
 			cmd.ActionType = cmdBProduce
-			cmd.ProduceType = unitPriest
+			cmd.CreateType = uint8(unitPriest)
 		}
 		// Indeks 5: Wytwarzanie Kapłanki
 		if actionIndex == 5 {
 			cmd.ActionType = cmdBProduce
-			cmd.ProduceType = unitPriestess
+			cmd.CreateType = uint8(unitPriestess)
 		}
 		// Indeks 6: Tutaj był stary CMD_PRODUCE bez typu, zakładam, że to błąd starego kodu
 		// lub puste miejsce. Zostawiamy IDLE.
@@ -1051,12 +1051,12 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		// Indeks 4: Wytwarzanie Włócznika
 		if actionIndex == 4 {
 			cmd.ActionType = cmdBProduce
-			cmd.ProduceType = unitSpearman
+			cmd.CreateType = uint8(unitSpearman)
 		}
 		// Indeks 5: Wytwarzanie Miecznika
 		if actionIndex == 5 {
 			cmd.ActionType = cmdBProduce
-			cmd.ProduceType = unitSwordsman
+			cmd.CreateType = uint8(unitSwordsman)
 		}
 		// Indeks 6: Pusty w starym kodzie (zwracał gołe CMD_PRODUCE)
 		// Indeks 7: Budowa Palisady (stare CMD_BUILD_FENCE)
@@ -1069,12 +1069,12 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		// Indeks 4: Wytwarzanie Kusznika
 		if actionIndex == 4 {
 			cmd.ActionType = cmdBProduce
-			cmd.ProduceType = unitCrossbowman
+			cmd.CreateType = uint8(unitCrossbowman)
 		}
 		// Indeks 5: Wytwarzanie Dowódcy
 		if actionIndex == 5 {
 			cmd.ActionType = cmdBProduce
-			cmd.ProduceType = unitCommander
+			cmd.CreateType = uint8(unitCommander)
 		}
 		// Indeks 6: Pusty
 	default:

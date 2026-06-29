@@ -514,6 +514,9 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bState *battl
 
 func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	log.Printf("INFO: unit.go dodano rozkaz %d.", cmd.ActionType)
+	// ŁATANIE DZIURY W KOMPLETOWANIE ROZKAÓW DLA JEDNOSTEK
+	u.CurrentSpell = cmd.Spell
+	u.AllowFriendlyFire = cmd.FriendlyFire
 
 	if u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID) {
 		log.Printf("INFO: unit.go shouldSkipDuplicate %t.", u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID))
@@ -534,6 +537,14 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	}
 
 	u.prepareForNewCommand(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID)
+
+	// @reminder: Nie powinno to tutaj być, ale lepsze to niż castle.go
+	// @todo: ogarnij czemu to się tak porobiło, nie powinno tak to wyglądać!
+	// ↓↓↓ NIE DZIAŁA
+	// u.CurrentSpell = cmd.Spell
+	// ↓↓↓↓ działa
+	// u.AllowFriendlyFire = cmd.FriendlyFire
+
 	u.applyCommandState(cmd.ActionType)
 }
 
@@ -681,13 +692,13 @@ func (u *unit) canAttack(targetID uint, bState *battleState) bool {
 	return false
 }
 
-func (u *unit) prepareForNewCommand(command commandType, targetX, targetY uint8, targetID uint) {
+func (u *unit) prepareForNewCommand(cmdType commandType, targetX, targetY uint8, targetID uint) {
 	u.clearPath()
 	u.History = nil
 	u.LoopCount = 0
 	u.TicksNoProgress = 0
 	u.LastPathIndex = 0
-	u.Command = command
+	u.Command = cmdType
 	u.TargetX = targetX
 	u.TargetY = targetY
 	u.TargetID = targetID
@@ -1848,7 +1859,6 @@ func (u *unit) takeDamage(damage uint16, bState *battleState) {
 			if foundBarn {
 				cmd := &command{
 					ActionType:          cmdUFlee,
-					CommandCategory:     categoryUnit,
 					TargetX:             barnX,
 					TargetY:             barnY,
 					InteractionTargetID: 0,
@@ -2330,7 +2340,6 @@ func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bState *battl
 
 	cmd := &command{
 		ActionType:          cmdUAttack,
-		CommandCategory:     categoryUnit,
 		TargetX:             realTargetX,
 		TargetY:             realTargetY,
 		InteractionTargetID: u.TargetID,
@@ -2372,7 +2381,6 @@ func (bld *building) getClosestOccupiedTile(fromX, fromY uint8) (uint8, uint8, b
 func (u *unit) startMoveToAttack(bState *battleState) {
 	cmd := &command{
 		ActionType:          cmdUAttack,
-		CommandCategory:     categoryUnit,
 		TargetX:             u.TargetX,
 		TargetY:             u.TargetY,
 		InteractionTargetID: u.TargetID,

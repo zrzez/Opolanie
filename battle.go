@@ -447,15 +447,15 @@ func processAI(bState *battleState) {
 // processCommands przetwarza rozkazy
 func processCommands(bState *battleState) {
 	if bState.CurrentCommands[0].ActionType != cmdUIdle {
-		log.Printf("ProcComm: Gracz wykonuje komendę. TargetObject: %d, ActionType: %d",
-			bState.CurrentCommands[0].CommandCategory, bState.CurrentCommands[0].ActionType)
+		log.Printf("ProcComm: Gracz wykonuje komendę. ActionType: %d",
+			bState.CurrentCommands[0].ActionType)
 		bState.HumanPlayerState.setCommand(&bState.CurrentCommands[0], bState)
 		bState.CurrentCommands[0].ActionType = cmdUIdle
 	}
 
 	if bState.CurrentCommands[1].ActionType != cmdUIdle {
-		log.Printf("ProcComm: SI wykonuje komendę. TargetObject: %d, ActionType: %d",
-			bState.CurrentCommands[1].CommandCategory, bState.CurrentCommands[1].ActionType)
+		log.Printf("ProcComm: SI wykonuje komendę. ActionType: %d",
+			bState.CurrentCommands[1].ActionType)
 		bState.AIEnemyState.setCommand(&bState.CurrentCommands[1], bState)
 		bState.CurrentCommands[1].ActionType = cmdUIdle
 	}
