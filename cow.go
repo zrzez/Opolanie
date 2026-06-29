@@ -274,14 +274,20 @@ func (u *unit) returnToBarnArea(bState *battleState) {
 }
 
 // Pomocnik do wykonania ruchu
-func (u *unit) addAndMove(cmd commandType, x, y uint8, id uint, bState *battleState, logMsg string) {
-	if u.Command != cmd || u.TargetX != x || u.TargetY != y {
+func (u *unit) addAndMove(cmdType commandType, x, y uint8, id uint, bState *battleState, logMsg string) {
+	if u.Command != cmdType || u.TargetX != x || u.TargetY != y {
 		// Tu naprawiamy błąd "unused parameter": używamy logMsg
 		if logMsg != "" {
 			log.Printf("unit %d (COW): %s", u.ID, logMsg)
 		}
 
-		u.addUnitCommand(cmd, x, y, id, bState)
+		cmd := &command{
+			ActionType:          cmdType,
+			TargetX:             x,
+			TargetY:             y,
+			InteractionTargetID: id,
+		}
+		u.addUnitCommand(cmd, bState)
 	}
 
 	u.move(bState)

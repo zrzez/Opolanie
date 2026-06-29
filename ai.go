@@ -5,7 +5,6 @@ package main
 import (
 	"log"
 	"math"
-	"math/rand"
 	"sort"
 )
 
@@ -194,7 +193,7 @@ func (mil *militaryAI) attackEnemy(bState *battleState) bool {
 }
 
 // SI tworzące nowe jednostki w dynamicznych bitwach
-func aiMakeNewUnits(bState *battleState) {
+/*func aiMakeNewUnits(bState *battleState) {
 	if !bState.CampaignData.GeneratorActive {
 		return
 	}
@@ -332,7 +331,7 @@ func aiMakeNewUnits(bState *battleState) {
 		}
 	}
 }
-
+*/
 // @todo: ogarnij czemu szuka po całej planszy a nie tylko w zasięgu wzroku
 // findNearestEnemyExtended znajduje najbliższego wroga
 func findNearestEnemyExtended(seeker *unit, bState *battleState) (*unit, *building, bool) {
@@ -496,7 +495,7 @@ func findGrass(xp, yp uint8, xe, ye *uint8, bState *battleState) {
 	*ye = yp + 3
 }
 
-func sendCowToBarn(cow *unit, bState *battleState) bool {
+/*func sendCowToBarn(cow *unit, bState *battleState) bool {
 	for _, building := range bState.Buildings {
 		if building == nil || !building.Exists {
 			continue
@@ -521,7 +520,7 @@ func sendCowToBarn(cow *unit, bState *battleState) bool {
 	}
 	return false
 }
-
+*/
 // who sprawdza do kogo przynależy dana jednostka
 func who(objectID uint, bState *battleState) uint8 {
 	if objectID == 0 {

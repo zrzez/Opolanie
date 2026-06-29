@@ -512,29 +512,29 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bState *battl
 	return bestX, bestY, true
 }
 
-func (u *unit) addUnitCommand(command commandType, targetX, targetY uint8, targetID uint, bState *battleState) {
-	log.Printf("INFO: unit.go dodano rozkaz %d.", command)
+func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
+	log.Printf("INFO: unit.go dodano rozkaz %d.", cmd.ActionType)
 
-	if u.shouldSkipDuplicate(command, targetX, targetY, targetID) {
-		log.Printf("INFO: unit.go shouldSkipDuplicate %t.", u.shouldSkipDuplicate(command, targetX, targetY, targetID))
+	if u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID) {
+		log.Printf("INFO: unit.go shouldSkipDuplicate %t.", u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID))
 
 		return
 	}
 
-	if err := u.resolveInteractionTarget(&targetX, &targetY, command, targetID, bState); err != nil {
+	if err := u.resolveInteractionTarget(&cmd.TargetX, &cmd.TargetY, cmd.ActionType, cmd.InteractionTargetID, bState); err != nil {
 		u.setIdleWithReason("cel nieosiągalny")
 
 		return
 	}
 
-	if !u.validateCommand(command, targetID, bState) {
-		log.Printf("INFO: unit.go rozkaz nie przeszedł sprawdzenia %t.", u.validateCommand(command, targetID, bState))
+	if !u.validateCommand(cmd.ActionType, cmd.InteractionTargetID, bState) {
+		log.Printf("INFO: unit.go rozkaz nie przeszedł sprawdzenia %t.", u.validateCommand(cmd.ActionType, cmd.InteractionTargetID, bState))
 
 		return
 	}
 
-	u.prepareForNewCommand(command, targetX, targetY, targetID)
-	u.applyCommandState(command)
+	u.prepareForNewCommand(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID)
+	u.applyCommandState(cmd.ActionType)
 }
 
 func (u *unit) shouldSkipDuplicate(command commandType, targetX, targetY uint8, targetID uint) bool {
@@ -1123,24 +1123,36 @@ func (bState *battleState) resolveActualTarget(mainTargetX, mainTargetY uint8, m
 	return mainTargetX, mainTargetY
 }
 
-func (bState *battleState) assignSmallGroupTargets(units []*unit, command commandType, targetX, targetY uint8, targetID uint) {
-	for _, unit := range units {
-		unit.addUnitCommand(command, targetX, targetY, targetID, bState)
+func (bState *battleState) assignSmallGroupTargets(units []*unit, cmdType commandType, targetX, targetY uint8, targetID uint) {
+	for _, currentUnit := range units {
+		cmd := &command{
+			ActionType:          cmdType,
+			TargetX:             targetX,
+			TargetY:             targetY,
+			InteractionTargetID: targetID,
+		}
+		currentUnit.addUnitCommand(cmd, bState)
 	}
 }
 
-func (bState *battleState) assignScatteredGroupTargets(units []*unit, command commandType, targetX, targetY uint8, targetID uint) {
+func (bState *battleState) assignScatteredGroupTargets(units []*unit, cmdType commandType, targetX, targetY uint8, targetID uint) {
 	positions := bState.generateFormationPositions(targetX, targetY, uint8(len(units)))
 
-	for i, unit := range units {
+	for i, currentUnit := range units {
 		assignedX, assignedY := targetX, targetY
 
 		if i < len(positions) {
 			assignedX = positions[i].X
 			assignedY = positions[i].Y
 		}
+		cmd := &command{
+			ActionType:          cmdType,
+			TargetX:             assignedX,
+			TargetY:             assignedY,
+			InteractionTargetID: targetID,
+		}
 
-		unit.addUnitCommand(command, assignedX, assignedY, targetID, bState)
+		currentUnit.addUnitCommand(cmd, bState)
 	}
 }
 
@@ -1834,7 +1846,14 @@ func (u *unit) takeDamage(damage uint16, bState *battleState) {
 		if u.Udder < 100 && u.Command != cmdUFlee {
 			barnX, barnY, foundBarn := findNearestBarnMilkingSpot(u, bState)
 			if foundBarn {
-				u.addUnitCommand(cmdUFlee, barnX, barnY, 0, bState)
+				cmd := &command{
+					ActionType:          cmdUFlee,
+					CommandCategory:     categoryUnit,
+					TargetX:             barnX,
+					TargetY:             barnY,
+					InteractionTargetID: 0,
+				}
+				u.addUnitCommand(cmd, bState)
 				log.Printf("unit %d (COW): Otrzymała obrażenia, uciekam do obory na (%d,%d).", u.ID, barnX, barnY)
 			} else {
 				log.Printf("unit %d (COW): Otrzymała obrażenia, ale nie znalazła obory do ucieczki. "+
@@ -2309,7 +2328,15 @@ func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bState *battl
 		}
 	}
 
-	u.addUnitCommand(cmdUAttack, realTargetX, realTargetY, u.TargetID, bState)
+	cmd := &command{
+		ActionType:          cmdUAttack,
+		CommandCategory:     categoryUnit,
+		TargetX:             realTargetX,
+		TargetY:             realTargetY,
+		InteractionTargetID: u.TargetID,
+	}
+
+	u.addUnitCommand(cmd, bState)
 
 	u.State = stateAttacking
 	u.AnimationType = "fight"
@@ -2327,15 +2354,15 @@ func (bld *building) getClosestOccupiedTile(fromX, fromY uint8) (uint8, uint8, b
 	closestX, closestY := uint8(0), uint8(0)
 	minDistSq := math.MaxFloat64
 
-	for _, tile := range bld.OccupiedTiles {
-		dx := float64(tile.X - fromX)
-		dy := float64(tile.Y - fromY)
+	for _, occupiedTile := range bld.OccupiedTiles {
+		dx := float64(occupiedTile.X - fromX)
+		dy := float64(occupiedTile.Y - fromY)
 		distSq := dx*dx + dy*dy
 
 		if distSq < minDistSq {
 			minDistSq = distSq
-			closestX = tile.X
-			closestY = tile.Y
+			closestX = occupiedTile.X
+			closestY = occupiedTile.Y
 		}
 	}
 
@@ -2343,7 +2370,14 @@ func (bld *building) getClosestOccupiedTile(fromX, fromY uint8) (uint8, uint8, b
 }
 
 func (u *unit) startMoveToAttack(bState *battleState) {
-	u.addUnitCommand(cmdUAttack, u.TargetX, u.TargetY, u.TargetID, bState)
+	cmd := &command{
+		ActionType:          cmdUAttack,
+		CommandCategory:     categoryUnit,
+		TargetX:             u.TargetX,
+		TargetY:             u.TargetY,
+		InteractionTargetID: u.TargetID,
+	}
+	u.addUnitCommand(cmd, bState)
 	u.State = stateMoving
 	u.AnimationType = "walk"
 

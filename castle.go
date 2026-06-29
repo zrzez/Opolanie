@@ -25,10 +25,31 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 		return
 	}
 
+	// @reminder: staram się tutaj przechwycić rozkazy dla wszystkich zaznaczonych jednsotek
+	if cmd.CommandCategory == categoryUnit && cmd.ExecutorID == 0 {
+		selectedUnits := getSelectedUnits(bState)
+		for _, u := range selectedUnits {
+			unitCmd := *cmd
+			unitCmd.ExecutorID = u.ID
+
+			u.AllowFriendlyFire = cmd.FriendlyFire
+			playerS.handleUnitCommand(&unitCmd, bState)
+		}
+
+		return
+	}
+
+	// @reminder: tutaj obsługujemy rozkazy dla pojedynczych jednostek i budynków
 	switch cmd.CommandCategory {
-	case 0: // Rozkaz dla budynku
+	case categoryBuilding: // Rozkaz dla budynku
 		playerS.handleBuildingCommand(cmd, bState)
-	case 1: // Komenda dla jednostki
+	case categoryUnit:
+		// @todo: czemu niby miałbym tutaj znowu walidować? Nie rozumiem, do tego ponowne sprawdzanie FF?
+		targetUnit, ok := getUnitByID(cmd.ExecutorID, bState)
+		if ok {
+			targetUnit.AllowFriendlyFire = cmd.FriendlyFire
+		}
+
 		playerS.handleUnitCommand(cmd, bState)
 	default:
 		log.Printf("setCommand: Nieznany TargetObject w komendzie: %d", cmd.CommandCategory)
@@ -38,6 +59,11 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 // handleBuildingCommand przetwarza rozkazy dotyczące budynków.
 // Obsługuje np. produkcję jednostek.
 func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleState) {
+	// 1. Dla tworzenia nowej budowli
+	if cmd.ActionType == cmdBPlaceConstruction {
+		playerS.handleConstructionCommand(cmd, bState)
+	}
+	// 2. Dla istniejących już budowli
 	targetBuilding, ok := getBuildingByID(cmd.InteractionTargetID, bState)
 
 	if !ok || !targetBuilding.Exists || targetBuilding.IsUnderConstruction {
@@ -60,6 +86,26 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 		log.Printf("handleBuildingCommand: Niezaimplementowany ActionType %d dla budynku %d.",
 			cmd.ActionType, targetBuilding.ID)
 	}
+}
+
+func (playerS *playerState) handleConstructionCommand(cmd *command, bState *battleState) {
+	// 0. Poprawność
+	bType := buildingType(cmd.InteractionTargetID)
+
+	if bType == buildingType(0) {
+		bState.CurrentMessage.Text = "Błąd: nie określono typu budynku. " // nie powinno się wydarzyć nigdy…
+		bState.CurrentMessage.Duration = 60
+
+		return
+	}
+
+	// 1. Przekazuję dalej
+	tryBuildStructure(bType, cmd.TargetX, cmd.TargetY, playerS.PlayerID, bState)
+
+	// 2. Udało się
+	log.Printf("[castle.go] Przyjęto rozkaz budowy: %s (%d,%d)", bType, cmd.TargetX, cmd.TargetY)
+	bState.PendingCommand = nil
+	bState.MouseState = mouseStateNormal
 }
 
 // handleUnitCommand przetwarza rozkazy dotyczące jednostek.
@@ -85,20 +131,20 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 		playerS.handleMoveCommand(cmd, targetUnit, bState)
 	case cmdUAttack:
 		log.Printf("INFO: castle.go wydano cmdAttack.")
-		targetUnit.addUnitCommand(cmdUAttack, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+		targetUnit.addUnitCommand(cmd, bState)
 	case cmdUStop:
-		targetUnit.addUnitCommand(cmdUStop, cmd.TargetX, cmd.TargetY, 0, bState) // czemu targetID = 0? może nil?
+		targetUnit.addUnitCommand(cmd, bState) // czemu targetID = 0? może nil?
 	case cmdUBuild:
-		targetUnit.addUnitCommand(cmdUBuild, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+		targetUnit.addUnitCommand(cmd, bState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
 	case cmdURepair:
-		targetUnit.addUnitCommand(cmdURepair, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+		targetUnit.addUnitCommand(cmd, bState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
 	case cmdUCastSpell:
 		targetUnit.CurrentSpell = cmd.Spell
-		targetUnit.addUnitCommand(cmdUCastSpell, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+		targetUnit.addUnitCommand(cmd, bState)
 	default:
 		log.Printf("handleUnitCommand: Nieznany ActionType %d dla jednostki %d.",
 			cmd.ActionType, targetUnit.ID)

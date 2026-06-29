@@ -60,36 +60,26 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 			if recipe.BuildingType != 0 {
 				// PRZYPADEK 1: Zasadzenie nowej budowy
 				// Jest to rozkaz wymagający dodatkowej informacji z planszy.
-				// TargetBuildingID pełni tu rolę nośnika rodzaju budynku (buildingType),
-				// który zostanie przekazany do bs.PendingBuildingType w input.go.
-				/*cmd = command{
-					ActionType:          cmdBPlaceConstruction,
-					InteractionTargetID: uint(recipe.BuildingType),
-				}*/
 				action.State = mouseStatePlaceConstruction
-				action.Cmd = command{InteractionTargetID: uint(recipe.BuildingType)}
+				action.Cmd = command{
+					ActionType:          cmdBPlaceConstruction,
+					CommandCategory:     categoryBuilding,
+					InteractionTargetID: uint(recipe.BuildingType),
+				}
 			} else {
 				// PRZYPADEK 2: PRODUKCJA (np. Krowa, Drwal)
-				// TargetBuildingID wskazuje na INSTANCJĘ budynku, który ma produkować (bld.ID).
-				/*cmd = command{
-					ActionType:          cmdBProduce,
-					InteractionTargetID: bld.ID,
-					ProduceType:         recipe.UnitType,
-				}*/
 				// Jest to rozkaz możliwy do wykonania natychmiastowo.
 				// Niczego z planszy nie potrzebujemy, dlatego stan myszy jest zwyczajny
 				action.State = mouseStateNormal
-
 				action.Cmd = command{
 					ActionType: cmdBProduce, // cmdB oznacza, że to „budynkowy rozkaz”
 					// na wypadek gdyby categoryBuilding nie było widoczne w kodzie i powstała wątpliwość
-					ExecutorID:          bld.ID,           // tenże budynek ma wykonać rozkaz
 					CommandCategory:     categoryBuilding, // rozkaz „budynkowy”
+					ExecutorID:          bld.ID,           // tenże budynek ma wykonać rozkaz
 					InteractionTargetID: bld.ID,           // tenże budynek jest celem rozkazu „wytwórz jednostkę”
 					ProduceType:         recipe.UnitType,  // rodzaj jednostki do wytworzenia
 				}
 			}
-
 			// Przypisanie gotowego rozkazu do UI
 			bState.UI.CurrentActions[rIndex] = action
 		}
@@ -124,12 +114,11 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Label:    "Napraw",
 			IconID:   spriteBtnRepair,
 			State:    mouseStateWorking, // rozkaz „złożony”
-			/* Nie jestem przekonany, czy mogę nie zacząć budować rozkaz
 			Cmd: command{
-				ActionType:      cmdUWork,
-				ExecutorID:      unitID,
+				ActionType:      cmdUWork, // cmdUWork, ponieważ tutaj nie możemy wiedzieć czy build czy repair
 				CommandCategory: categoryUnit,
-			},*/
+				ExecutorID:      0, // @reminder: sprawdzam, czy mogę znaleźć „dla każdego” rozkaz
+			},
 		}
 	}
 

@@ -232,21 +232,23 @@ func (bld *building) applyPhase2Graphics(bState *battleState) {
 
 // sprawdza, czy w danym miejscu (tileX, tileY)
 // można postawić budynek, którego rodzaj mamy zapisany w pamięci (bs.PendingBuildingType).
-func tryBuildStructure(bState *battleState, tileX, tileY uint8) {
-	stats, ok := buildingDefs[bState.PendingBuildingType]
+func tryBuildStructure(bType buildingType, tileX, tileY uint8, owner uint8, bState *battleState) {
+	stats, ok := buildingDefs[bType]
 
 	if !ok {
 		return
 	}
 
-	pendingType := bState.PendingBuildingType
+	pendingType := bType
 
 	// @reminder: mosty, palisady oraz drogi nie powinny być ograniczane przez górną granicę budowli
 	regularBuilding := pendingType != buildingPalisade && pendingType != buildingBridge && pendingType != buildingRoad
 
+	ownerState := bState.getPlayerState(owner)
+
 	if regularBuilding {
 		// @reminder: nie sprawdza, czy SI może postawić budynek!
-		if bState.HumanPlayerState.CurrentBuildings >= maxBuildingsPerPlayer {
+		if ownerState.CurrentBuildings >= maxBuildingsPerPlayer {
 			bState.CurrentMessage.Text = "Limit budynków!"
 			bState.CurrentMessage.Duration = 60
 
@@ -254,7 +256,7 @@ func tryBuildStructure(bState *battleState, tileX, tileY uint8) {
 		}
 	}
 
-	if bState.HumanPlayerState.Milk < stats.Cost {
+	if ownerState.Milk < stats.Cost {
 		bState.CurrentMessage.Text = fmt.Sprintf("Niedobór mleka! (%d)", stats.Cost)
 		bState.CurrentMessage.Duration = 60
 
@@ -278,13 +280,13 @@ func tryBuildStructure(bState *battleState, tileX, tileY uint8) {
 
 	default:
 		// Walidacja terenu (Teraz tileX, tileY to lewy górny róg)
-		if !isValidConstructionSite(tileX, tileY, stats.Width, stats.Height, bState) {
+		if !isValidConstructionSite(tileX, tileY, stats.Width, stats.Height, bType, bState) {
 			return
 		}
 	}
 
 	// === DECYZJA POZYTYWNA ===
-	bState.HumanPlayerState.Milk -= stats.Cost
+	ownerState.Milk -= stats.Cost
 
 	if regularBuilding {
 		for dx := range stats.Width {
@@ -314,7 +316,7 @@ func tryBuildStructure(bState *battleState, tileX, tileY uint8) {
 	bldOwner := colorNone
 
 	if regularBuilding {
-		bState.HumanPlayerState.CurrentBuildings++
+		ownerState.CurrentBuildings++
 		bldOwner = colorRed
 	}
 
@@ -359,7 +361,7 @@ func isWithinBoard(constructionX, constructionY uint8, bState *battleState) bool
 	return true
 }
 
-func isFreeForConstruction(constructionX, constructionY uint8, bState *battleState) bool {
+func isFreeForConstruction(constructionX, constructionY uint8, bType buildingType, bState *battleState) bool {
 	currentTile := &bState.Board.Tiles[constructionX][constructionY]
 
 	// Czy coś tu stoi?
@@ -372,7 +374,7 @@ func isFreeForConstruction(constructionX, constructionY uint8, bState *battleSta
 
 	if currentTile.Building != nil {
 		existingIsUnfinishedPalisade := currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction
-		buildingNonPalisade := bState.PendingBuildingType != buildingPalisade
+		buildingNonPalisade := bType != buildingPalisade
 
 		// Zezwalamy na budowę TYLKO w jednym przypadku:
 		// istniejąca nieukończona palisada + budujemy coś innego niż palisadę
@@ -399,19 +401,19 @@ func isFreeForConstruction(constructionX, constructionY uint8, bState *battleSta
 }
 
 // isValidConstructionSite sprawdza wszelkie warunki, które należy spełnić, aby można było zasadzić budowlę.
-func isValidConstructionSite(tileX, tileY, width, height uint8, bState *battleState) bool {
-	if !canFitBuilding(tileX, tileY, width, height, bState) {
+func isValidConstructionSite(tileX, tileY, width, height uint8, bType buildingType, bState *battleState) bool {
+	if !canFitBuilding(tileX, tileY, width, height, bType, bState) {
 		return false
 	}
 
-	if !hasRoadAccess(tileX, tileY, width, bState) && bState.PendingBuildingType != buildingPalisade {
+	if !hasRoadAccess(tileX, tileY, width, bState) && bType != buildingPalisade {
 		return false
 	}
 
 	return true
 }
 
-func canFitBuilding(tileX, tileY, width, height uint8, bState *battleState) bool {
+func canFitBuilding(tileX, tileY, width, height uint8, bType buildingType, bState *battleState) bool {
 	for dx := range width {
 		for dy := range height {
 			// Dodajemy przesunięcie do kursora.
@@ -421,7 +423,7 @@ func canFitBuilding(tileX, tileY, width, height uint8, bState *battleState) bool
 				return false
 			}
 
-			if !isFreeForConstruction(constructionX, constructionY, bState) {
+			if !isFreeForConstruction(constructionX, constructionY, bType, bState) {
 				return false
 			}
 		}

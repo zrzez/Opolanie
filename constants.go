@@ -133,23 +133,20 @@ const (
 )
 
 const (
-	cmdUIdle      commandType = iota // Bezczynność
-	cmdUMove                         // Ruch
-	cmdUGoto                         // Idź do, teleportacja maga
-	cmdUFlee                         // Ucieczka, krowa
-	cmdUGraze                        // Wypasaj
-	cmdUAttack                       // Napad
-	cmdUStop                         // Zatrzymaj się @todo: potrzeba też „waruj”
-	cmdUCastSpell                    // Rzuć czar
-	cmdBProduce                      // Wytwarzaj
-	cmdBMilking                      // Dój krowę
-	//cmdUWork                                 // Napraw uszkodzoną budowlę
-	//↓↓↓↓ Zastępujemy nieostre cmdUWork, które służyło do pracy na budowie i napraw
-	//↓↓↓↓ dwoma różnymi rozkazami. Dzięki temu nie mieszamy tych dwóch podobnych
-	//↓↓↓↓ pojęć
-	cmdUBuild             // Praca jednostki na budowie
-	cmdURepair            // Praca jednostki przy naprawie budynku
-	cmdBPlaceConstruction // Budowa
+	cmdUIdle              commandType = iota // Bezczynność
+	cmdUMove                                 // Ruch
+	cmdUGoto                                 // Idź do, teleportacja maga
+	cmdUFlee                                 // Ucieczka, krowa
+	cmdUGraze                                // Wypasaj
+	cmdUAttack                               // Napad
+	cmdUStop                                 // Zatrzymaj się @todo: potrzeba też „waruj”
+	cmdUCastSpell                            // Rzuć czar
+	cmdBProduce                              // Wytwarzaj
+	cmdBMilking                              // Dój krowę
+	cmdUWork                                 // Coś związanego z budową, ale UI nie zna szczegółów
+	cmdUBuild                                // Praca jednostki na budowie
+	cmdURepair                               // Praca jednostki przy naprawie budynku
+	cmdBPlaceConstruction                    // Budowa
 )
 
 const (

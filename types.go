@@ -249,7 +249,8 @@ type command struct {
 	TargetY uint8 // Współrzędna y kliknięcia w mapę
 
 	// === INNE ===
-	ProduceType unitType // Tylko dla cmdProduce: co chcemy stworzyć
+	ProduceType  unitType // Tylko dla cmdProduce: co chcemy stworzyć
+	FriendlyFire bool     // @reminder: próbuję, czy się sprawdzi, być może usunę - 28.06.2026
 }
 
 // aiState przechowuje usposobienie SI.
@@ -437,8 +438,9 @@ type battleState struct {
 	IsMapDragging           bool
 	MapInitialClickPos      rl.Vector2
 	CameraTargetOnDragStart rl.Vector2
-	PendingBuildingType     buildingType // Rodzaj budynku do wybudowania
-	UI                      uiAssets
+	// PendingBuildingType     buildingType // Rodzaj budynku do wybudowania - 28.06.2026 raczej się pozbędę tego
+	PendingCommand *command // @reminder: jeśli się uda, to ujednolici rozkazy
+	UI             uiAssets
 
 	// === Przymioty bitwy ===
 	CurrentLevel          uint8           // Numer bieżącego poziomu
