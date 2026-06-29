@@ -128,7 +128,8 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	switch cmd.ActionType {
 	case cmdUMove:
 		log.Printf("INFO: castle.go wydano cmdMove.")
-		playerS.handleMoveCommand(cmd, targetUnit, bState)
+		// playerS.handleMoveCommand(cmd, targetUnit, bState) nie działa
+		targetUnit.addUnitCommand(cmd, bState)
 	case cmdUAttack:
 		log.Printf("INFO: castle.go wydano cmdAttack.")
 		targetUnit.addUnitCommand(cmd, bState)
