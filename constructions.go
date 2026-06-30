@@ -233,59 +233,11 @@ func (bld *building) applyPhase2Graphics(bState *battleState) {
 // sprawdza, czy w danym miejscu (tileX, tileY)
 // można postawić budynek, którego rodzaj mamy zapisany w pamięci (bs.PendingBuildingType).
 func tryBuildStructure(bType buildingType, tileX, tileY uint8, owner uint8, bState *battleState) {
-	stats, ok := buildingDefs[bType]
+	stats := buildingDefs[bType]
 
-	if !ok {
-		return
-	}
-
-	pendingType := bType
-
-	// @reminder: mosty, palisady oraz drogi nie powinny być ograniczane przez górną granicę budowli
-	regularBuilding := pendingType != buildingPalisade && pendingType != buildingBridge && pendingType != buildingRoad
-
+	regularBuilding := bType != buildingPalisade && bType != buildingBridge && bType != buildingRoad
 	ownerState := bState.getPlayerState(owner)
 
-	if regularBuilding {
-		// @reminder: nie sprawdza, czy SI może postawić budynek!
-		if ownerState.CurrentBuildings >= maxBuildingsPerPlayer {
-			bState.CurrentMessage.Text = "Limit budynków!"
-			bState.CurrentMessage.Duration = 60
-
-			return
-		}
-	}
-
-	if ownerState.Milk < stats.Cost {
-		bState.CurrentMessage.Text = fmt.Sprintf("Niedobór mleka! (%d)", stats.Cost)
-		bState.CurrentMessage.Duration = 60
-
-		return
-	}
-
-	switch pendingType {
-	case buildingRoad:
-		// nie możemy stawiać drogi na ozdobnikach, budynkach, drodze i moście, musi sąsiadować z inną drogą
-		textureID := bState.Board.Tiles[tileX][tileY].TextureID
-
-		isConnected := isPath(textureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bState)
-
-		if isConnected || isWater(textureID) || !isWalkable(bState, tileX, tileY) {
-			return
-		}
-	case buildingBridge:
-		if !isWater(bState.Board.Tiles[tileX][tileY].TextureID) || !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) {
-			return
-		}
-
-	default:
-		// Walidacja terenu (Teraz tileX, tileY to lewy górny róg)
-		if !isValidConstructionSite(tileX, tileY, stats.Width, stats.Height, bType, bState) {
-			return
-		}
-	}
-
-	// === DECYZJA POZYTYWNA ===
 	ownerState.Milk -= stats.Cost
 
 	if regularBuilding {
@@ -320,11 +272,11 @@ func tryBuildStructure(bType buildingType, tileX, tileY uint8, owner uint8, bSta
 		bldOwner = colorRed
 	}
 
-	if pendingType != buildingRoad {
+	if bType != buildingRoad {
 		newBld := &building{}
 
 		// init teraz przyjmie tileX, tileY jako lewy górny róg
-		newBld.initConstruction(tileX, tileY, pendingType, bldOwner, bState)
+		newBld.initConstruction(tileX, tileY, bType, bldOwner, bState)
 
 		bState.Buildings = append(bState.Buildings, newBld)
 		newBld.startConstruction(bState)
@@ -349,89 +301,6 @@ func tryBuildStructure(bType buildingType, tileX, tileY uint8, owner uint8, bSta
 	}
 }
 
-func isWithinBoard(constructionX, constructionY uint8, bState *battleState) bool {
-	// @reminder: usunąłem sprawdzenie constructionX i constructionY < 0
-	if constructionX >= boardMaxX || constructionY >= boardMaxY {
-		bState.CurrentMessage.Text = "Poza mapą!"
-		bState.CurrentMessage.Duration = 40
-
-		return false
-	}
-
-	return true
-}
-
-func isFreeForConstruction(constructionX, constructionY uint8, bType buildingType, bState *battleState) bool {
-	currentTile := &bState.Board.Tiles[constructionX][constructionY]
-
-	// Czy coś tu stoi?
-	if currentTile.Unit != nil {
-		bState.CurrentMessage.Text = "Miejsce zajęte przez jednostkę!"
-		bState.CurrentMessage.Duration = 40
-
-		return false
-	}
-
-	if currentTile.Building != nil {
-		existingIsUnfinishedPalisade := currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction
-		buildingNonPalisade := bType != buildingPalisade
-
-		// Zezwalamy na budowę TYLKO w jednym przypadku:
-		// istniejąca nieukończona palisada + budujemy coś innego niż palisadę
-		if existingIsUnfinishedPalisade && buildingNonPalisade {
-			// OK – nie blokujemy, spadamy do sprawdzenia terenu
-		} else {
-			// We wszystkich innych przypadkach budynek blokuje miejsce
-			bState.CurrentMessage.Text = "Miejsce zajęte przez budynek!"
-			bState.CurrentMessage.Duration = 40
-
-			return false
-		}
-	}
-
-	// Czy teren nadaje się pod budowę?
-	if isObstacle(currentTile.TextureID) {
-		bState.CurrentMessage.Text = "Nie można na tym!"
-		bState.CurrentMessage.Duration = 40
-
-		return false
-	}
-
-	return true
-}
-
-// isValidConstructionSite sprawdza wszelkie warunki, które należy spełnić, aby można było zasadzić budowlę.
-func isValidConstructionSite(tileX, tileY, width, height uint8, bType buildingType, bState *battleState) bool {
-	if !canFitBuilding(tileX, tileY, width, height, bType, bState) {
-		return false
-	}
-
-	if !hasRoadAccess(tileX, tileY, width, bState) && bType != buildingPalisade {
-		return false
-	}
-
-	return true
-}
-
-func canFitBuilding(tileX, tileY, width, height uint8, bType buildingType, bState *battleState) bool {
-	for dx := range width {
-		for dy := range height {
-			// Dodajemy przesunięcie do kursora.
-			constructionX, constructionY := tileX+dx, tileY+dy
-
-			if !isWithinBoard(constructionX, constructionY, bState) {
-				return false
-			}
-
-			if !isFreeForConstruction(constructionX, constructionY, bType, bState) {
-				return false
-			}
-		}
-	}
-
-	return true
-}
-
 func isObstacle(texID uint16) bool {
 	switch {
 	case isRockNonWalkable(texID):
@@ -448,60 +317,6 @@ func isObstacle(texID uint16) bool {
 		return true
 	case !isLandOrOther(texID):
 		return true
-	}
-
-	return false
-}
-
-func hasRoadAccess(x, y, size uint8, bState *battleState) bool {
-	// 1. Sprawdzamy boki LEWY i PRAWY (iterujemy po wysokości budynku)
-	for i := uint8(0); i < size; i++ {
-		currentY := y + i
-
-		// Zabezpieczenie, gdyby budynek wystawał poza mapę dołem (teoretycznie niemożliwe po walidacji, ale bezpiecznie)
-		if currentY >= boardMaxY {
-			break
-		}
-
-		// --- LEWA KRAWĘDŹ (x-1) ---
-		// Sprawdzamy tylko, jeśli nie jesteśmy przytuleni do lewej ściany mapy (x=0)
-		// To zapobiega błędowi "uint8 overflow" (0 - 1 = 255)
-		if x > 0 {
-			if isPath(bState.Board.Tiles[x-1][currentY].TextureID) {
-				return true
-			}
-		}
-
-		// --- PRAWA KRAWĘDŹ (x+size) ---
-		if x+size < boardMaxX {
-			if isPath(bState.Board.Tiles[x+size][currentY].TextureID) {
-				return true
-			}
-		}
-	}
-
-	// 2. Sprawdzamy boki GÓRA i DÓŁ (iterujemy po szerokości budynku)
-	for i := uint8(0); i < size; i++ {
-		currentX := x + i
-
-		if currentX >= boardMaxX {
-			break
-		}
-
-		// --- GÓRNA KRAWĘDŹ (y-1) ---
-		// Sprawdzamy tylko, jeśli nie jesteśmy na samej górze mapy (y=0)
-		if y > 0 {
-			if isPath(bState.Board.Tiles[currentX][y-1].TextureID) {
-				return true
-			}
-		}
-
-		// --- DOLNA KRAWĘDŹ (y+size) ---
-		if y+size < boardMaxY {
-			if isPath(bState.Board.Tiles[currentX][y+size].TextureID) {
-				return true
-			}
-		}
 	}
 
 	return false

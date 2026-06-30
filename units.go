@@ -1854,7 +1854,7 @@ func (u *unit) takeDamage(damage uint16, bState *battleState) {
 	}
 
 	if u.Type == unitCow && u.Exists {
-		if u.Udder < 100 && u.Command != cmdUFlee {
+		if u.Udder < fullUdderAmount && u.Command != cmdUFlee {
 			barnX, barnY, foundBarn := findNearestBarnMilkingSpot(u, bState)
 			if foundBarn {
 				cmd := &command{
@@ -1864,10 +1864,9 @@ func (u *unit) takeDamage(damage uint16, bState *battleState) {
 					InteractionTargetID: 0,
 				}
 				u.addUnitCommand(cmd, bState)
-				log.Printf("unit %d (COW): Otrzymała obrażenia, uciekam do obory na (%d,%d).", u.ID, barnX, barnY)
+				log.Printf("unit %d (COW): Otrzymała obrażenia, ucieka do obory na (%d,%d).", u.ID, barnX, barnY)
 			} else {
-				log.Printf("unit %d (COW): Otrzymała obrażenia, ale nie znalazła obory do ucieczki. "+
-					"Pozostaję przy obecnej komendzie.", u.ID)
+				log.Printf("unit %d (COW): Otrzymała obrażenia, ale nie znalazła obory do ucieczki. ", u.ID)
 			}
 		}
 	}

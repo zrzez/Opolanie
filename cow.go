@@ -395,8 +395,8 @@ func findClosestBarnGlobally(u *unit, bState *battleState) (uint8, uint8, bool) 
 			minDist = dist
 			closestX, closestY = x, y
 
-			tile := &bState.Board.Tiles[x][y]
-			occupant := tile.Unit
+			currentTile := &bState.Board.Tiles[x][y]
+			occupant := currentTile.Unit
 			isSpotFree = occupant == nil || occupant.ID == u.ID
 		}
 	}
@@ -407,13 +407,13 @@ func findClosestBarnGlobally(u *unit, bState *battleState) (uint8, uint8, bool) 
 // ale przy nowym odnajdywaniu drogi wchodzimy do środka, więc używamy logiki minX/maxY).
 func (bld *building) getMilkingSpotCoords() (uint8, uint8) {
 	minX, maxY := uint8(math.MaxUint8), uint8(0)
-	for _, tile := range bld.OccupiedTiles {
-		if tile.X < minX {
-			minX = tile.X
+	for _, currentTile := range bld.OccupiedTiles {
+		if currentTile.X < minX {
+			minX = currentTile.X
 		}
 
-		if tile.Y > maxY {
-			maxY = tile.Y
+		if currentTile.Y > maxY {
+			maxY = currentTile.Y
 		}
 	}
 	// Zwracamy lewy dolny róg samej konstrukcji.

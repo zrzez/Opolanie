@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -89,17 +90,69 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 	// 0. Poprawność
 	bType := buildingType(cmd.CreateType)
 
-	if bType == buildingType(0) {
+	if bType == 0 {
 		bState.CurrentMessage.Text = "Błąd: nie określono typu budynku. " // nie powinno się wydarzyć nigdy…
 		bState.CurrentMessage.Duration = 60
 
 		return
 	}
 
-	// 1. Przekazuję dalej
+	// Walidacja kontekstowa
+	if ok, errCode := validateConstructionContext(bType, playerS.PlayerID, bState); !ok {
+		switch errCode {
+		case buildErrLimit:
+			bState.CurrentMessage.Text = "Limit budynków!"
+			bState.CurrentMessage.Duration = 60
+		case buildErrMilk:
+			stats := buildingDefs[bType]
+			bState.CurrentMessage.Text = fmt.Sprintf("Niedobór mleka! (%d)", stats.Cost)
+			bState.CurrentMessage.Duration = 60
+		default:
+			bState.CurrentMessage.Text = "COŚ POSZŁO PIERUŃSKO NIE TAK Z KONTEKSTEM!"
+			bState.CurrentMessage.Duration = 60
+		}
+
+		return
+	}
+
+	// Walidacja środowiskowa
+	if ok, errCode := validateConstructionSite(bType, cmd.TargetX, cmd.TargetY, bState); !ok {
+		switch errCode {
+		case buildErrOutofBounds:
+			bState.CurrentMessage.Text = "Poza mapą!"
+			bState.CurrentMessage.Duration = 40
+		case buildErrOccupiedUnit:
+			bState.CurrentMessage.Text = "Miejsce zajęte przez jednostkę!"
+			bState.CurrentMessage.Duration = 40
+		case buildErrOccupiedBuilding:
+			bState.CurrentMessage.Text = "Miejsce zajęte przez budynek!"
+			bState.CurrentMessage.Duration = 40
+		case buildErrObstacle:
+			bState.CurrentMessage.Text = "Nie można na tym!"
+			bState.CurrentMessage.Duration = 40
+		case buildErrWater:
+			bState.CurrentMessage.Text = "Nie można na wodzie!"
+			bState.CurrentMessage.Duration = 40
+		case buildErrNoWater:
+			bState.CurrentMessage.Text = "Tu nie ma wody!"
+			bState.CurrentMessage.Duration = 40
+		case buildErrNoRoadAccess:
+			bState.CurrentMessage.Text = "Brak dostępu do drogi!"
+			bState.CurrentMessage.Duration = 40
+		case buildErrAlreadyPath:
+			bState.CurrentMessage.Text = "Tu już jest droga!"
+			bState.CurrentMessage.Duration = 40
+		default:
+			bState.CurrentMessage.Text = "COŚ POSZŁO PIERUŃSKO NIE TAK ZE ŚRODOWISKIEM!"
+			bState.CurrentMessage.Duration = 60
+		}
+		return
+	}
+
+	// 1. Wykonanie
 	tryBuildStructure(bType, cmd.TargetX, cmd.TargetY, playerS.PlayerID, bState)
 
-	// 2. Udało się
+	// 2. Zakończenie, czyścimy
 	log.Printf("[castle.go] Przyjęto rozkaz budowy: %d (%d,%d)", bType, cmd.TargetX, cmd.TargetY)
 	bState.PendingCommand = nil
 	bState.MouseState = mouseStateNormal
