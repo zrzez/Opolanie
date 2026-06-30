@@ -1851,35 +1851,35 @@ func drawMinimapUnits(bState *battleState, minimapX, minimapY, minimapWidth, min
 			bldColor = rl.Red
 		}
 
-		for _, tile := range bld.OccupiedTiles {
-			if tile.X < 0 || tile.X >= boardMaxX || tile.Y < 0 || tile.Y >= boardMaxY {
+		for _, currentTile := range bld.OccupiedTiles {
+			if currentTile.X < 0 || currentTile.X >= boardMaxX || currentTile.Y < 0 || currentTile.Y >= boardMaxY {
 				continue
 			}
-			w := xGridLines[tile.X+1] - xGridLines[tile.X]
-			h := yGridLines[tile.Y+1] - yGridLines[tile.Y]
-			rl.DrawRectangle(int32(xGridLines[tile.X]), int32(yGridLines[tile.Y]), int32(w), int32(h), bldColor)
+			w := xGridLines[currentTile.X+1] - xGridLines[currentTile.X]
+			h := yGridLines[currentTile.Y+1] - yGridLines[currentTile.Y]
+			rl.DrawRectangle(int32(xGridLines[currentTile.X]), int32(yGridLines[currentTile.Y]), int32(w), int32(h), bldColor)
 		}
 	}
 
 	// 3. Jednostki
-	for _, unit := range bState.Units {
-		if !unit.Exists {
+	for _, currentUnit := range bState.Units {
+		if !currentUnit.Exists {
 			continue
 		}
 		var unitColor rl.Color
-		if unit.Owner == bState.PlayerID {
+		if currentUnit.Owner == bState.PlayerID {
 			unitColor = rl.White
 		} else {
 			unitColor = rl.Red
 		}
 
-		if unit.X < 0 || unit.X >= boardMaxX || unit.Y < 0 || unit.Y >= boardMaxY {
+		if currentUnit.X < 0 || currentUnit.X >= boardMaxX || currentUnit.Y < 0 || currentUnit.Y >= boardMaxY {
 			continue
 		}
 
-		w := xGridLines[unit.X+1] - xGridLines[unit.X]
-		h := yGridLines[unit.Y+1] - yGridLines[unit.Y]
-		rl.DrawRectangle(int32(xGridLines[unit.X]), int32(yGridLines[unit.Y]), int32(w), int32(h), unitColor)
+		w := xGridLines[currentUnit.X+1] - xGridLines[currentUnit.X]
+		h := yGridLines[currentUnit.Y+1] - yGridLines[currentUnit.Y]
+		rl.DrawRectangle(int32(xGridLines[currentUnit.X]), int32(yGridLines[currentUnit.Y]), int32(w), int32(h), unitColor)
 	}
 
 	// 4. Ramka Kamery
