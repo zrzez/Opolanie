@@ -937,7 +937,7 @@ func (bld *building) produceUnit(newUnitType unitType, bState *battleState) {
 
 	spawnX, spawnY, ok := bld.getClosestWalkableTile(bState)
 	if ok {
-		bld.spawnUnit(unitType(newUnitType), spawnX, spawnY, bState)
+		bld.spawnUnit(newUnitType, spawnX, spawnY, bState)
 		log.Printf("INFO: Budynek ID %d zrobił jednostkę typu %v. Mleka gracza: %d.", bld.ID, newUnitType, owner.Milk)
 	}
 }

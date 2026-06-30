@@ -73,9 +73,8 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 				action.Cmd = command{
 					ActionType: cmdBProduce, // cmdB oznacza, że to „budynkowy rozkaz”
 					// na wypadek gdyby categoryBuilding nie było widoczne w kodzie i powstała wątpliwość
-					ExecutorID:          bld.ID,                 // tenże budynek ma wykonać rozkaz
-					InteractionTargetID: bld.ID,                 // tenże budynek jest celem rozkazu „wytwórz jednostkę”
-					CreateType:          uint8(recipe.UnitType), // rodzaj jednostki do wytworzenia
+					ExecutorID: bld.ID,                 // tenże budynek ma wykonać rozkaz
+					CreateType: uint8(recipe.UnitType), // rodzaj jednostki do wytworzenia
 				}
 			}
 			// Przypisanie gotowego rozkazu do UI

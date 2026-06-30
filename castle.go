@@ -55,12 +55,13 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 // handleBuildingCommand przetwarza rozkazy dotyczące budynków.
 // Obsługuje np. produkcję jednostek.
 func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleState) {
-	// 1. Dla tworzenia nowej budowli
+	// 1. Dla zasadzenia nowej budowy
 	if cmd.ActionType == cmdBPlaceConstruction {
 		playerS.handleConstructionCommand(cmd, bState)
 	}
-	// 2. Dla istniejących już budowli
-	targetBuilding, ok := getBuildingByID(cmd.InteractionTargetID, bState)
+
+	// 2. Wytwarzanie jednostek
+	targetBuilding, ok := getBuildingByID(cmd.ExecutorID, bState)
 
 	if !ok || !targetBuilding.Exists || targetBuilding.IsUnderConstruction {
 		log.Printf("handleBuildingCommand: Nie znaleziono ID %d, nie istnieje lub w budowie.", cmd.InteractionTargetID)
