@@ -1,6 +1,8 @@
 package main
 
-import rl "github.com/gen2brain/raylib-go/raylib"
+import (
+	rl "github.com/gen2brain/raylib-go/raylib"
+)
 
 // ==============
 // SPRAWDZANIE POPRAWNOŚCI ROZKAZÓW DLA BUDYNKÓW
@@ -343,7 +345,13 @@ func validateBuildingContext(u *unit, targetBld *building) (bool, uint8) {
 	}
 
 	// 2. Czy właściwa budowa?
-	if targetBld == nil || !targetBld.Exists || targetBld.Owner != u.Owner {
+	if targetBld == nil || !targetBld.Exists {
+		return false, workErrInvalidTarget
+	}
+
+	isNeutral := targetBld.Type == buildingBridge || targetBld.Type == buildingPalisade
+
+	if !isNeutral && targetBld.Owner != u.Owner {
 		return false, workErrInvalidTarget
 	}
 
@@ -362,7 +370,13 @@ func validateRepairContext(u *unit, targetBld *building) (bool, uint8) {
 	}
 
 	// 2. Czy właściwy budynek?
-	if targetBld == nil || !targetBld.Exists || targetBld.Owner != u.Owner {
+	if targetBld == nil || !targetBld.Exists {
+		return false, workErrInvalidTarget
+	}
+
+	isNeutral := targetBld.Type == buildingBridge || targetBld.Type == buildingPalisade
+
+	if !isNeutral && targetBld.Owner != u.Owner {
 		return false, workErrInvalidTarget
 	}
 
@@ -375,7 +389,13 @@ func validateRepairContext(u *unit, targetBld *building) (bool, uint8) {
 }
 
 func isValidWorkTarget(targetBld *building, playerID uint8) bool {
-	if targetBld == nil || !targetBld.Exists || targetBld.Owner != playerID {
+	if targetBld == nil || !targetBld.Exists {
+		return false
+	}
+
+	isNeutral := targetBld.Type == buildingBridge || targetBld.Type == buildingPalisade
+
+	if !isNeutral && targetBld.Owner != playerID {
 		return false
 	}
 

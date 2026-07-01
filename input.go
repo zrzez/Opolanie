@@ -648,55 +648,70 @@ func resolveRightClickCommandType(
 	cmdType = cmdUMove
 	isCommandValid = true
 
+	var hasAxeman bool
+	for _, u := range selectedUnits {
+		if u.Type == unitAxeman {
+			hasAxeman = true
+			break
+		}
+	}
+
+	isNeutralBuilding := targetTile.Building != nil &&
+		(targetTile.Building.Type == buildingPalisade || targetTile.Building.Type == buildingBridge)
+
 	switch {
-	// 0. Chodzenie po zniszczonej/nie wybudowanej palisadzie
+	// 0. Chodzenie po zniszczonej palisadzie
 	case targetTile.Building != nil && targetTile.Building.Type == buildingPalisade &&
 		targetTile.Building.IsUnderConstruction:
 		cmdType = cmdUMove
 
-	// 1. Atak na wrogie jednostki/budynki
+	// 1. Drwal buduje/naprawia niczyje budynki
+	case hasAxeman && isNeutralBuilding && targetTile.Building.Exists:
+		if targetTile.Building.IsUnderConstruction {
+			cmdType = cmdUBuild
+		} else if targetTile.Building.isRepairable(bState.PlayerID) {
+			cmdType = cmdURepair
+		} else {
+			cmdType = cmdUAttack
+		}
+
+	// 2. Atak na wrogie jednostki/budynki
 	case targetID != 0 && (targetOwner != bState.PlayerID || iState.IsCtrlKeyDown):
 		cmdType = cmdUAttack
-	// 2. Ścinanie drzewa
+
+	// 3. Ścinanie drzewa
 	case isTreeStump(targetTile.TextureID):
 		canAttackTree := false
 
 		for _, u := range selectedUnits {
 			if u.canDamageTree(targetTile.X, targetTile.Y, bState) {
 				canAttackTree = true
-
 				break
 			}
 		}
 
 		if canAttackTree {
 			cmdType = cmdUAttack
-			// targetID pozostaje 0; koordynaty ataku są przekazywane przez tileX, tileY
 		} else {
 			bState.CurrentMessage.Text = "Zaznaczone jednostki nie mogą atakować drzew!"
 			bState.CurrentMessage.Duration = 60
-
 			isCommandValid = false
 		}
-	// 3. Nasz drwal najeżdża na naszą budowę
-	// a) w zaznaczonych jednostkach mamy drwala
-	// b) najechaliśmy na naszą budowę
-	// Najprostszy przypadek: jedna jednostka zaznaczona i jest to drwal
-	// @todo: ogarnij, czy to jest coś co mam usunąć skoro PPM daje jedynie budowę 01.07.2026
-	case selectedUnits[0].Type == unitAxeman && targetTile.Building != nil &&
+
+	// 4. Nasz drwal najeżdża na naszą budowę
+	case hasAxeman && targetTile.Building != nil &&
 		targetTile.Building.IsUnderConstruction && targetOwner == bState.PlayerID:
-		// drwal dostaje rozkaz budowy
 		cmdType = cmdUBuild
-	case selectedUnits[0].Type == unitAxeman && targetTile.Building != nil &&
+
+	case hasAxeman && targetTile.Building != nil &&
 		!targetTile.Building.IsUnderConstruction && targetTile.Building.HP < targetTile.Building.MaxHP &&
 		targetOwner == bState.PlayerID:
 		cmdType = cmdURepair
 
-	// 4. Nieudane wydanie rozaku pójścia w jakieś miejsce
+	// 5. Nieudane wydanie rozkazu pójścia w jakieś miejsce
 	case !targetTile.IsWalkable:
 		bState.CurrentMessage.Text = "Nieprzechodnie!"
 		bState.CurrentMessage.Duration = 60
-
 		isCommandValid = false
 	}
 
@@ -713,11 +728,7 @@ func handleMouseStatePlacingConstruction(tileX, tileY uint8, bState *battleState
 	cmd.TargetX, cmd.TargetY = tileX, tileY
 
 	// Przekazujemy do węzła
-	bState.HumanPlayerState.setCommand(cmd, bState) // @todo: czemu do cholery to potrzebuje bState jako argumetnu?!
-
-	// Czyścimy stan
-	bState.PendingCommand = nil
-	bState.MouseState = mouseStateNormal
+	bState.HumanPlayerState.setCommand(cmd, bState) // @todo: czemu do cholery to potrzebuje bState jako argumentu?!
 }
 
 func handleMouseStateWorking(tileX, tileY uint8, bState *battleState, iState inputState) {
@@ -747,6 +758,7 @@ func handleMouseStateWorking(tileX, tileY uint8, bState *battleState, iState inp
 		bState.CurrentMessage.Duration = 60
 		bState.PendingCommand = nil
 		bState.MouseState = mouseStateNormal
+
 		return
 	}
 

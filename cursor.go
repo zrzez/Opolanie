@@ -102,6 +102,23 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 		return spriteCursorCrossRed
 	}
 
+	// Podpowiedź naprawy
+	selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
+	isAxeman := ok && selectedUnit.Type == unitAxeman
+
+	if isAxeman && targetBuilding != nil && targetBuilding.Exists {
+		isMyBuilding := targetOwner == int(bState.PlayerID)
+		isBridge := targetBuilding.Type == buildingBridge
+
+		if (isMyBuilding || isBridge) && targetBuilding.IsUnderConstruction {
+			return spriteBtnRepair
+		}
+
+		if isMyBuilding && targetBuilding.HP < targetBuilding.MaxHP {
+			return spriteBtnRepair
+		}
+	}
+
 	// Wróg
 	if targetOwner != -1 && targetOwner != int(bState.PlayerID) {
 		return cursorForEnemy(bState, tileUnderCursor)
@@ -110,12 +127,6 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 	// Swój
 	if targetOwner == int(bState.PlayerID) {
 		// chyba tutaj powinienem dodać warunek dla „szybkiej budowy”
-		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
-
-		if ok && selectedUnit.Type == unitAxeman && tileUnderCursor.Building != nil && tileUnderCursor.Building.Exists && tileUnderCursor.Building.IsUnderConstruction {
-			return spriteBtnRepair
-		}
-
 		if !iState.IsCtrlKeyDown {
 			return spriteCursorFrameWhite
 		}
@@ -130,9 +141,7 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 	}
 
 	// Drzewa
-	selectedUnit, unitOK := getUnitByID(bState.CurrentSelection.UnitID, bState)
-
-	if unitOK && tileUnderCursor.isStandingTree() && !tileUnderCursor.IsBurning {
+	if ok && tileUnderCursor.isStandingTree() && !tileUnderCursor.IsBurning {
 		if selectedUnit.canDamageTree(tileUnderCursor.X, tileUnderCursor.Y, bState) {
 			return spriteCursorCrossRed
 		}

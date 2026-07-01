@@ -153,6 +153,10 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 	// 1. Wykonanie
 	tryBuildStructure(bType, cmd.TargetX, cmd.TargetY, playerS.PlayerID, bState)
 
+	if bType == buildingRoad || bType == buildingPalisade || bType == buildingBridge {
+		return
+	}
+
 	// 2. Zakończenie, czyścimy
 	log.Printf("[castle.go] Przyjęto rozkaz budowy: %d (%d,%d)", bType, cmd.TargetX, cmd.TargetY)
 	bState.PendingCommand = nil
