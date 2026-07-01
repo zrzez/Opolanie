@@ -186,7 +186,7 @@ func cursorForEnemy(bState *battleState, tileUnderCursor *tile) uint16 {
 
 		if targetBuilding.Type == buildingPalisade {
 			if !targetBuilding.IsUnderConstruction {
-				if ok && !canDamagePalisades(selectedUnit) {
+				if ok && !selectedUnit.Type.canDamagePalisades() {
 					return spriteCursorStop
 				}
 			} else {

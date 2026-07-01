@@ -406,8 +406,8 @@ func getSelectedUnits(bState *battleState) []*unit {
 	return selected
 }
 
-func canDamagePalisades(unit *unit) bool {
-	return unit.Type == unitAxeman || unit.Type == unitPriest
+func (ut unitType) canDamagePalisades() bool {
+	return ut == unitAxeman || ut == unitPriest
 }
 
 func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, bState *battleState) (uint8, uint8, error) {
@@ -667,7 +667,7 @@ func (u *unit) canAttack(targetID uint, bState *battleState) bool {
 			return false
 		}
 
-		if targetBuilding.Type == buildingPalisade && !canDamagePalisades(u) {
+		if targetBuilding.Type == buildingPalisade && !u.Type.canDamagePalisades() {
 			log.Printf("INFO: Jednostka %d nie może atakować palisad", u.ID)
 
 			return false
@@ -1378,7 +1378,7 @@ func (u *unit) validateAttackTarget(bState *battleState) (*combatTarget, error) 
 	}
 
 	if target.Building != nil {
-		if target.Building.Type == buildingPalisade && !canDamagePalisades(u) {
+		if target.Building.Type == buildingPalisade && !u.Type.canDamagePalisades() {
 			return nil, fmt.Errorf("jednostka nie może niszczyć palisad")
 		}
 
@@ -1985,7 +1985,7 @@ func (u *unit) isReadyToAct(bState *battleState) bool {
 const palisadeStrategicBuildingProximity = 10
 
 func (u *unit) isImportantPalisade(palisade *building, bState *battleState) bool {
-	if u.Owner != bState.AIPlayerID || !canDamagePalisades(u) {
+	if u.Owner != bState.AIPlayerID || !u.Type.canDamagePalisades() {
 		return false
 	}
 
@@ -2055,7 +2055,7 @@ func (u *unit) handleTargetSearchForHumanPlayer(bState *battleState) {
 }
 
 func (u *unit) handleTargetSearchForAI(bState *battleState) {
-	isPalisadeBreaker := canDamagePalisades(u)
+	isPalisadeBreaker := u.Type.canDamagePalisades()
 
 	primaryTargetUnit, primaryTargetBuilding, foundPrimary := findNearestEnemyExtended(u, bState)
 
