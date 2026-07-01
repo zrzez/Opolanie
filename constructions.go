@@ -916,7 +916,7 @@ func (bld *building) bounds() bounds {
 }
 
 func (bld *building) isRepairable(playerID uint8) bool {
-	if bld == nil || bld.HP >= bld.MaxHP {
+	if bld == nil || !bld.Exists || bld.HP >= bld.MaxHP {
 		return false
 	}
 

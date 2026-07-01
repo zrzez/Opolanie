@@ -142,6 +142,7 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 		case buildErrAlreadyPath:
 			bState.CurrentMessage.Text = "Tu już jest droga!"
 			bState.CurrentMessage.Duration = 40
+		case buildErrNone:
 		default:
 			bState.CurrentMessage.Text = "COŚ POSZŁO PIERUŃSKO NIE TAK ZE ŚRODOWISKIEM!"
 			bState.CurrentMessage.Duration = 60
@@ -186,10 +187,57 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	case cmdUStop:
 		targetUnit.addUnitCommand(cmd, bState) // czemu targetID = 0? może nil?
 	case cmdUBuild:
+		targetBuilding, ok := getBuildingByID(cmd.InteractionTargetID, bState)
+		if !ok {
+			return
+		}
+
+		if valid, errCode := validateBuildingContext(targetUnit, targetBuilding); !valid {
+			switch errCode {
+			case workErrWrongWorkerType:
+				bState.CurrentMessage.Text = "Ten rodzaj jednostki nie może naprawiać!"
+				bState.CurrentMessage.Duration = 60
+			case workErrInvalidTarget:
+				bState.CurrentMessage.Text = "Tego nie da się budować!"
+				bState.CurrentMessage.Duration = 60
+			case workErrNotUnderConstruction:
+				bState.CurrentMessage.Text = "Nie wymaga budowy!"
+				bState.CurrentMessage.Duration = 60
+			case workErrNone:
+			default:
+				bState.CurrentMessage.Text = "COŚ POSZŁO PIERUŃSKO NIE TAK ZE SPRAWDZANIEM BUDOWY!"
+				bState.CurrentMessage.Duration = 60
+			}
+			return
+		}
+
 		targetUnit.addUnitCommand(cmd, bState)
-		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
+		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz BUDOWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
 	case cmdURepair:
+		targetBuilding, ok := getBuildingByID(cmd.InteractionTargetID, bState)
+		if !ok {
+			return
+		}
+		if valid, errCode := validateRepairContext(targetUnit, targetBuilding); !valid {
+			switch errCode {
+			case workErrWrongWorkerType:
+				bState.CurrentMessage.Text = "Ten rodzaj jednostki nie może naprawiać!"
+				bState.CurrentMessage.Duration = 40
+			case workErrInvalidTarget:
+				bState.CurrentMessage.Text = "Tego nie da się naprawić!"
+				bState.CurrentMessage.Duration = 40
+			case workErrNotRepairable:
+				bState.CurrentMessage.Text = "Nie wymaga naprawy!"
+				bState.CurrentMessage.Duration = 40
+			case workErrNone:
+			default:
+				bState.CurrentMessage.Text = "COŚ POSZŁO PIERUŃSKO NIE TAK ZE SPRAWDZANIEM NAPRAWY!"
+				bState.CurrentMessage.Duration = 60
+			}
+			return
+		}
+
 		targetUnit.addUnitCommand(cmd, bState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)

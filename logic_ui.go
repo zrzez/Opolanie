@@ -100,7 +100,6 @@ func fillUnitActions(bState *battleState, unitID uint) {
 		State:    mouseStateNormal, // rozkaz „natychmiastowy”
 		Cmd: command{
 			ActionType: cmdUStop,
-			ExecutorID: currentUnit.ID,
 		},
 	}
 	// @todo: podejrzewam, że zamiast if-ów będzie potrzebny switch później
@@ -112,7 +111,6 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			State:    mouseStateWorking, // rozkaz „złożony”
 			Cmd: command{
 				ActionType: cmdUWork, // cmdUWork, ponieważ tutaj nie możemy wiedzieć czy build czy repair
-				ExecutorID: 0,        // @reminder: sprawdzam, czy mogę znaleźć „dla każdego” rozkaz
 			},
 		}
 	}

@@ -20,6 +20,11 @@ const (
 	buildErrNoRoadAccess
 	buildErrAlreadyPath
 	buildErrNoDefinition
+	workErrNone
+	workErrWrongWorkerType
+	workErrInvalidTarget
+	workErrNotUnderConstruction
+	workErrNotRepairable
 )
 
 // ========
@@ -326,4 +331,53 @@ func validationBoxColor(tileX, tileY uint8, bState *battleState) rl.Color {
 
 	// 5. Ważne, ale bez dostępu do drogi
 	return rl.Orange
+}
+
+// ====
+// Budowanie i naprawianie
+// ====
+func validateBuildingContext(u *unit, targetBld *building) (bool, uint8) {
+	// 1. Czy jednostka ma prawo budować?
+	if u.Type != unitAxeman {
+		return false, workErrWrongWorkerType
+	}
+
+	// 2. Czy właściwa budowa?
+	if targetBld == nil || !targetBld.Exists || targetBld.Owner != u.Owner {
+		return false, workErrInvalidTarget
+	}
+
+	// 3. Czy to plac budowy?
+	if !targetBld.IsUnderConstruction {
+		return false, workErrNotUnderConstruction
+	}
+
+	return true, workErrNone
+}
+
+func validateRepairContext(u *unit, targetBld *building) (bool, uint8) {
+	// 1. Czy jednostka ma prawo naprawiać?
+	if u.Type != unitAxeman {
+		return false, workErrWrongWorkerType
+	}
+
+	// 2. Czy właściwy budynek?
+	if targetBld == nil || !targetBld.Exists || targetBld.Owner != u.Owner {
+		return false, workErrInvalidTarget
+	}
+
+	// 3. Czy naprawialny?
+	if !targetBld.isRepairable(u.Owner) {
+		return false, workErrNotRepairable
+	}
+
+	return true, workErrNone
+}
+
+func isValidWorkTarget(targetBld *building, playerID uint8) bool {
+	if targetBld == nil || !targetBld.Exists || targetBld.Owner != playerID {
+		return false
+	}
+
+	return targetBld.IsUnderConstruction || targetBld.isRepairable(playerID)
 }

@@ -537,14 +537,6 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	}
 
 	u.prepareForNewCommand(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID)
-
-	// @reminder: Nie powinno to tutaj być, ale lepsze to niż castle.go
-	// @todo: ogarnij czemu to się tak porobiło, nie powinno tak to wyglądać!
-	// ↓↓↓ NIE DZIAŁA
-	// u.CurrentSpell = cmd.Spell
-	// ↓↓↓↓ działa
-	// u.AllowFriendlyFire = cmd.FriendlyFire
-
 	u.applyCommandState(cmd.ActionType)
 }
 
@@ -1560,21 +1552,17 @@ func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
 }
 
 func (u *unit) repair(bState *battleState) {
-	// 0. Tylko drwale mogą naprawiać!
-	if u.Type != unitAxeman {
-		return
-	}
-	// 1. Sprawdzamy, czy istnieje
+	// Bezpiecznik, bo cel mógł się zmienić w międzyczasie
 	_, targetBuilding := getObjectByID(u.TargetID, bState)
+	validRepairTarget, _ := validateRepairContext(u, targetBuilding)
 
-	if targetBuilding == nil || !targetBuilding.Exists || targetBuilding.HP >= targetBuilding.MaxHP {
-		u.State = stateIdle
-		u.AnimationType = "idle"
-		u.Command = cmdUIdle
+	if !validRepairTarget {
+		u.setIdleWithReason("Nie można naprawić budynku")
 
 		return
 	}
-	// 2. Szukamy drogi do celu
+
+	// Szukamy drogi do celu
 	distance := targetBuilding.getDistanceToUnit(u.X, u.Y)
 
 	var amount uint16
@@ -1592,22 +1580,17 @@ func (u *unit) repair(bState *battleState) {
 }
 
 func (u *unit) build(bState *battleState) {
-	// 0. Tylk drwale mogą budować.
-	if u.Type != unitAxeman {
-		return
-	}
-
+	// Bezpiecznik, bo budowa mogą się zmienić w międzyczasie
 	_, targetBuilding := getObjectByID(u.TargetID, bState)
+	validBuildTarget, _ := validateBuildingContext(u, targetBuilding)
 
-	if targetBuilding == nil || !targetBuilding.Exists || !targetBuilding.IsUnderConstruction {
-		u.State = stateIdle
-		u.AnimationType = "idle"
-		u.Command = cmdUIdle
+	if !validBuildTarget {
+		u.setIdleWithReason("Nie można budować")
 
 		return
 	}
 
-	// 2. Szukamy drogi do celu
+	// Szukamy drogi do celu
 	distance := targetBuilding.getDistanceToUnit(u.X, u.Y)
 
 	var amount uint16

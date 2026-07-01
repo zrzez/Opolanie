@@ -88,7 +88,8 @@ func checkScreenCursor(mousePos rl.Vector2, viewW, totalW, viewH float32) uint16
 func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner int, targetBuilding *building, iState inputState) uint16 {
 	// Naprawa
 	if bState.MouseState == mouseStateWorking {
-		if targetBuilding.isRepairable(bState.PlayerID) {
+		// @todo: sprawdź, czy to działa dla wszystkich playerState, a nie tylko gracza czerwonego
+		if isValidWorkTarget(targetBuilding, bState.PlayerID) {
 			return spriteBtnRepair
 		}
 
@@ -110,8 +111,8 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 	if targetOwner == int(bState.PlayerID) {
 		// chyba tutaj powinienem dodać warunek dla „szybkiej budowy”
 		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
-		if ok && selectedUnit.Type == unitAxeman && tileUnderCursor.Building != nil && tileUnderCursor.Building.IsUnderConstruction {
-			// co jeśli nie jest to prawidłowa zwrotka?!
+
+		if ok && selectedUnit.Type == unitAxeman && tileUnderCursor.Building != nil && tileUnderCursor.Building.Exists && tileUnderCursor.Building.IsUnderConstruction {
 			return spriteBtnRepair
 		}
 

@@ -9,9 +9,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
-	"strconv"
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -708,67 +706,6 @@ func updateCurrentScreen(bState *battleState, ps *programState) {
 		updateGame(bState)
 		updateActionButtons(bState)
 	}
-}
-
-// Odpowiada za wczytanie odpowiedniej rodziny tekstur
-// @todo: to opiera się o ułomny i tymczasowy sposób ładowania tekstur.
-// Do przebudowania wraz z wdrożeniem obsługi .dat!
-func (ps *programState) loadTextureCategory(texMap map[int]rl.Texture2D, dirPath string,
-	re *regexp.Regexp, categoryName string,
-) {
-	files, err := os.ReadDir(dirPath)
-	if err != nil {
-		log.Printf("OSTRZEŻENIE: Nie można odczytać katalogu %s ('%s'): %v", categoryName, dirPath, err)
-
-		return
-	}
-
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() < files[j].Name()
-	})
-
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-		matches := re.FindStringSubmatch(file.Name())
-		if len(matches) > 1 {
-			id, err := strconv.Atoi(matches[len(matches)-1])
-			if err != nil {
-				log.Printf("BŁĄD: %s - Nie można sparsować ID '%s' z pliku '%s'",
-					categoryName, matches[len(matches)-1], file.Name())
-
-				continue
-			}
-
-			if _, found := texMap[id]; found {
-				log.Printf("OSTRZEŻENIE: %s - Konflikt ID %d. Plik '%s' zignorowany", categoryName, id, file.Name())
-
-				continue
-			}
-
-			texPath := filepath.Join(dirPath, file.Name())
-			texture := rl.LoadTexture(texPath)
-
-			if texture.ID == 0 {
-				log.Printf("BŁĄD: %s - Nie udało się załadować: %s", categoryName, texPath)
-			} else {
-				texMap[id] = texture
-			}
-		}
-	}
-
-	log.Printf("INFO: %s - Załadowano %d tekstur", categoryName, len(texMap))
-}
-
-// @todo: sprawdź, czy do zmiany po ogarnięciu ładowania zasobów z .dat.
-func (ps *programState) loadSingleTexture(path string) (rl.Texture2D, error) {
-	texture := rl.LoadTexture(path)
-	if texture.ID == 0 {
-		return rl.Texture2D{}, fmt.Errorf("nie udało się załadować tekstury: %s", path)
-	}
-
-	return texture, nil
 }
 
 // newBattleState @todo: w kampanii gracz zawsze czerwony, ale przeciwnicy to już różnie
