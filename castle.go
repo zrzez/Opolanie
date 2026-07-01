@@ -98,7 +98,9 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 	}
 
 	// Walidacja kontekstowa
-	if ok, errCode := validateConstructionContext(bType, playerS.PlayerID, bState); !ok {
+	ok, errCode := validateConstructionContext(bType, playerS.PlayerID, bState)
+
+	if !ok {
 		switch errCode {
 		case buildErrLimit:
 			bState.CurrentMessage.Text = "Limit budynków!"
@@ -116,7 +118,9 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 	}
 
 	// Walidacja środowiskowa
-	if ok, errCode := validateConstructionSite(bType, cmd.TargetX, cmd.TargetY, bState); !ok {
+	ok, errCode = validateConstructionSite(bType, cmd.TargetX, cmd.TargetY, bState)
+
+	if !ok {
 		switch errCode {
 		case buildErrOutofBounds:
 			bState.CurrentMessage.Text = "Poza mapą!"
@@ -191,12 +195,15 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	case cmdUStop:
 		targetUnit.addUnitCommand(cmd, bState) // czemu targetID = 0? może nil?
 	case cmdUBuild:
-		targetBuilding, ok := getBuildingByID(cmd.InteractionTargetID, bState)
-		if !ok {
+		targetBuilding, ok2 := getBuildingByID(cmd.InteractionTargetID, bState)
+
+		if !ok2 {
 			return
 		}
 
-		if valid, errCode := validateBuildingContext(targetUnit, targetBuilding); !valid {
+		valid, errCode := validateBuildingContext(targetUnit, targetBuilding)
+
+		if !valid {
 			switch errCode {
 			case workErrWrongWorkerType:
 				bState.CurrentMessage.Text = "Ten rodzaj jednostki nie może naprawiać!"
@@ -219,11 +226,14 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz BUDOWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
 	case cmdURepair:
-		targetBuilding, ok := getBuildingByID(cmd.InteractionTargetID, bState)
-		if !ok {
+		targetBuilding, ok3 := getBuildingByID(cmd.InteractionTargetID, bState)
+		if !ok3 {
 			return
 		}
-		if valid, errCode := validateRepairContext(targetUnit, targetBuilding); !valid {
+
+		valid, errCode := validateRepairContext(targetUnit, targetBuilding)
+
+		if !valid {
 			switch errCode {
 			case workErrWrongWorkerType:
 				bState.CurrentMessage.Text = "Ten rodzaj jednostki nie może naprawiać!"
@@ -239,6 +249,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 				bState.CurrentMessage.Text = "COŚ POSZŁO PIERUŃSKO NIE TAK ZE SPRAWDZANIEM NAPRAWY!"
 				bState.CurrentMessage.Duration = 60
 			}
+
 			return
 		}
 
@@ -258,9 +269,9 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 
 // handleMoveCommand obsługuje logikę rozkazu ruchu dla jednostki.
 // Sprawdza dostępność celu i wyznacza ścieżkę.
-func (playerS *playerState) handleMoveCommand(cmd *command, unit *unit, bState *battleState) {
+func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *battleState) {
 	log.Printf("DEBUG: handleMoveCommand: Rozkaz ruchu dla jednostki ID %d do (%d,%d).",
-		unit.ID, cmd.TargetX, cmd.TargetY)
+		u.ID, cmd.TargetX, cmd.TargetY)
 
 	// 1. Sprawdzenie czy kafelek jest przechodni (używamy isWalkable)
 	if !isWalkable(bState, cmd.TargetX, cmd.TargetY) {
@@ -272,7 +283,7 @@ func (playerS *playerState) handleMoveCommand(cmd *command, unit *unit, bState *
 
 		log.Printf(
 			"handleMoveCommand: ODRZUCONO ROZKAZ: Cel (%d,%d) jest nieprzechodni (TextureID: %d). Jednostka ID %d.",
-			cmd.TargetX, cmd.TargetY, terrainID, unit.ID,
+			cmd.TargetX, cmd.TargetY, terrainID, u.ID,
 		)
 
 		return
@@ -280,9 +291,9 @@ func (playerS *playerState) handleMoveCommand(cmd *command, unit *unit, bState *
 
 	path := findPath(
 		bState,
-		unit.ID,
-		unit.X,
-		unit.Y,
+		u.ID,
+		u.X,
+		u.Y,
 		cmd.TargetX,
 		cmd.TargetY,
 	)
@@ -290,17 +301,17 @@ func (playerS *playerState) handleMoveCommand(cmd *command, unit *unit, bState *
 	if len(path) == 0 {
 		log.Printf(
 			"DEBUG: handleMoveCommand: Pathfinding nie znalazł ścieżki dla jednostki %d do (%d,%d). Komenda odrzucona.",
-			unit.ID, cmd.TargetX, cmd.TargetY,
+			u.ID, cmd.TargetX, cmd.TargetY,
 		)
 
 		return
 	}
 
-	unit.Path = path
-	unit.PathIndex = 0
+	u.Path = path
+	u.PathIndex = 0
 	log.Printf(
 		"handleMoveCommand: Ścieżka znaleziona, ustawiona dla jednostki %d. Długość: %d. Rozkaz MOVE do (%d,%d).",
-		unit.ID,
+		u.ID,
 		len(path),
 		cmd.TargetX,
 		cmd.TargetY,

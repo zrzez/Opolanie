@@ -28,17 +28,19 @@ func checkEndConditions(bState *battleState) {
 		playerStillAlive := false
 
 		// Sprawdź jednostki gracza
-		for _, unit := range bState.Units {
-			if unit.Exists && unit.Owner == bState.PlayerID {
+		for _, u := range bState.Units {
+			if u.Exists && u.Owner == bState.PlayerID {
 				playerStillAlive = true
+
 				break
 			}
 		}
 		// Sprawdź budynki gracza
 		if !playerStillAlive {
 			for _, bld := range bState.Buildings {
-				if bld.Exists && bld.Owner == bState.PlayerID && bld.Type == buildingMain { //&& !bld.IsUnderConstruction {
+				if bld.Exists && bld.Owner == bState.PlayerID && bld.Type == buildingMain {
 					playerStillAlive = true
+
 					break
 				}
 			}
@@ -46,9 +48,10 @@ func checkEndConditions(bState *battleState) {
 
 		if bState.CampaignData.EndCondition == endKillAll {
 			// Sprawdź jednostki wroga
-			for _, unit := range bState.Units {
-				if unit.Exists && unit.Owner == bState.AIPlayerID {
+			for _, u := range bState.Units {
+				if u.Exists && u.Owner == bState.AIPlayerID {
 					allEnemiesDead = false
+
 					break
 				}
 			}
@@ -57,6 +60,7 @@ func checkEndConditions(bState *battleState) {
 				for _, bld := range bState.Buildings {
 					if bld.Exists && bld.Owner == bState.AIPlayerID && bld.Type == buildingMain {
 						allEnemiesDead = false
+
 						break
 					}
 				}
@@ -78,6 +82,7 @@ func checkEndConditions(bState *battleState) {
 			bState.CurrentMessage.Text = "Porażka!"
 			bState.CurrentMessage.Duration = 120
 		}
+
 		return
 
 	case endRescue:
@@ -85,15 +90,15 @@ func checkEndConditions(bState *battleState) {
 		targetKilled := false
 		rx, ry := bState.CampaignData.RescueTargetX, bState.CampaignData.RescueTargetY
 
+		// @todo: czemu to do cholery jest 0,0?
 		if rx != 0 || ry != 0 {
-			// ZMIANA: Używamy nowej struktury Tiles
-			tile := &bState.Board.Tiles[rx][ry]
+			t := &bState.Board.Tiles[rx][ry]
 
 			// Sprawdzamy widoczność i obecność jednostki bezpośrednio
-			if tile.Visibility != visibilityUnexplored { // Dawne PlcFogOfWar != 0
+			if t.Visibility != visibilityUnexplored { // Dawne PlcFogOfWar != 0
 				// Jeśli na polu nie ma jednostki (nil) lub jednostka nie należy do AI (czyli zginęła/została przejęta?)
 				// w oryginale sprawdzano czy ID==0 lub Owner!=AI
-				if tile.Unit == nil || tile.Unit.Owner != bState.AIPlayerID {
+				if t.Unit == nil || t.Unit.Owner != bState.AIPlayerID {
 					targetKilled = true
 				}
 			}
@@ -101,9 +106,9 @@ func checkEndConditions(bState *battleState) {
 
 		// Czy dotarto do punktu zwycięstwa
 		rescueAchieved := false
-		for _, unit := range bState.Units {
-			if unit.Exists && unit.Owner == bState.PlayerID {
-				if unit.X == bState.CampaignData.VictoryPointX && unit.Y == bState.CampaignData.VictoryPointY {
+		for _, u := range bState.Units {
+			if u.Exists && u.Owner == bState.PlayerID {
+				if u.X == bState.CampaignData.VictoryPointX && u.Y == bState.CampaignData.VictoryPointY {
 					rescueAchieved = true
 					break
 				}
@@ -112,9 +117,11 @@ func checkEndConditions(bState *battleState) {
 
 		// Sprawdzenie czy gracz żyje (kopiowane z góry dla bezpieczeństwa)
 		playerStillAlive := false
-		for _, unit := range bState.Units {
-			if unit.Exists && unit.Owner == bState.PlayerID {
+
+		for _, u := range bState.Units {
+			if u.Exists && u.Owner == bState.PlayerID {
 				playerStillAlive = true
+
 				break
 			}
 		}
@@ -122,6 +129,7 @@ func checkEndConditions(bState *battleState) {
 			for _, bld := range bState.Buildings {
 				if bld.Exists && bld.Owner == bState.PlayerID && bld.Type == buildingMain {
 					playerStillAlive = true
+
 					break
 				}
 			}
@@ -129,41 +137,49 @@ func checkEndConditions(bState *battleState) {
 
 		if rescueAchieved {
 			bState.BattleOutcome = outcomeVictory
+
 			// @todo: wróć do poprawienia tego warunku
 			log.Println("WARUNEK ZAKOŃCZENIA: Cel uratowany. Zwycięstwo!")
+
 			bState.CurrentMessage.Text = "Uratowano!"
 			bState.CurrentMessage.Duration = 120
 		} else if targetKilled {
 			bState.BattleOutcome = outcomeDefeat
+
 			// @todo: wróć do poprawienia tego warunku
 			log.Println("WARUNEK ZAKOŃCZENIA: Cel ratunkowy został zabity. Porażka!")
+
 			bState.CurrentMessage.Text = "Cel zabity!"
 			bState.CurrentMessage.Duration = 120
 		} else if !playerStillAlive {
 			bState.BattleOutcome = outcomeDefeat
+
 			// @todo: wróć do poprawienia tego warunku
 			log.Println("WARUNEK ZAKOŃCZENIA: Gracz przegrał. Porażka!")
+
 			bState.CurrentMessage.Text = "Porażka!"
 			bState.CurrentMessage.Duration = 120
 		}
+
 		return
 
 	case endKillOne:
 		targetKilled := true
 		// Szukamy konkretnego dowódcy po ID (to akurat zostaje, bo szukamy w liście Units)
-		commanderUnit, ok := getUnitByID(1, bState)
+		commanderUnit, ok := getUnitByID(1, bState) // @todo: @reminder: to nie może być sztywne id!
 		if ok && commanderUnit.Exists {
 			targetKilled = false
 		}
 
 		playerStillAlive := false
-		for _, unit := range bState.Units {
-			if unit.Exists && unit.Owner == bState.PlayerID {
+		for _, u := range bState.Units {
+			if u.Exists && u.Owner == bState.PlayerID {
 				playerStillAlive = true
 
 				break
 			}
 		}
+
 		if !playerStillAlive {
 			for _, bld := range bState.Buildings {
 				if bld.Exists && bld.Owner == bState.PlayerID && bld.Type == buildingMain {
@@ -178,16 +194,20 @@ func checkEndConditions(bState *battleState) {
 			bState.BattleOutcome = outcomeVictory
 
 			log.Println("WARUNEK ZAKOŃCZENIA: Cel zabity. Zwycięstwo!")
+
 			// @todo: wróć do poprawienia tego warunku
 			bState.CurrentMessage.Text = "Cel zabity!"
 			bState.CurrentMessage.Duration = 120
 		} else if !playerStillAlive {
 			bState.BattleOutcome = outcomeDefeat
+
 			// @todo: wróć do poprawienia tego warunku
 			log.Println("WARUNEK ZAKOŃCZENIA: Gracz przegrał. Porażka!")
+
 			bState.CurrentMessage.Text = "Porażka!"
 			bState.CurrentMessage.Duration = 120
 		}
+
 		return
 
 	case endBuild:
@@ -197,6 +217,7 @@ func checkEndConditions(bState *battleState) {
 		// Przykładowo level_15.json wymaga łącznie 7 budowli
 		// To 1xMAIN + 2xBarn + 1xBARRACKS+ 3 nowe budowle żeby wygrać
 		buildingCount := uint8(0)
+
 		for _, bld := range bState.Buildings {
 			// Nie zniszczone budynki gracza, nieukończone budowle się nie wliczają!
 			if bld.Exists && bld.Owner == bState.PlayerID && !bld.IsUnderConstruction {
@@ -210,10 +231,12 @@ func checkEndConditions(bState *battleState) {
 		// @todo: sama jedna krowa bez budynków nie pozwoli wygrać
 		// z pastuchem to samo!
 		playerStillAlive := false
-		for _, unit := range bState.Units {
-			if unit.Exists && unit.Owner == bState.PlayerID {
+
+		for _, u := range bState.Units {
+			if u.Exists && u.Owner == bState.PlayerID {
 				playerStillAlive = true
 				// Wystarczy jedna żywa jednostka, aby gracz „wciąż żył”
+
 				break
 			}
 		}
@@ -225,6 +248,7 @@ func checkEndConditions(bState *battleState) {
 			for _, bld := range bState.Buildings {
 				if bld.Exists && bld.Owner == bState.PlayerID && bld.Type == buildingMain {
 					playerStillAlive = true
+
 					break
 				}
 			}
@@ -233,17 +257,22 @@ func checkEndConditions(bState *battleState) {
 		// Czy mamy dość ukończonych budynków, aby zakończyć bitwę?
 		if buildingCount >= bState.CampaignData.TargetType {
 			bState.BattleOutcome = outcomeVictory
+
 			// @todo: usuń po zweryfikowaniu, czy działa poprawnie
 			log.Println("WARUNEK ZAKOŃCZENIA: Wymagana liczba budynków zbudowana. Zwycięstwo!")
+
 			bState.CurrentMessage.Text = "Zbudowano!"
 			bState.CurrentMessage.Duration = 30
 		} else if !playerStillAlive {
 			bState.BattleOutcome = outcomeDefeat
+
 			// @todo: usuń po zweryfikowaniu, czy działa poprawnie
 			log.Println("WARUNEK ZAKOŃCZENIA: Gracz przegrał. Porażka!")
+
 			bState.CurrentMessage.Text = "Porażka!"
 			bState.CurrentMessage.Duration = 30
 		}
+
 		return
 	}
 }
@@ -321,7 +350,8 @@ func updatePerFrameLogic(bState *battleState) {
 	bState.enemyCacheUpdateTick = 0
 
 	if bState.CheatsEnabled {
-		log.Printf("DEBUG GAME: Level %d, Difficulty %d, GameState %d", bState.CurrentLevel, bState.DifficultyLevel, bState.BattleOutcome)
+		log.Printf("DEBUG GAME: Level %d, Difficulty %d, GameState %d",
+			bState.CurrentLevel, bState.DifficultyLevel, bState.BattleOutcome)
 	}
 
 	// Animacje
@@ -551,9 +581,11 @@ func placeDestroyedBuilding(bld *building, bState *battleState) {
 	for _, occupiedTile := range bld.OccupiedTiles {
 		if occupiedTile.X < boardMaxX && occupiedTile.Y < boardMaxY {
 			// Usuwamy odnośnik do budynku z kafelka
-			if bState.Board.Tiles[occupiedTile.X][occupiedTile.Y].Building == bld {
-				bState.Board.Tiles[occupiedTile.X][occupiedTile.Y].Building = nil
-				bState.Board.Tiles[occupiedTile.X][occupiedTile.Y].IsWalkable = true
+			checkTile := bState.Board.Tiles[occupiedTile.X][occupiedTile.Y]
+
+			if checkTile.Building == bld {
+				checkTile.Building = nil
+				checkTile.IsWalkable = true
 			}
 		}
 	}

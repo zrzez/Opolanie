@@ -46,9 +46,9 @@ func (bld *building) initConstruction(x, y uint8, buildingType buildingType, own
 			if px < boardMaxX && py < boardMaxY {
 				bld.OccupiedTiles = append(bld.OccupiedTiles, point{X: px, Y: py})
 
-				tile := &bState.Board.Tiles[px][py]
-				tile.Building = bld
-				tile.IsWalkable = false
+				occupieTile := &bState.Board.Tiles[px][py]
+				occupieTile.Building = bld
+				occupieTile.IsWalkable = false
 			}
 		}
 	}
@@ -118,37 +118,6 @@ func (bld *building) build(amount uint16, bState *battleState) {
 		bld.completeConstruction(bState)
 	}
 }
-
-/*func (bld *building) applyWork(amount uint16, bState *battleState) bool {
-	if !bld.Exists {
-		return false
-	}
-
-	// Budowa
-	if bld.IsUnderConstruction {
-		bld.increaseHPBuilding(amount)
-
-		// Zaawansowana budowa wymaga innej tekstury
-		if bld.HP >= bld.MaxHP/2 {
-			bld.applyPhase2Graphics(bState)
-		}
-
-		if bld.HP >= bld.MaxHP {
-			bld.completeConstruction(bState)
-		}
-
-		return true
-	}
-
-	// Naprawa
-	if bld.HP < bld.MaxHP {
-		bld.increaseHPBuilding(amount)
-
-		return true
-	}
-
-	return false
-}*/
 
 // completeConstruction domyka budowę, zmienia flagi grafikę
 func (bld *building) completeConstruction(bState *battleState) {
@@ -230,75 +199,88 @@ func (bld *building) applyPhase2Graphics(bState *battleState) {
 	}
 }
 
-// sprawdza, czy w danym miejscu (tileX, tileY)
-// można postawić budynek, którego rodzaj mamy zapisany w pamięci (bs.PendingBuildingType).
-func tryBuildStructure(bType buildingType, tileX, tileY uint8, owner uint8, bState *battleState) {
-	stats := buildingDefs[bType]
+func (bldType buildingType) isRegularBuilding() bool {
+	return bldType != buildingRoad && bldType != buildingBridge && bldType != buildingPalisade
+}
 
-	regularBuilding := bType != buildingPalisade && bType != buildingBridge && bType != buildingRoad
-	ownerState := bState.getPlayerState(owner)
+func clearConstructionSite(tileX, tileY uint8, bldStats buildingStats, bState *battleState) {
+	for dx := range bldStats.Width {
+		for dy := range bldStats.Height {
+			cx, cy := tileX+dx, tileY+dy
 
-	ownerState.Milk -= stats.Cost
+			// Zabezpieczenie przed wyjściem poza mapę
+			if cx >= boardMaxX || cy >= boardMaxY {
+				continue
+			}
 
-	if regularBuilding {
-		for dx := range stats.Width {
-			for dy := range stats.Height {
-				cx, cy := tileX+dx, tileY+dy
+			currentTile := &bState.Board.Tiles[cx][cy]
 
-				// Zabezpieczenie przed wyjściem poza mapę
-				if cx >= boardMaxX || cy >= boardMaxY {
-					continue
-				}
+			// Czyścimy plac budowy z palisad
+			if currentTile.Building != nil && currentTile.Building.Type == buildingPalisade &&
+				currentTile.Building.IsUnderConstruction {
 
-				currentTile := &bState.Board.Tiles[cx][cy]
-
-				if currentTile.Building != nil &&
-					currentTile.Building.Type == buildingPalisade &&
-					currentTile.Building.IsUnderConstruction {
-
-					currentTile.Building.OccupiedTiles = make([]point, 0, 1)
-					currentTile.IsWalkable = false
-					currentTile.Building.HP = 0
-					currentTile.Building.Exists = false
-				}
+				currentTile.Building.OccupiedTiles = make([]point, 0, 1)
+				currentTile.IsWalkable = false
+				currentTile.Building.HP = 0
+				currentTile.Building.Exists = false
 			}
 		}
 	}
+}
+
+func placeRoad(tileX, tileY uint8, bState *battleState) {
+	bState.Board.Tiles[tileX][tileY].TextureID = spriteRoadStart
+	cx := int(tileX)
+	cy := int(tileY)
+
+	refreshRoadTile(cx, cy, bState.Board)
+
+	refreshRoadTile(cx+1, cy, bState.Board) // prawo
+	refreshRoadTile(cx-1, cy, bState.Board) // lewo
+	refreshRoadTile(cx, cy+1, bState.Board) // góra
+	refreshRoadTile(cx, cy-1, bState.Board) // dół
+
+	log.Printf("BUDOWA: Postawiono drogę na (%d,%d).", tileX, tileY)
+}
+
+func placeConstructionSite(tileX, tileY, bldOwner uint8, bldStats buildingStats, bldType buildingType, bState *battleState) {
+	newBld := &building{}
+
+	// init teraz przyjmie tileX, tileY jako lewy górny róg
+	newBld.initConstruction(tileX, tileY, bldType, bldOwner, bState)
+
+	bState.Buildings = append(bState.Buildings, newBld)
+	newBld.startConstruction(bState)
+
+	bState.CurrentMessage.Text = fmt.Sprintf("Wznoszenie: %s", bldStats.Name)
+	bState.CurrentMessage.Duration = 60
+
+	log.Printf("BUDOWA: Rozpoczęto %s (ID: %d) na (%d,%d).", bldStats.Name, newBld.ID, tileX, tileY)
+}
+
+// Stawia plac budowy we wskazanym miejscu
+func tryBuildStructure(bldType buildingType, tileX, tileY uint8, owner uint8, bState *battleState) {
+	bldStats := buildingDefs[bldType]
+	ownerState := bState.getPlayerState(owner)
+
+	ownerState.Milk -= bldStats.Cost
 
 	bldOwner := colorNone
 
-	if regularBuilding {
+	if bldType == buildingRoad {
+		placeRoad(tileX, tileY, bState)
+
+		return
+	}
+
+	if bldType.isRegularBuilding() {
 		ownerState.CurrentBuildings++
 		bldOwner = colorRed
+
+		clearConstructionSite(tileX, tileY, bldStats, bState)
 	}
 
-	if bType != buildingRoad {
-		newBld := &building{}
-
-		// init teraz przyjmie tileX, tileY jako lewy górny róg
-		newBld.initConstruction(tileX, tileY, bType, bldOwner, bState)
-
-		bState.Buildings = append(bState.Buildings, newBld)
-		newBld.startConstruction(bState)
-
-		bState.CurrentMessage.Text = fmt.Sprintf("Wznoszenie: %s", stats.Name)
-		bState.CurrentMessage.Duration = 60
-
-		log.Printf("BUDOWA: Rozpoczęto %s (ID: %d) na (%d,%d).", stats.Name, newBld.ID, tileX, tileY)
-	} else {
-		bState.Board.Tiles[tileX][tileY].TextureID = spriteRoadStart
-		cx := int(tileX)
-		cy := int(tileY)
-
-		refreshRoadTile(cx, cy, bState.Board)
-
-		refreshRoadTile(cx+1, cy, bState.Board) // prawo
-		refreshRoadTile(cx-1, cy, bState.Board) // lewo
-		refreshRoadTile(cx, cy+1, bState.Board) // góra
-		refreshRoadTile(cx, cy-1, bState.Board) // dół
-
-		log.Printf("BUDOWA: Postawiono drogę na (%d,%d).", tileX, tileY)
-	}
+	placeConstructionSite(tileX, tileY, bldOwner, bldStats, bldType, bState)
 }
 
 func isObstacle(texID uint16) bool {
@@ -459,8 +441,8 @@ func (bld *building) getBounds() (int, int, int, int) {
 	minX, minY := math.MaxUint8, math.MaxUint8
 	maxX, maxY := 0, 0
 
-	for _, tile := range bld.OccupiedTiles {
-		tileX, tileY := int(tile.X), int(tile.Y)
+	for _, occupiedTile := range bld.OccupiedTiles {
+		tileX, tileY := int(occupiedTile.X), int(occupiedTile.Y)
 		if tileX < minX {
 			minX = tileX
 		}
@@ -653,11 +635,14 @@ func (bld *building) canProduceUnit(unitType unitType, bState *battleState) bool
 
 		return false
 	}
+
 	fmt.Println("sprawdzam, czy da się zrobić jednostkę.")
+
 	// 1. Czy jest wolne miejsce w budynku?
 	if !bld.hasSpace() {
 		return reject("Brak miejsca w budynku!")
 	}
+
 	fmt.Println("jest miejsce w budynku")
 	// Ustalamy kto chce wykonać działanie
 	ownerState := bState.getPlayerState(bld.Owner)
@@ -670,6 +655,7 @@ func (bld *building) canProduceUnit(unitType unitType, bState *battleState) bool
 	fmt.Println("nie przekraczam populacji")
 	// Pobieramy dane o jednostce do stworzenia
 	stats, ok := unitDefs[unitType]
+
 	if !ok {
 		log.Printf("BŁĄD KRYTYCZNY: Brak definicji dla jednostki ID %d w unitDefs. Budynek ID: %d", unitType, bld.ID)
 		reject("Brak definicji jednostki!")
@@ -735,6 +721,7 @@ func (bld *building) produceUnit(newUnitType unitType, bState *battleState) {
 
 	// 2. Weryfikujemy, czy taki rodzaj jednostki istnieje
 	stats, ok := unitDefs[newUnitType]
+
 	if !ok {
 		panic(fmt.Sprintf("BŁĄD KRYTYCZNY: Brak definicji dla jednostki %d w unitDefs", newUnitType))
 	}
@@ -807,6 +794,7 @@ func (bld *building) convertToTerrain(bState *battleState) {
 
 // getButtonCommand zastępuje przestarzałe GetProductionCommand.
 // Tłumaczy kliknięcie przycisku (actionIndex) na pełny rozkaz (command).
+// @todo: sprawdź, czy te actionIndex muszą być zaczarodziejskie. 01.07.2026
 func (bld *building) getButtonCommand(actionIndex int) command {
 	// Domyślny, pusty rozkaz
 	cmd := command{ActionType: cmdUIdle}
