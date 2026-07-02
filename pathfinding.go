@@ -65,7 +65,7 @@ func findPath(bState *battleState, moverID uint, startX, startY, endX, endY uint
 	// 1. Pobieramy jednostkę, żeby wiedzieć kim jesteśmy (dla wyjątków ruchu - np. Krowa->Obora)
 	var mover *unit
 	if moverID > 0 {
-		mover, _ = getObjectByID(moverID, bState)
+		mover, _ = bState.getObjectByID(moverID)
 	}
 
 	openHeap := &pathNodeHeap{}
@@ -151,7 +151,7 @@ func isWalkableUnit(bState *battleState, x, y uint8, mover *unit) bool {
 			currentTile.Building.Type == buildingBarn &&
 			currentTile.Building.Owner == mover.Owner {
 
-			mx, my, ok := calculateMilkingSpot(currentTile.Building)
+			mx, my, ok := currentTile.Building.calculateMilkingSpot()
 			if ok && x == mx && y == my {
 				return !isWaterOrObstacle(currentTile.TextureID)
 			}

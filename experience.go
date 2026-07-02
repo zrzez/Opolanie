@@ -79,7 +79,7 @@ func (u *unit) levelUpBonusArmor(level uint8) {
 // Jest to najprostszy przypadek ponieważ tylko podmieniamy u.MaxMana na nową wartość.
 func (u *unit) levelUpBonusMana(level uint8) {
 	// Jeśli się zmarło lub nie ma many
-	if !u.Exists || !u.Type.hasMana() {
+	if !u.Exists || !u.Type.isMagical() {
 		return
 	}
 

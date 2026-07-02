@@ -338,7 +338,7 @@ func (bld *building) getAssignedUnits(bState *battleState) []*unit {
 	var units []*unit
 
 	for _, unitID := range bld.AssignedUnits {
-		currentUnit, ok := getUnitByID(unitID, bState)
+		currentUnit, ok := bState.getUnitByID(unitID)
 		if ok && currentUnit.Exists {
 			units = append(units, currentUnit)
 		}
@@ -351,7 +351,7 @@ func (bld *building) cleanupDeadUnits(bState *battleState) {
 	var validUnits []uint
 
 	for _, unitID := range bld.AssignedUnits {
-		currentUnit, ok := getUnitByID(unitID, bState)
+		currentUnit, ok := bState.getUnitByID(unitID)
 		if ok && currentUnit.Exists {
 			validUnits = append(validUnits, unitID)
 		}

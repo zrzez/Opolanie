@@ -103,7 +103,7 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 	}
 
 	// Podpowiedź naprawy
-	selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
+	selectedUnit, ok := bState.getUnitByID(bState.CurrentSelection.UnitID)
 	isAxeman := ok && selectedUnit.Type == unitAxeman
 
 	if isAxeman && targetBuilding != nil && targetBuilding.Exists {
@@ -142,7 +142,7 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 
 	// Drzewa
 	if ok && tileUnderCursor.isStandingTree() && !tileUnderCursor.IsBurning {
-		if selectedUnit.canDamageTree(tileUnderCursor.X, tileUnderCursor.Y, bState) {
+		if selectedUnit.canDamageTree(tileUnderCursor) {
 			return spriteCursorCrossRed
 		}
 
@@ -178,7 +178,7 @@ func cursorForEnemy(bState *battleState, tileUnderCursor *tile) uint16 {
 
 	if targetBuilding != nil && targetBuilding.Exists {
 		// Mag nie może atakować żadnych budynków
-		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
+		selectedUnit, ok := bState.getUnitByID(bState.CurrentSelection.UnitID)
 
 		if ok && selectedUnit.Type == unitMage {
 			return spriteCursorStop

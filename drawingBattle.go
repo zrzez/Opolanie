@@ -510,7 +510,7 @@ func drawBuildingsInterfaces(bState *battleState) {
 // === RYSOWANIE JEDNOSTEK I POCISKÓW ===
 
 func calculateLegacyPhase(u *unit) uint8 {
-	idx := getLegacyUnitIndex(u.Type)
+	idx := u.Type.getLegacyUnitIndex()
 	delay := u.Delay
 
 	delay = max(delay, minPhaseDelay)
@@ -547,7 +547,7 @@ func getRenderDirection(u *unit, bState *battleState) (int, int) {
 
 		// 1. Sprawdź, czy mamy cel ataku (Unit lub Building)
 		if u.TargetID != 0 {
-			targetUnit, targetBld := getObjectByID(u.TargetID, bState)
+			targetUnit, targetBld := bState.getObjectByID(u.TargetID)
 
 			if targetUnit != nil && targetUnit.Exists {
 				targetX = targetUnit.X
@@ -1166,7 +1166,7 @@ func drawUnit(u *unit, bState *battleState, ps *programState) {
 	// 2. Logika ruchu - Cofanie od celu
 
 	if u.State == stateMoving {
-		idx := getLegacyUnitIndex(u.Type)
+		idx := u.Type.getLegacyUnitIndex()
 		delayIdx := u.Delay
 
 		// Zabezpieczenie zakresu

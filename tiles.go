@@ -6,14 +6,6 @@ import "slices"
 
 // Pomagierzy do sprawdzania rodzaju tekstury kafelka.
 
-/*
-Każda zmiana w tym pliku wymaga ode mnie odpowiedzenia sobie na pytanie: metoda, czy funkcja?
-Muszę utrzymać ten rozdział, inaczej kod w innych miejscach będzie mniej czytelny.
-
-Funkcja jeśli: sprawdzenie wartości tekstury, nie zmienia niczego w kafelku. Przykład: isDirtRoad()
-Metoda jeśli: zmienia stan wewnętrzeny kafelka lub wchodzimy z nim w interakcję. Przykład:
-*/
-
 // =============
 // ↓↓↓FUNKCJE↓↓↓
 // =============

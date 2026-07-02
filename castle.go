@@ -28,7 +28,7 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 
 	// @reminder: staram się tutaj przechwycić rozkazy dla wszystkich zaznaczonych jednsotek
 	if cmd.ActionType < cmdDelimiter && cmd.ExecutorID == 0 {
-		selectedUnits := getSelectedUnits(bState)
+		selectedUnits := bState.getSelectedUnits()
 		for _, u := range selectedUnits {
 			unitCmd := *cmd
 			unitCmd.ExecutorID = u.ID
@@ -44,7 +44,7 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 		playerS.handleBuildingCommand(cmd, bState)
 	} else {
 		// @todo: czemu niby miałbym tutaj znowu walidować? Nie rozumiem, do tego ponowne sprawdzanie FF?
-		targetUnit, ok := getUnitByID(cmd.ExecutorID, bState)
+		targetUnit, ok := bState.getUnitByID(cmd.ExecutorID)
 		if ok {
 			targetUnit.AllowFriendlyFire = cmd.FriendlyFire
 		}
@@ -62,7 +62,7 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 	}
 
 	// 2. Wytwarzanie jednostek
-	targetBuilding, ok := getBuildingByID(cmd.ExecutorID, bState)
+	targetBuilding, ok := bState.getBuildingByID(cmd.ExecutorID)
 
 	if !ok || !targetBuilding.Exists || targetBuilding.IsUnderConstruction {
 		log.Printf("handleBuildingCommand: Nie znaleziono ID %d, nie istnieje lub w budowie.", cmd.InteractionTargetID)
@@ -170,7 +170,7 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 // handleUnitCommand przetwarza rozkazy dotyczące jednostek.
 // Obsługuje np. ruch, atak, stop, magię.
 func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState) {
-	targetUnit, ok := getUnitByID(cmd.ExecutorID, bState)
+	targetUnit, ok := bState.getUnitByID(cmd.ExecutorID)
 	if !ok || !targetUnit.Exists {
 		log.Printf("handleUnitCommand: Nie znaleziono jednostki ID %d lub nie istnieje.", cmd.ExecutorID)
 
@@ -195,7 +195,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	case cmdUStop:
 		targetUnit.addUnitCommand(cmd, bState) // czemu targetID = 0? może nil?
 	case cmdUBuild:
-		targetBuilding, ok2 := getBuildingByID(cmd.InteractionTargetID, bState)
+		targetBuilding, ok2 := bState.getBuildingByID(cmd.InteractionTargetID)
 
 		if !ok2 {
 			return
@@ -226,7 +226,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz BUDOWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
 	case cmdURepair:
-		targetBuilding, ok3 := getBuildingByID(cmd.InteractionTargetID, bState)
+		targetBuilding, ok3 := bState.getBuildingByID(cmd.InteractionTargetID)
 		if !ok3 {
 			return
 		}
@@ -319,7 +319,7 @@ func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *bat
 }
 
 // szuka budynku w battleState.Buildings.
-func getBuildingByID(bldID uint, bState *battleState) (*building, bool) {
+func (bState *battleState) getBuildingByID(bldID uint) (*building, bool) {
 	for _, bld := range bState.Buildings {
 		if bld.ID == bldID {
 			return bld, true
@@ -330,7 +330,7 @@ func getBuildingByID(bldID uint, bState *battleState) (*building, bool) {
 }
 
 // szuka jednostki w battleState.Units.
-func getUnitByID(unitID uint, bState *battleState) (*unit, bool) {
+func (bState *battleState) getUnitByID(unitID uint) (*unit, bool) {
 	for _, currentUnit := range bState.Units {
 		if currentUnit.ID == unitID {
 			return currentUnit, true
@@ -340,12 +340,12 @@ func getUnitByID(unitID uint, bState *battleState) (*unit, bool) {
 	return nil, false
 }
 
-func getObjectByID(objectID uint, bState *battleState) (*unit, *building) {
-	if currentUnit, ok := getUnitByID(objectID, bState); ok {
+func (bState *battleState) getObjectByID(objectID uint) (*unit, *building) {
+	if currentUnit, ok := bState.getUnitByID(objectID); ok {
 		return currentUnit, nil
 	}
 
-	if currentBuilding, ok := getBuildingByID(objectID, bState); ok {
+	if currentBuilding, ok := bState.getBuildingByID(objectID); ok {
 		return nil, currentBuilding
 	}
 

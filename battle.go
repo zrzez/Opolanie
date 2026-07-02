@@ -166,7 +166,7 @@ func checkEndConditions(bState *battleState) {
 	case endKillOne:
 		targetKilled := true
 		// Szukamy konkretnego dowódcy po ID (to akurat zostaje, bo szukamy w liście Units)
-		commanderUnit, ok := getUnitByID(1, bState) // @todo: @reminder: to nie może być sztywne id!
+		commanderUnit, ok := bState.getUnitByID(1) // @todo: @reminder: to nie może być sztywne id!
 		if ok && commanderUnit.Exists {
 			targetKilled = false
 		}

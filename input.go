@@ -438,7 +438,7 @@ func handleGameShortcuts(bState *battleState) bool {
 
 			firstUnitInGroup := true
 			for _, groupUnit := range bState.ControlGroups[i].Units {
-				currentUnit, ok := getUnitByID(groupUnit.UnitID, bState)
+				currentUnit, ok := bState.getUnitByID(groupUnit.UnitID)
 				if ok && currentUnit.Exists && currentUnit.Owner == bState.PlayerID {
 					currentUnit.IsSelected = true
 					if firstUnitInGroup {
@@ -461,7 +461,7 @@ func handleGameShortcuts(bState *battleState) bool {
 	}
 
 	if bState.CurrentSelection.IsUnit && bState.CurrentSelection.OwnerID == bState.PlayerID {
-		selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
+		selectedUnit, ok := bState.getUnitByID(bState.CurrentSelection.UnitID)
 		if !ok || !selectedUnit.Exists {
 			clearSelection(bState)
 			return false
@@ -611,7 +611,7 @@ func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY 
 		return true
 	}
 
-	selectedUnits := getSelectedUnits(bState)
+	selectedUnits := bState.getSelectedUnits()
 
 	if len(selectedUnits) == 0 {
 		return false
@@ -684,7 +684,7 @@ func resolveRightClickCommandType(
 		canAttackTree := false
 
 		for _, u := range selectedUnits {
-			if u.canDamageTree(targetTile.X, targetTile.Y, bState) {
+			if u.canDamageTree(targetTile) {
 				canAttackTree = true
 				break
 			}
@@ -1269,7 +1269,7 @@ func handleMinimapRightMouse(
 		return false
 	}
 
-	selectedUnits := getSelectedUnits(bState)
+	selectedUnits := bState.getSelectedUnits()
 	if len(selectedUnits) == 0 {
 		return true
 	}

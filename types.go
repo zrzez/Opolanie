@@ -160,6 +160,7 @@ type corpse struct {
 type combatTarget struct {
 	Unit     *unit
 	Building *building
+	Tile     *tile
 }
 
 type economyAI struct {

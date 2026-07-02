@@ -28,7 +28,7 @@ func updateActionButtons(bState *battleState) {
 
 // Wypełnia przyciski na podstawie przepisu budynku.
 func fillBuildingActions(bState *battleState, buildingID uint) {
-	bld, ok := getBuildingByID(buildingID, bState)
+	bld, ok := bState.getBuildingByID(buildingID)
 	// Jeśli budynek został zniszczony lub jest w trakcie budowy, to nie może działać.
 	if !ok || !bld.Exists || bld.IsUnderConstruction {
 		return
@@ -85,7 +85,7 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 
 // Wypełnia przyciski na podstawie rodzaju jednostki.
 func fillUnitActions(bState *battleState, unitID uint) {
-	currentUnit, ok := getUnitByID(unitID, bState)
+	currentUnit, ok := bState.getUnitByID(unitID)
 
 	if !ok || !currentUnit.Exists || currentUnit.Owner != bState.PlayerID {
 		return
