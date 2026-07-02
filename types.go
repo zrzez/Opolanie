@@ -75,15 +75,21 @@ type unit struct {
 	Command      commandType // Bieżący rozkaz (cmdMove, cmdAttack itd.)
 	CurrentSpell spellID     // Jaki czar ma rzucić
 	TargetID     uint        // Identyfikator przedmiotu (jednostka bądź budynek) rozkazu
-	TargetX      uint8       // Współrzędna X celu (dla cmdMove. cmdAttack)
-	TargetY      uint8       // Współrzędna Y celu (dla cmdMove. cmdAttack)
-	Experience   uint8       // Miara doświadczenia jednostki
-	Level        uint8       // Poziom doświadczenia jednostki
-	IsSelected   bool        // Określa czy dana jednostka jest wybrana przez gracza
-	BelongsTo    *building   // Określa do którego budynku jest przywiązana dana jednostka
-	IsInQueue    bool        // Wskaźnik, by wiedzieć, czy jednostka jest w kolejce
+	TargetX      uint8       // Intencja: Współrzędna X celu (dla cmdMove. cmdAttack)
+	TargetY      uint8       // Intencja: Współrzędna Y celu (dla cmdMove. cmdAttack)
+	// ↓↓↓↓↓↓ NOWOŚĆ! TYLKO OD ZRZEZA!
+	ApproachX uint8 // PODEJŚCIE: kafalek na którym trzeba stanąć, aby dobrać się do celu
+	ApproachY uint8 // PODEJŚCIE: kafalek na którym trzeba stanąć, aby dobrać się do celu
+	// ↑↑↑↑↑↑ Powinno zastąpić ułomne interactionTargetX/Y i uzdrowić rozkazy w units.go
 	// Do obsługi atakowania drzew, być może zbędne - 20.04.2026
+	// @todo:↓↓↓ wypierdziel jeśli ApproachXY siądą 02.07.2026
 	interactionTargetX, interactionTargetY uint8
+
+	Experience uint8     // Miara doświadczenia jednostki
+	Level      uint8     // Poziom doświadczenia jednostki
+	IsSelected bool      // Określa czy dana jednostka jest wybrana przez gracza
+	BelongsTo  *building // Określa do którego budynku jest przywiązana dana jednostka
+	IsInQueue  bool      // Wskaźnik, by wiedzieć, czy jednostka jest w kolejce
 	// Dodawalibyśmy jednostkę do określonego budynku i w ten sposób śledzimy
 	// kto do kogo przynależy i np. krowy gdzie idą dać się wydoić!
 	AllowFriendlyFire bool // Wskaźnik, czy możemy napaść swoich

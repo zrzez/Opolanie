@@ -411,7 +411,7 @@ func (ut unitType) canDamagePalisades() bool {
 	return ut == unitAxeman || ut == unitPriest
 }
 
-func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, bState *battleState) (uint8, uint8, error) {
+func (u *unit) findApproachTileForTarget(intentionX, intentionY uint8, targetID uint, bState *battleState) (uint8, uint8, error) {
 	targetUnit, targetBuilding := bState.getObjectByID(targetID)
 
 	// Cel jest budynkiem
@@ -435,7 +435,6 @@ func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, b
 	if targetUnit != nil && targetUnit.Exists {
 		bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState)
 
-		// findBestPositionAroundUnit zwraca pozycję celu jako bezpiecznik.
 		if bestX == targetUnit.X && bestY == targetUnit.Y {
 			// Sprawdź, czy to naprawdę fallback (kafel jest zajęty przez cel)
 			targetTile := &bState.Board.Tiles[bestX][bestY]
@@ -447,10 +446,11 @@ func (u *unit) resolveApproachPosition(targetX, targetY *uint8, targetID uint, b
 		return bestX, bestY, nil
 	}
 
-	targetTile := &bState.Board.Tiles[*targetX][*targetY]
+	// Cel jest drzewem
+	targetTile := &bState.Board.Tiles[intentionX][intentionY]
 
 	if targetTile.isTree() {
-		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(*targetX, *targetY, bState)
+		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(intentionX, intentionY, bState)
 		if !ok {
 			return 0, 0, fmt.Errorf("nie ma pozycji do ataku tego drzewa")
 		}
@@ -516,28 +516,49 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bState *battl
 func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	log.Printf("INFO: unit.go dodano rozkaz %d.", cmd.ActionType)
 	// ŁATANIE DZIURY W KOMPLETOWANIE ROZKAÓW DLA JEDNOSTEK
+	// @reminder: Łatanie dziury w kompletowaniu rozkazów dla jednostek
+	// @todo: ogarnij to łatanie, bo nie powinno to tuja być! - 02.07.2026
 	u.CurrentSpell = cmd.Spell
 	u.AllowFriendlyFire = cmd.FriendlyFire
 
 	if u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID) {
-		log.Printf("INFO: unit.go shouldSkipDuplicate %t.", u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID))
+		log.Printf("INFO: unit.go shouldSkipDuplicate %t.",
+			u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID))
 
 		return
 	}
 
-	if err := u.resolveInteractionTarget(&cmd.TargetX, &cmd.TargetY, cmd.ActionType, cmd.InteractionTargetID, bState); err != nil {
+	var approachX, approachY uint8
+	if cmd.ActionType.isInteraction() {
+		var err error
+		// Jeśli czar wymaga interakcji, to obliczamy gdzie podejść
+		// Na drzewo nie da się wejść, więc trzeba znaleźć kafelek obok
+		approachX, approachY, err = u.calculateApproachTile(cmd.TargetX, cmd.TargetY, cmd.ActionType, cmd.InteractionTargetID, bState)
+		if err != nil {
+			u.setIdleWithReason("cel nieosiągalny")
+
+			return
+		}
+	} else {
+		// Nie wymaga interakcji, np. cmdMove, to cel jest miejscem w które się udajemy
+		approachX, approachY = cmd.TargetX, cmd.TargetY
+	}
+
+	/*if err := u.resolveInteractionTarget(&cmd.TargetX, &cmd.TargetY, cmd.ActionType, cmd.InteractionTargetID, bState); err != nil {
 		u.setIdleWithReason("cel nieosiągalny")
 
 		return
-	}
+	}*/
 
-	if !u.validateCommand(cmd.ActionType, cmd.InteractionTargetID, bState) {
-		log.Printf("INFO: unit.go rozkaz nie przeszedł sprawdzenia %t.", u.validateCommand(cmd.ActionType, cmd.InteractionTargetID, bState))
+	if !u.validateCommand(cmd.ActionType, cmd.InteractionTargetID, cmd.TargetX, cmd.TargetY, bState) {
+		log.Printf("INFO: unit.go rozkaz nie przeszedł sprawdzenia %t.",
+			u.validateCommand(cmd.ActionType, cmd.InteractionTargetID, cmd.TargetX, cmd.TargetY, bState))
 
 		return
 	}
 
-	u.prepareForNewCommand(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID)
+	// Przekazujemy cel oraz podejście
+	u.prepareForNewCommand(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, approachX, approachY)
 	u.applyCommandState(cmd.ActionType)
 }
 
@@ -546,44 +567,27 @@ func (u *unit) shouldSkipDuplicate(command commandType, targetX, targetY uint8, 
 		u.TargetY == targetY && u.TargetID == targetID
 }
 
-func (u *unit) resolveInteractionTarget(targetX, targetY *uint8, command commandType, targetID uint, bState *battleState) error {
-	if !command.isInteraction() {
-		return nil
-	}
-
+func (u *unit) calculateApproachTile(intentionX, intentionY uint8, command commandType, targetID uint, bState *battleState) (uint8, uint8, error) {
 	// Gromobicie oraz deszcz ognia
 	if u.CurrentSpell == spellMagicShower {
-		// Zapamiętujemy faktyczny cel czaru
-		u.interactionTargetX, u.interactionTargetY = *targetX, *targetY
-
-		// Szukamy miejsca, skąd jednostka może rzucić czar (w zasięgu AttackRange)
-		finalX, finalY, ok := u.findBestPositionAroundTile(*targetX, *targetY, bState)
+		// Intencja, to TargetX/Y
+		// tutaj ustalamy, gdzie kapłan/ka mają stanąć
+		finalX, finalY, ok := u.findBestPositionAroundTile(intentionX, intentionY, bState)
 		if !ok {
-			return fmt.Errorf("brak miejsca w zasięgu czaru")
+			return 0, 0, fmt.Errorf("brak miejsca w zasięgu czaru")
 		}
 
-		// Nadpisujemy TargetX/Y
-		*targetX, *targetY = finalX, finalY
-		return nil
+		return finalX, finalY, nil
 	}
 
+	// Czary, których celem jest rzucający
+	// magiczna tarcza i magiczne widzenie
 	if u.CurrentSpell == spellMagicShield || u.CurrentSpell == spellMagicSight {
-		*targetX, *targetY = u.X, u.Y
-		return nil
+		return u.X, u.Y, nil
 	}
 
-	if targetID == 0 {
-		u.interactionTargetX, u.interactionTargetY = *targetX, *targetY
-	}
-
-	finalX, finalY, err := u.resolveApproachPosition(targetX, targetY, targetID, bState)
-	if err != nil {
-		return err
-	}
-
-	*targetX, *targetY = finalX, finalY
-
-	return nil
+	// Budynki, jednostki i drzewa jako cel
+	return u.findApproachTileForTarget(intentionX, intentionY, targetID, bState)
 }
 
 func (ct commandType) isInteraction() bool {
@@ -595,10 +599,10 @@ func (ct commandType) isInteraction() bool {
 	}
 }
 
-func (u *unit) validateCommand(command commandType, targetID uint, bState *battleState) bool {
+func (u *unit) validateCommand(command commandType, targetID uint, intentionX, intentionY uint8, bState *battleState) bool {
 	switch command {
 	case cmdUAttack:
-		return u.canAttack(targetID, bState)
+		return u.canAttack(targetID, intentionX, intentionY, bState)
 	default:
 		return true
 	}
@@ -620,12 +624,25 @@ func (u *unit) canDamageTree(treeTile *tile) bool {
 	}
 }
 
-func (u *unit) canAttack(targetID uint, bState *battleState) bool {
+func (u *unit) canAttack(targetID uint, intentionX, intentionY uint8, bState *battleState) bool {
 	// Drzewa
 	// dany kafelek musi istnieć więc nie robię != nil
-	targetTile := &bState.Board.Tiles[u.interactionTargetX][u.interactionTargetY]
-	if targetTile.isTree() {
-		return u.canDamageTree(targetTile)
+	if targetID == 0 {
+		if u.TargetX >= boardMaxX || u.TargetY >= boardMaxY {
+			fmt.Print("DUPA BOARDMAX")
+			return false
+		}
+
+		targetTile := &bState.Board.Tiles[intentionX][intentionY]
+
+		if targetTile.isTree() {
+			fmt.Print("DUPA TO NIE DRZEWO")
+			return u.canDamageTree(targetTile)
+		}
+
+		fmt.Print("DUPA DRZEWO, ALE WYPAD")
+		// Jeśli ID == 0, ale nie jest drzewem, to mamy problem…
+		return false
 	}
 
 	targetUnit, targetBuilding := bState.getObjectByID(targetID)
@@ -634,11 +651,7 @@ func (u *unit) canAttack(targetID uint, bState *battleState) bool {
 	// musi istnieć
 	if targetUnit != nil && targetUnit.ID != u.ID {
 		// musi być oznaczona jako żywa
-		if !targetUnit.Exists {
-			return false
-		}
-		// Istnieje i jest oznaczona jako żywa
-		return true
+		return targetUnit.Exists
 	}
 
 	// Budynki
@@ -669,15 +682,17 @@ func (u *unit) canAttack(targetID uint, bState *battleState) bool {
 	return false
 }
 
-func (u *unit) prepareForNewCommand(cmdType commandType, targetX, targetY uint8, targetID uint) {
+func (u *unit) prepareForNewCommand(cmdType commandType, intentionX, intentionY uint8, targetID uint, approachX, approachY uint8) {
 	u.clearPath()
 	u.History = nil
 	u.LoopCount = 0
 	u.TicksNoProgress = 0
 	u.LastPathIndex = 0
 	u.Command = cmdType
-	u.TargetX = targetX
-	u.TargetY = targetY
+	u.TargetX = intentionX
+	u.TargetY = intentionY
+	u.ApproachX = approachX
+	u.ApproachY = approachY
 	u.TargetID = targetID
 	u.Delay = 0
 }
@@ -716,7 +731,7 @@ func (u *unit) applyCommandState(command commandType) {
 }
 
 func (u *unit) isAtTarget() bool {
-	return u.X == u.TargetX && u.Y == u.TargetY
+	return u.X == u.ApproachX && u.Y == u.ApproachY
 }
 
 func (u *unit) move(bState *battleState) {
@@ -858,7 +873,7 @@ func (u *unit) waitForPathfindingBudget() {
 func (u *unit) calculateNewPath(bState *battleState) bool {
 	bState.pathfindingUnitsThisTick++
 
-	newPath := findPath(bState, u.ID, u.X, u.Y, u.TargetX, u.TargetY)
+	newPath := findPath(bState, u.ID, u.X, u.Y, u.ApproachX, u.ApproachY)
 
 	if newPath == nil {
 		u.handlePathfindingFailure()
@@ -2079,44 +2094,7 @@ func (u *unit) handleUnitTarget(targetUnit *unit, bState *battleState) {
 
 func (u *unit) handleBuildingTarget(targetBuilding *building, bState *battleState) {
 	u.TargetID = targetBuilding.ID
-
-	currentDistanceToBuilding := targetBuilding.getDistanceToUnit(u.X, u.Y)
-
-	if currentDistanceToBuilding != math.MaxUint8 && currentDistanceToBuilding <= u.AttackRange {
-		u.startDirectAttack(u.X, u.Y, bState)
-		return
-	}
-
-	finalMoveTargetX, finalMoveTargetY := uint8(0), uint8(0)
-
-	optimalRangedX, optimalRangedY := uint8(0), uint8(0)
-	closestWalkableX, closestWalkableY := uint8(0), uint8(0)
-	var ok bool
-
-	if u.AttackRange > 1 {
-		optimalRangedX, optimalRangedY, ok = findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, targetBuilding, bState)
-	}
-
-	if !ok {
-		finalMoveTargetX, finalMoveTargetY = optimalRangedX, optimalRangedY
-	} else {
-		closestWalkableX, closestWalkableY, ok = targetBuilding.getClosestWalkableTile(bState)
-		if ok {
-			finalMoveTargetX, finalMoveTargetY = closestWalkableX, closestWalkableY
-		}
-	}
-
-	if !ok {
-		u.setIdle()
-
-		return
-	}
-
-	u.TargetX = finalMoveTargetX
-	u.TargetY = finalMoveTargetY
-	u.startMoveToAttack(bState)
-	log.Printf("DEBUG_AI: unit %d (Type:%d) moving to attack bld %d, target tile: (%d,%d). Current position: (%d,%d).",
-		u.ID, u.Type, u.TargetID, u.TargetX, u.TargetY, u.X, u.Y)
+	u.startDirectAttack(u.X, u.Y, bState)
 }
 
 func (u *unit) setMoveTargetForUnit(targetUnit *unit, bState *battleState) {
@@ -2224,7 +2202,7 @@ func (u *unit) validateTargetExists(bState *battleState) (*combatTarget, error) 
 
 	// Do atakowania drzew. Muszę poprawić!
 	if u.TargetID == 0 {
-		treeTile := &bState.Board.Tiles[u.interactionTargetX][u.interactionTargetY]
+		treeTile := &bState.Board.Tiles[u.TargetX][u.TargetY]
 		if treeTile.isStandingTree() && !treeTile.IsBurning {
 			return &combatTarget{Tile: treeTile}, nil
 		}
