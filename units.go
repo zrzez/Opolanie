@@ -136,10 +136,9 @@ func (u *unit) decreaseHPUnit(amount uint16) {
 }
 
 // show umieszcza jednostkę na mapie w Tiles.
-func (u *unit) show(bState *battleState) {
+func (u *unit) show(board *boardData) {
 	if u.X < boardMaxX && u.Y < boardMaxY {
-		// ZMIANA: Ustawiamy wskaźnik unit w nowej strukturze Tiles
-		bState.Board.Tiles[u.X][u.Y].Unit = u
+		board.Tiles[u.X][u.Y].Unit = u
 	} else {
 		log.Printf("OSTRZEŻENIE: Próba umieszczenia jednostki poza mapą: (%d,%d)", u.X, u.Y)
 	}
@@ -357,7 +356,7 @@ func (u *unit) executeStandardUnitCommand(bState *battleState) {
 		}
 
 		if u.CurrentSpell == spellMagicSight {
-			u.castMagicSight(bState)
+			u.castMagicSight(bState.Board)
 		}
 
 	case cmdUIdle, cmdUStop:
@@ -417,7 +416,7 @@ func (u *unit) findApproachTileForTarget(intentionX, intentionY uint8, targetID 
 	// Cel jest budynkiem
 	if targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge) {
 		if u.AttackRange > 1 {
-			x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, targetBuilding, bState)
+			x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, targetBuilding, bState.Board)
 			if ok {
 				return x, y, nil
 			}
@@ -450,7 +449,7 @@ func (u *unit) findApproachTileForTarget(intentionX, intentionY uint8, targetID 
 	targetTile := &bState.Board.Tiles[intentionX][intentionY]
 
 	if targetTile.isTree() {
-		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(intentionX, intentionY, bState)
+		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(intentionX, intentionY, bState.Board)
 		if !ok {
 			return 0, 0, fmt.Errorf("nie ma pozycji do ataku tego drzewa")
 		}
@@ -461,7 +460,7 @@ func (u *unit) findApproachTileForTarget(intentionX, intentionY uint8, targetID 
 	return 0, 0, fmt.Errorf("cel ataku ID %d nie istnieje", targetID)
 }
 
-func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bState *battleState) (uint8, uint8, bool) {
+func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, board *boardData) (uint8, uint8, bool) {
 	var bestX, bestY uint8
 
 	minDistance := math.MaxFloat64
@@ -476,7 +475,7 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bState *battl
 				continue // wiersz poza planszą
 			}
 
-			if !isWalkable(bState, uint8(column), uint8(row)) {
+			if !isWalkable(board, uint8(column), uint8(row)) {
 				continue // kafelek nieprzechodni
 			}
 
@@ -488,7 +487,7 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, bState *battl
 				continue // pomijamy samo drzewo
 			}
 
-			electedTile := &bState.Board.Tiles[uint8(column)][uint8(row)]
+			electedTile := &board.Tiles[uint8(column)][uint8(row)]
 
 			if electedTile.Unit != nil && electedTile.Unit.ID != u.ID {
 				continue // ktoś już tam stoi
@@ -572,7 +571,7 @@ func (u *unit) calculateApproachTile(intentionX, intentionY uint8, command comma
 	if u.CurrentSpell == spellMagicShower {
 		// Intencja, to TargetX/Y
 		// tutaj ustalamy, gdzie kapłan/ka mają stanąć
-		finalX, finalY, ok := u.findBestPositionAroundTile(intentionX, intentionY, bState)
+		finalX, finalY, ok := u.findBestPositionAroundTile(intentionX, intentionY, bState.Board)
 		if !ok {
 			return 0, 0, fmt.Errorf("brak miejsca w zasięgu czaru")
 		}
@@ -822,7 +821,7 @@ func (u *unit) executeAStarMovement(bState *battleState) {
 		return
 	}
 
-	u.moveAlongPath(bState)
+	u.moveAlongPath(bState.Board)
 }
 
 func (u *unit) ensureValidPath(bState *battleState) bool {
@@ -894,7 +893,7 @@ func (u *unit) setPathAndState(path []*pathNode) {
 	u.RetryAttempts = 0
 }
 
-func (u *unit) moveAlongPath(bState *battleState) {
+func (u *unit) moveAlongPath(board *boardData) {
 	if u.PathIndex >= len(u.Path) {
 		u.clearPath()
 
@@ -903,24 +902,24 @@ func (u *unit) moveAlongPath(bState *battleState) {
 
 	next := u.Path[u.PathIndex]
 
-	if u.canMoveTo(next.X, next.Y, bState) {
-		u.executeSuccessfulMove(next.X, next.Y, bState)
+	if u.canMoveTo(next.X, next.Y, board) {
+		u.executeSuccessfulMove(next.X, next.Y, board)
 	} else {
-		u.handleMovementBlocked(bState, next.X, next.Y)
+		u.handleMovementBlocked(board, next.X, next.Y)
 	}
 }
 
-func (u *unit) executeSuccessfulMove(x, y uint8, bState *battleState) {
-	u.executeMove(x, y, bState)
+func (u *unit) executeSuccessfulMove(x, y uint8, board *boardData) {
+	u.executeMove(x, y, board)
 	u.resetMovementCounters()
 	u.updateMovementHistory()
 }
 
-func (u *unit) handleMovementBlocked(bState *battleState, blockedX, blockedY uint8) {
-	detourX, detourY, ok := u.findLocalDetour(bState, blockedX, blockedY)
+func (u *unit) handleMovementBlocked(board *boardData, blockedX, blockedY uint8) {
+	detourX, detourY, ok := u.findLocalDetour(board, blockedX, blockedY)
 
 	if !ok {
-		u.executeSuccessfulMove(detourX, detourY, bState)
+		u.executeSuccessfulMove(detourX, detourY, board)
 		u.invalidatePathForRecalculation()
 		return
 	}
@@ -928,7 +927,7 @@ func (u *unit) handleMovementBlocked(bState *battleState, blockedX, blockedY uin
 	u.handlePersistentBlock()
 }
 
-func (u *unit) findLocalDetour(bState *battleState, blockedX, blockedY uint8) (uint8, uint8, bool) {
+func (u *unit) findLocalDetour(board *boardData, blockedX, blockedY uint8) (uint8, uint8, bool) {
 	bestX, bestY := 0, 0
 	bestScore := math.MaxFloat64
 
@@ -944,7 +943,7 @@ func (u *unit) findLocalDetour(bState *battleState, blockedX, blockedY uint8) (u
 				continue
 			}
 
-			if !u.canMoveTo(uint8(x), uint8(y), bState) {
+			if !u.canMoveTo(uint8(x), uint8(y), board) {
 				continue
 			}
 
@@ -1173,7 +1172,7 @@ func (bState *battleState) generateFormationPositions(centerX, centerY, count ui
 		x := centerX + offsetX
 		y := centerY + offsetY
 
-		if x < boardMaxX && y < boardMaxY && isWalkable(bState, x, y) {
+		if x < boardMaxX && y < boardMaxY && isWalkable(bState.Board, x, y) {
 			positions = append(positions, point{X: x, Y: y})
 		} else {
 			positions = append(positions, point{X: centerX, Y: centerY})
@@ -1183,12 +1182,12 @@ func (bState *battleState) generateFormationPositions(centerX, centerY, count ui
 	return positions
 }
 
-func (u *unit) canMoveTo(x, y uint8, bState *battleState) bool {
+func (u *unit) canMoveTo(x, y uint8, board *boardData) bool {
 	if x >= boardMaxX || y >= boardMaxY {
 		return false
 	}
 
-	currentTile := &bState.Board.Tiles[x][y]
+	currentTile := &board.Tiles[x][y]
 
 	// Kolizja z jednostkami (standardowo)
 	if currentTile.Unit != nil && currentTile.Unit.ID != u.ID {
@@ -1197,7 +1196,7 @@ func (u *unit) canMoveTo(x, y uint8, bState *battleState) bool {
 
 	// Kolizja z terenem/budynkami (używamy nowej funkcji z pathfinding.go)
 	// Przekazujemy 'u', aby obsłużyć wyjątek krowy wchodzącej do obory
-	return isWalkableUnit(bState, x, y, u)
+	return isWalkableUnit(board, x, y, u)
 }
 
 // calculateMilkingSpot oblicza milking spot dla obory
@@ -1222,11 +1221,11 @@ func (bld *building) calculateMilkingSpot() (uint8, uint8, bool) {
 }
 
 // executeMove wykonuje ruch na nową pozycję.
-func (u *unit) executeMove(x, y uint8, bState *battleState) {
+func (u *unit) executeMove(x, y uint8, board *boardData) {
 	// ZMIANA: Używamy nowej struktury Tiles
 	// Usuń z poprzedniej pozycji (jeśli to ta jednostka tam jest)
-	if bState.Board.Tiles[u.X][u.Y].Unit == u {
-		bState.Board.Tiles[u.X][u.Y].Unit = nil
+	if board.Tiles[u.X][u.Y].Unit == u {
+		board.Tiles[u.X][u.Y].Unit = nil
 	}
 
 	oldX, oldY := u.X, u.Y
@@ -1234,7 +1233,7 @@ func (u *unit) executeMove(x, y uint8, bState *battleState) {
 	u.X, u.Y = x, y
 
 	// Ustaw na nowej pozycji
-	bState.Board.Tiles[u.X][u.Y].Unit = u
+	board.Tiles[u.X][u.Y].Unit = u
 
 	u.PathIndex++
 	u.updateMovementAnimation(oldX, oldY)
@@ -1756,7 +1755,7 @@ func (u *unit) castSpell(bState *battleState) {
 	}
 }
 
-func (u *unit) castMagicSight(bState *battleState) {
+func (u *unit) castMagicSight(board *boardData) {
 	if u.Mana >= spellCostMagicSight {
 		u.Mana -= spellCostMagicSight
 		log.Printf("Jednostka %d rzuca czar widzenia", u.ID)
@@ -1767,7 +1766,7 @@ func (u *unit) castMagicSight(bState *battleState) {
 				if i <= boardMaxX && j <= boardMaxY {
 					// @todo: czemu 18?!
 					if math.Abs(float64(u.X-i))+math.Abs(float64(u.Y-j)) < 18 {
-						bState.Board.Tiles[i][j].Visibility = visibilityVisible
+						board.Tiles[i][j].Visibility = visibilityVisible
 					}
 				}
 			}
@@ -2116,7 +2115,7 @@ func (u *unit) findBestPositionAroundUnit(targetUnit *unit, bState *battleState)
 			checkX := int(targetUnit.X) + dx
 			checkY := int(targetUnit.Y) + dy
 
-			if u.isValidMoveTarget(uint8(checkX), uint8(checkY), bState) {
+			if u.isValidMoveTarget(uint8(checkX), uint8(checkY), bState.Board) {
 				// log.Println("Funkcja findBestPositionAroundUnit isValidMoveTarget = true, szukam freeSpot")
 				dist := math.Abs(float64(int(u.X)-checkX)) + math.Abs(float64(int(u.Y)-checkY))
 				if dist < minDist {
@@ -2139,10 +2138,10 @@ func (u *unit) findBestPositionAroundUnit(targetUnit *unit, bState *battleState)
 	return uint8(bestX), uint8(bestY)
 }
 
-func (u *unit) findBestPositionAroundTile(tileX, tileY uint8, bState *battleState) (uint8, uint8, bool) {
+func (u *unit) findBestPositionAroundTile(tileX, tileY uint8, board *boardData) (uint8, uint8, bool) {
 	// 1. Najpierw sprawdzamy, czy sam kliknięty kafelek jest przechodni i pusty
-	if isWalkable(bState, tileX, tileY) {
-		currentTile := &bState.Board.Tiles[tileX][tileY]
+	if isWalkable(board, tileX, tileY) {
+		currentTile := &board.Tiles[tileX][tileY]
 		if currentTile.Unit == nil || currentTile.Unit.ID == u.ID {
 			return tileX, tileY, true
 		}
@@ -2162,12 +2161,12 @@ func (u *unit) findBestPositionAroundTile(tileX, tileY uint8, bState *battleStat
 				continue
 			}
 
-			if !isWalkable(bState, uint8(checkX), uint8(checkY)) {
+			if !isWalkable(board, uint8(checkX), uint8(checkY)) {
 				continue
 			}
 
 			// Pomijamy kafelki zajęte przez inne jednostki
-			currentTile := &bState.Board.Tiles[checkX][checkY]
+			currentTile := &board.Tiles[checkX][checkY]
 			if currentTile.Unit != nil && currentTile.Unit.ID != u.ID {
 				continue
 			}
@@ -2184,11 +2183,11 @@ func (u *unit) findBestPositionAroundTile(tileX, tileY uint8, bState *battleStat
 	return bestX, bestY, found
 }
 
-func (u *unit) isValidMoveTarget(x, y uint8, bState *battleState) bool {
+func (u *unit) isValidMoveTarget(x, y uint8, board *boardData) bool {
 	return x < boardMaxX && y < boardMaxY &&
-		bState.Board.Tiles[x][y].Unit == nil &&
-		bState.Board.Tiles[x][y].Building == nil &&
-		isWalkable(bState, x, y)
+		board.Tiles[x][y].Unit == nil &&
+		board.Tiles[x][y].Building == nil &&
+		isWalkable(board, x, y)
 }
 
 func (u *unit) validateTargetExists(bState *battleState) (*combatTarget, error) {
@@ -2347,7 +2346,7 @@ func (t unitType) getLegacyUnitIndex() int {
 	return int(t)
 }
 
-func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *building, bState *battleState) (uint8, uint8, bool) {
+func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *building, board *boardData) (uint8, uint8, bool) {
 	if len(bld.OccupiedTiles) == 0 {
 		return 0, 0, false
 	}
@@ -2384,7 +2383,7 @@ func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *b
 	for _, candidate := range candidates {
 		x, y := candidate.X, candidate.Y
 
-		if !bld.isValidWalkableTile(x, y, bState) {
+		if !bld.isValidWalkableTile(x, y, board) {
 			continue
 		}
 

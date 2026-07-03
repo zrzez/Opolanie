@@ -525,7 +525,7 @@ func (bld *building) getClosestWalkableTile(bState *battleState) (uint8, uint8, 
 	return 0, 0, false
 }
 
-func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8, bState *battleState) (uint8, uint8, bool) {
+func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8, board *boardData) (uint8, uint8, bool) {
 	centerX, centerY, ok := bld.getCenter()
 	if !ok {
 		return 0, 0, false
@@ -555,7 +555,7 @@ func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8,
 	minDistance := math.MaxFloat64
 
 	for _, candidate := range candidates {
-		if !bld.isValidWalkableTile(candidate.X, candidate.Y, bState) {
+		if !bld.isValidWalkableTile(candidate.X, candidate.Y, board) {
 			continue
 		}
 
@@ -572,12 +572,12 @@ func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8,
 	return bestX, bestY, true
 }
 
-func (bld *building) isValidWalkableTile(x, y uint8, bState *battleState) bool {
+func (bld *building) isValidWalkableTile(x, y uint8, board *boardData) bool {
 	if x < 0 || x >= boardMaxX || y < 0 || y >= boardMaxY {
 		return false
 	}
 
-	currentTile := &bState.Board.Tiles[x][y]
+	currentTile := &board.Tiles[x][y]
 
 	// Jest przejezdne I nie ma tam nikogo
 	return currentTile.IsWalkable && currentTile.Unit == nil && currentTile.Building == nil
@@ -691,7 +691,7 @@ func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *
 	newUnit.Owner = bld.Owner
 	newUnit.BelongsTo = bld
 
-	newUnit.show(bState)
+	newUnit.show(bState.Board)
 
 	bState.Units = append(bState.Units, newUnit)
 	bld.registerUnit(newUnit.ID)

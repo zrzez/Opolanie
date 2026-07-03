@@ -71,7 +71,7 @@ func validateConstructionSite(bType buildingType, tileX, tileY uint8, bState *ba
 		if isWater(textureID) {
 			return false, buildErrWater
 		}
-		if !isWalkable(bState, tileX, tileY) {
+		if !isWalkable(bState.Board, tileX, tileY) {
 			return false, buildErrObstacle
 		}
 		if !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) {

@@ -1289,7 +1289,7 @@ func handleMinimapRightMouse(
 
 	if targetID != 0 && (targetOwner != bState.PlayerID || iState.IsCtrlKeyDown) {
 		cmdType = cmdUAttack
-	} else if !isWalkable(bState, tileX, tileY) {
+	} else if !isWalkable(bState.Board, tileX, tileY) {
 		bState.CurrentMessage.Text = "Nieprzechodnie!"
 		bState.CurrentMessage.Duration = 60
 

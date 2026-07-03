@@ -347,7 +347,7 @@ func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) 
 		newUnit.Owner = ownerID
 
 		// Wstawienie na mapę
-		newUnit.show(bState)
+		newUnit.show(bState.Board)
 
 		// Dodanie do głównej listy
 		bState.Units = append(bState.Units, newUnit)

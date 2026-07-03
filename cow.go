@@ -449,7 +449,7 @@ func findNearestAvailableWaitingSpot(targetX, targetY uint8, bState *battleState
 
 				// Reszta logiki bez zmian...
 				isOccupied := tile.Unit != nil && tile.Unit.ID != myUnitID
-				if isWalkable(bState, x, y) && !isOccupied && tile.Building == nil {
+				if isWalkable(bState.Board, x, y) && !isOccupied && tile.Building == nil {
 					return x, y, true
 				}
 			}
@@ -528,7 +528,7 @@ func findReachableGrass(u *unit, bState *battleState, originX, originY, radius u
 			}
 
 			// 3. Sprawdź drogę
-			if isWalkable(bState, nextX, nextY) {
+			if isWalkable(bState.Board, nextX, nextY) {
 				queue = append(queue, point{nextX, nextY})
 			}
 		}

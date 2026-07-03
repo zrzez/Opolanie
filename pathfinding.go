@@ -102,7 +102,7 @@ func findPath(bState *battleState, moverID uint, startX, startY, endX, endY uint
 
 				// 2. KLUCZOWE: Używamy isWalkableUnit zamiast zwykłego isWalkable
 				// To pozwala krowie wejść w ścianę obory, jeśli to jej cel.
-				if !isWalkableUnit(bState, uint8(checkX), uint8(checkY), mover) {
+				if !isWalkableUnit(bState.Board, uint8(checkX), uint8(checkY), mover) {
 					continue
 				}
 
@@ -131,18 +131,18 @@ func findPath(bState *battleState, moverID uint, startX, startY, endX, endY uint
 	return nil
 }
 
-func isWalkable(bState *battleState, x, y uint8) bool {
-	return isWalkableUnit(bState, x, y, nil)
+func isWalkable(board *boardData, x, y uint8) bool {
+	return isWalkableUnit(board, x, y, nil)
 }
 
 // isWalkableUnit - Sprawdza czy dana jednostka może wejść na kafelek.
 // Obsługuje wyjątek: Krowa wchodzi do swojej Obory (punkt dojenia).
-func isWalkableUnit(bState *battleState, x, y uint8, mover *unit) bool {
+func isWalkableUnit(board *boardData, x, y uint8, mover *unit) bool {
 	if x >= boardMaxX || y >= boardMaxY {
 		return false
 	}
 
-	currentTile := &bState.Board.Tiles[x][y]
+	currentTile := &board.Tiles[x][y]
 
 	// 1. Sprawdź czy to budynek
 	if currentTile.Building != nil {

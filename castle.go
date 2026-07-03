@@ -274,7 +274,7 @@ func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *bat
 		u.ID, cmd.TargetX, cmd.TargetY)
 
 	// 1. Sprawdzenie czy kafelek jest przechodni (używamy isWalkable)
-	if !isWalkable(bState, cmd.TargetX, cmd.TargetY) {
+	if !isWalkable(bState.Board, cmd.TargetX, cmd.TargetY) {
 		// Pobieramy ID tekstury z nowej struktury Tiles
 		var terrainID uint16
 		if cmd.TargetX < boardMaxX && cmd.TargetY < boardMaxY {
