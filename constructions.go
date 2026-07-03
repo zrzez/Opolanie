@@ -11,7 +11,7 @@ import (
 
 // initConstruction odpowiada tylko za techniczne utworzenie obiektu w pamięci i na planszy.
 // Nie mylić z tryBuildStructure.
-func (bld *building) initConstruction(x, y uint8, buildingType buildingType, owner uint8, bState *battleState) {
+func (bld *building) initConstruction(buildingType buildingType, owner uint8, nextUniqueObjectID uint) {
 	// 1. Sprawdzamy, czy dany rodzaj budynku był określony wcześniej
 	stats, ok := buildingDefs[buildingType]
 	if !ok {
@@ -21,8 +21,7 @@ func (bld *building) initConstruction(x, y uint8, buildingType buildingType, own
 	}
 
 	// 2. Podstawowe właściwości
-	bld.ID = bState.NextUniqueObjectID
-	bState.NextUniqueObjectID++
+	bld.ID = nextUniqueObjectID
 	bld.Type = buildingType
 	bld.Owner = owner
 	bld.Exists = true
@@ -30,28 +29,7 @@ func (bld *building) initConstruction(x, y uint8, buildingType buildingType, own
 	bld.MaxHP = stats.MaxHP
 	bld.HP = stats.MaxHP
 	bld.MaxFood = stats.MaxFood
-
 	bld.AssignedUnits = make([]uint, 0)
-
-	// 3. Zajmowanie kafelków
-	bld.OccupiedTiles = make([]point, 0, stats.Width*stats.Height)
-
-	startX := x
-	startY := y
-
-	for ox := range stats.Width {
-		for oy := range stats.Height {
-			px, py := startX+ox, startY+oy
-
-			if px < boardMaxX && py < boardMaxY {
-				bld.OccupiedTiles = append(bld.OccupiedTiles, point{X: px, Y: py})
-
-				occupieTile := &bState.Board.Tiles[px][py]
-				occupieTile.Building = bld
-				occupieTile.IsWalkable = false
-			}
-		}
-	}
 }
 
 func (bld *building) startConstruction(bState *battleState) {
@@ -159,7 +137,10 @@ func placeConstructionSite(tileX, tileY, bldOwner uint8, bldStats buildingStats,
 	newBld := &building{}
 
 	// init teraz przyjmie tileX, tileY jako lewy górny róg
-	newBld.initConstruction(tileX, tileY, bldType, bldOwner, bState)
+	newBld.initConstruction(bldType, bldOwner, bState.NextUniqueObjectID)
+	bState.NextUniqueObjectID++
+
+	placeConstructionOnBoard(newBld, tileX, tileY, bState.Board)
 
 	bState.Buildings = append(bState.Buildings, newBld)
 	newBld.startConstruction(bState)
@@ -800,4 +781,147 @@ func (bld *building) isRepairable(playerID uint8) bool {
 	}
 
 	return bld.Type == buildingPalisade || bld.Type == buildingBridge || bld.Owner == playerID
+}
+
+func cleanupDestroyedBuildings(bState *battleState) {
+	if bState.GlobalFrameCounter%6000 != 0 {
+		return
+	}
+
+	if len(bState.Buildings) < int(maxBuildingsPerPlayer)*4 {
+		return
+	}
+
+	log.Println("INFO: Rozpoczynam czyszczenie pamięci z budynków...")
+
+	newBuildingsList := make([]*building, 0, len(bState.Buildings))
+	for _, bld := range bState.Buildings {
+		if bld.Exists {
+			newBuildingsList = append(newBuildingsList, bld)
+		}
+	}
+
+	removedCount := len(bState.Buildings) - len(newBuildingsList)
+	bState.Buildings = newBuildingsList
+
+	if removedCount > 0 {
+		log.Printf("INFO: Wyczyszczono %d zniszczonych budynków.", removedCount)
+	}
+}
+
+func cleanupConvertedBuildings(bState *battleState) {
+	newBuildingList := make([]*building, 0, len(bState.Buildings))
+
+	for _, bld := range bState.Buildings {
+		if bld.IsPendingRemoval {
+			// @reminder: Nie da się zasadzić budowy poza granicami
+			// planszy więc nie trzeba sprawdzać przy usuwaniu
+			// czy zajmowane kafelki mieszczą się w planszy
+			currentTile := &bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y]
+			currentTile.Building = nil
+			currentTile.IsWalkable = true
+		} else {
+			// zachowujemy budynek
+			newBuildingList = append(newBuildingList, bld)
+		}
+	}
+	// lista budynków staje się listą zachowanych budowli
+	bState.Buildings = newBuildingList
+}
+
+func applyPhase2Graphics(bld *building, board *boardData) {
+	if bld.Type == buildingPalisade {
+		return
+	}
+
+	template, ok := constructionTemplatesPhase02[bld.Type]
+	if !ok {
+		return
+	}
+
+	minX, minY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
+
+	for dy, row := range template {
+		for dx, texID := range row {
+			tx, ty := uint16(minX)+uint16(dx), uint16(minY)+uint16(dy)
+			board.Tiles[tx][ty].TextureID = texID
+		}
+	}
+}
+
+func completeConstruction(bld *building, board *boardData, playerID uint8) bool {
+	bld.IsUnderConstruction = false
+	bld.HP = bld.MaxHP
+
+	applyFinishedGraphics(bld, board)
+
+	if bld.Type == buildingBridge {
+		bld.IsPendingRemoval = true
+	}
+
+	return bld.Owner == playerID
+}
+
+func applyFinishedGraphics(bld *building, board *boardData) {
+	switch bld.Type {
+	case buildingPalisade:
+		if bld.Type == buildingPalisade {
+			pt := bld.OccupiedTiles[0]
+			joinPalisade(pt.X, pt.Y, board)
+		}
+
+		return
+
+	case buildingBridge:
+		board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].IsWalkable = true
+		board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteBridge01
+
+		return
+
+	default:
+		template, ok := buildingTemplates[bld.Type]
+		if !ok {
+			fmt.Println("Bład przy próbie zastosowania grafiki ukończonej budowy.")
+		}
+
+		minX, minY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
+
+		for dy, row := range template {
+			for dx, texID := range row {
+				tx, ty := minX+uint8(dx), minY+uint8(dy)
+				if tx < boardMaxX && ty < boardMaxY {
+					board.Tiles[tx][ty].TextureID = uint16(texID)
+				}
+			}
+		}
+	}
+}
+
+func placeConstructionOnBoard(bld *building, x, y uint8, board *boardData) {
+	// 1. Sprawdzamy, czy dany rodzaj budynku był określony wcześniej
+	stats, ok := buildingDefs[bld.Type]
+	if !ok {
+		log.Printf("BŁĄD KRYTYCZNY: Brak określenia dla budynku rodzaju %d!", bld.Type)
+
+		return
+	}
+	// 3. Zajmowanie kafelków
+	bld.OccupiedTiles = make([]point, 0, stats.Width*stats.Height)
+
+	startX := x
+	startY := y
+
+	for ox := range stats.Width {
+		for oy := range stats.Height {
+			px, py := startX+ox, startY+oy
+
+			if px < boardMaxX && py < boardMaxY {
+				bld.OccupiedTiles = append(bld.OccupiedTiles, point{X: px, Y: py})
+
+				occupieTile := &board.Tiles[px][py]
+				occupieTile.Building = bld
+				occupieTile.IsWalkable = false
+			}
+		}
+	}
 }
