@@ -705,7 +705,7 @@ func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *
 	// W sumie, to może należałoby odwrócić logikę, bo != jest dużo częsciej?
 	if newUnit.Type == unitCow {
 		// Bez tego nowa krowa stoi bezczynnie
-		newUnit.grazeCowPhase(bState)
+		newUnit.Command = cmdUGraze
 	}
 
 	log.Printf("DEBUG: Stworzono jednostkę. Populacja Gracza: %d, AI: %d",

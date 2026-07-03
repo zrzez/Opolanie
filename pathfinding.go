@@ -59,15 +59,8 @@ func (h *pathNodeHeap) update(node, parent *pathNode, goCost, heuristicCost floa
 const maxPathfindingIterations = 10000
 
 // odnajduje ścieżkę do celu używając algo A*.
-func findPath(bState *battleState, moverID uint, startX, startY, endX, endY uint8) []*pathNode {
+func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) []*pathNode {
 	startNode := &pathNode{parent: nil, X: startX, Y: startY}
-
-	// 1. Pobieramy jednostkę, żeby wiedzieć kim jesteśmy (dla wyjątków ruchu - np. Krowa->Obora)
-	var mover *unit
-	if moverID > 0 {
-		mover, _ = bState.getObjectByID(moverID)
-	}
-
 	openHeap := &pathNodeHeap{}
 	heap.Init(openHeap)
 	heap.Push(openHeap, startNode)
@@ -102,11 +95,11 @@ func findPath(bState *battleState, moverID uint, startX, startY, endX, endY uint
 
 				// 2. KLUCZOWE: Używamy isWalkableUnit zamiast zwykłego isWalkable
 				// To pozwala krowie wejść w ścianę obory, jeśli to jej cel.
-				if !isWalkableUnit(bState.Board, uint8(checkX), uint8(checkY), mover) {
+				if !isWalkableUnit(board, uint8(checkX), uint8(checkY), mover) {
 					continue
 				}
 
-				newGoCost := currentNode.goCost + calculateMoveCost(currentNode, &pathNode{X: uint8(checkX), Y: uint8(checkY)}, bState, moverID)
+				newGoCost := currentNode.goCost + calculateMoveCost(currentNode, &pathNode{X: uint8(checkX), Y: uint8(checkY)}, board, mover)
 
 				if existingNode, found := nodeMap[coordKey]; found {
 					if newGoCost <= existingNode.goCost {
@@ -220,14 +213,14 @@ func isWaterOrObstacle(spriteID uint16) bool {
 	return false
 }
 
-func calculateMoveCost(from, to *pathNode, bState *battleState, moverID uint) float64 {
+func calculateMoveCost(from, to *pathNode, board *boardData, mover *unit) float64 {
 	cost := 1.0
 	// koszt ruchu po przekątnej
 	if from.X != to.X && from.Y != to.Y {
 		cost = 1.414
 	}
 
-	terrainID := bState.Board.Tiles[to.X][to.Y].TextureID
+	terrainID := board.Tiles[to.X][to.Y].TextureID
 
 	// Drogi ułatwiają ruch
 	if terrainID >= spriteRoadStart && terrainID <= spriteRoadEnd {
@@ -236,8 +229,8 @@ func calculateMoveCost(from, to *pathNode, bState *battleState, moverID uint) fl
 
 	// Unikanie tłoku (sztuczka A*):
 	// Inne jednostki nie są ścianą (isWalkableUnit puszcza), ale są bardzo drogie.
-	currentTile := &bState.Board.Tiles[to.X][to.Y]
-	if currentTile.Unit != nil && uint(currentTile.Unit.Owner) == moverID {
+	currentTile := &board.Tiles[to.X][to.Y]
+	if currentTile.Unit != nil && currentTile.Unit.Owner == mover.Owner {
 		cost *= 3
 	}
 

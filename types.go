@@ -465,6 +465,7 @@ type battleState struct {
 	enemyCacheUpdateTick      uint16
 	pathfindingUnitsThisTick  uint16
 	enemyCacheUpdatesThisTick uint16
+	PathfindingBudget         int
 }
 
 type enemyCacheEntry struct {
@@ -613,3 +614,8 @@ type bounds struct {
 }
 
 type unitDirection uint8
+
+// ============ INTERFACE
+type ObjectResolver interface {
+	GetObjectByID(id uint) (*unit, *building)
+}

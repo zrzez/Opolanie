@@ -15,7 +15,7 @@ const (
 	milkingSpeed    uint8 = 3   // celuję w 1,6 sekundy dojenia
 )
 
-func (u *unit) handleCowBehavior(bState *battleState) {
+func (u *unit) handleCowBehavior(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	// 0. Obsługa techniczna, opóźnienia i blokady
 	if u.Delay > 0 {
 		u.Delay--
@@ -37,14 +37,14 @@ func (u *unit) handleCowBehavior(bState *battleState) {
 
 	// 2. Faza: Obora, pełne wymiona lub ucieczka
 	if u.Udder >= fullUdderAmount || u.Command == cmdBMilking {
-		u.milkCowPhase(bState)
+		u.milkCowPhase(resolver, board, pathfindingBudget, bState)
 
 		return
 	}
 
 	// 3. Faza: Wypasanie
 	// Obejmuje też tryb CMD_GRAZE i CMD_IDLE (szukanie jedzenia) to może być problematyczne dla 1.
-	u.grazeCowPhase(bState)
+	u.grazeCowPhase(resolver, board, pathfindingBudget, bState)
 }
 
 // Fazy zachowania
@@ -57,7 +57,7 @@ func (u *unit) idleCow() {
 }
 
 // Faza 1: Logika związana z oborą.
-func (u *unit) milkCowPhase(bState *battleState) {
+func (u *unit) milkCowPhase(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	barnX, barnY, isSpotFree := findNearestBarnMilkingSpot(u, bState)
 
 	// A. Nie znaleziono żadnej obory
@@ -69,17 +69,17 @@ func (u *unit) milkCowPhase(bState *battleState) {
 
 	// B. Krowa jest na miejscu dojenia
 	if u.X == barnX && u.Y == barnY {
-		u.performMilkingAction(bState)
+		u.performMilkingAction(resolver, board, pathfindingBudget, bState)
 
 		return
 	}
 
 	// C. Krowa musi dojść do obory (lub do kolejki)
-	u.moveToBarnOrQueue(bState, barnX, barnY, isSpotFree)
+	u.moveToBarnOrQueue(resolver, board, pathfindingBudget, bState, barnX, barnY, isSpotFree)
 }
 
 // Faza 2 i 3: Logika wypasania
-func (u *unit) grazeCowPhase(bState *battleState) {
+func (u *unit) grazeCowPhase(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	// Krok A: Jeśli stoimy na trawie → jedz
 	if u.tryEatGrass(bState) {
 		return
@@ -87,20 +87,20 @@ func (u *unit) grazeCowPhase(bState *battleState) {
 
 	// Jeśli mamy rozkaz ruchu (np. gracz kliknął), a nie doszliśmy → idź
 	if u.Command == cmdUMove && !u.isAtTarget() {
-		u.move(bState)
+		u.move(resolver, board, pathfindingBudget, bState)
 
 		return
 	}
 
 	// Krok B: Jeśli nie jemy, a jesteśmy w ruchu → idź dalej
 	if u.State == stateMoving && !u.isAtTarget() {
-		u.move(bState)
+		u.move(resolver, board, pathfindingBudget, bState)
 
 		return
 	}
 
 	// Krok C: Znajdź nowy kawałek trawy
-	u.findNewPasture(bState)
+	u.findNewPasture(resolver, board, pathfindingBudget, bState)
 }
 
 var (
@@ -154,7 +154,7 @@ func (u *unit) tryEatGrass(bState *battleState) bool {
 }
 
 // Szuka nowej trawy i wydaje rozkaz ruchu.
-func (u *unit) findNewPasture(bState *battleState) {
+func (u *unit) findNewPasture(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	originX, originY, ok := u.getGrazingAnchorPoint()
 	if !ok {
 		return
@@ -166,34 +166,34 @@ func (u *unit) findNewPasture(bState *battleState) {
 	grassX, grassY, found := findReachableGrass(u, bState, originX, originY, grazingRadius)
 
 	if found {
-		u.addAndMove(cmdUGraze, grassX, grassY, 0, bState, "Znalazłam trawę.")
+		u.addAndMove(resolver, board, pathfindingBudget, cmdUGraze, grassX, grassY, 0, bState, "Znalazłam trawę.")
 	} else {
 		// Nie ma trawy -> Wróć pod oborę i czekaj
-		u.returnToBarnArea(bState)
+		u.returnToBarnArea(resolver, board, pathfindingBudget, bState)
 	}
 }
 
 // Decyzja: idź prosto do wejścia CZY dołącz do kolejki
-func (u *unit) moveToBarnOrQueue(bState *battleState, barnX, barnY uint8, spotAvailable bool) {
+func (u *unit) moveToBarnOrQueue(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState, barnX, barnY uint8, spotAvailable bool) {
 	if spotAvailable {
 		// Obora wolna -> Idź prosto do środka
-		u.addAndMove(cmdUMove, barnX, barnY, 0, bState, "Idę do obory (wolne).")
+		u.addAndMove(resolver, board, pathfindingBudget, cmdUMove, barnX, barnY, 0, bState, "Idę do obory (wolne).")
 		u.IsInQueue = false
 	} else {
 		// Zajęte -> Dołącz do kolejki
-		u.joinMilkingQueue(bState, barnX, barnY)
+		u.joinMilkingQueue(resolver, board, pathfindingBudget, bState, barnX, barnY)
 	}
 }
 
 // Logika dołączania do kolejki (Oryginalna funkcjonalność).
-func (u *unit) joinMilkingQueue(bState *battleState, barnX, barnY uint8) {
+func (u *unit) joinMilkingQueue(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState, barnX, barnY uint8) {
 	homeBarn := u.BelongsTo
 
 	if homeBarn == nil {
 		// Jeśli krowa nie ma domu, a chce się doić, idzie pod najbliższą (awaryjnie)
 		// Ale nie może wejść do kolejki "bezdomnej".
 		// w takim wypadku po prostu idzie w pobliże znalezionego barnX/y.
-		u.addAndMove(cmdUMove, barnX, barnY, 0, bState, "Idę pod oborę (bezdomna).")
+		u.addAndMove(resolver, board, pathfindingBudget, cmdUMove, barnX, barnY, 0, bState, "Idę pod oborę (bezdomna).")
 
 		return
 	}
@@ -243,9 +243,9 @@ func (u *unit) joinMilkingQueue(bState *battleState, barnX, barnY uint8) {
 	// 4. Idź do miejsca w kolejce
 	hasCorrectMoveCommand := u.Command == cmdUMove && u.TargetX == waitX && u.TargetY == waitY
 	if hasCorrectMoveCommand {
-		u.move(bState)
+		u.move(resolver, board, pathfindingBudget, bState)
 	} else {
-		u.addAndMove(cmdUMove, waitX, waitY, 0, bState, "Idę do poczekalni.")
+		u.addAndMove(resolver, board, pathfindingBudget, cmdUMove, waitX, waitY, 0, bState, "Idę do poczekalni.")
 	}
 }
 
@@ -263,18 +263,18 @@ func (u *unit) getGrazingAnchorPoint() (uint8, uint8, bool) {
 }
 
 // Awaryjny powrót w pobliże obory, gdy nie ma trawy
-func (u *unit) returnToBarnArea(bState *battleState) {
+func (u *unit) returnToBarnArea(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	u.setIdleWithReason("brak trawy w zasięgu")
 	if u.BelongsTo != nil {
 		bx, by, ok := u.BelongsTo.getClosestWalkableTile(bState)
 		if ok {
-			u.addAndMove(cmdUMove, bx, by, 0, bState, "Wracam pod oborę (brak paszy).")
+			u.addAndMove(resolver, board, pathfindingBudget, cmdUMove, bx, by, 0, bState, "Wracam pod oborę (brak paszy).")
 		}
 	}
 }
 
 // Pomocnik do wykonania ruchu
-func (u *unit) addAndMove(cmdType commandType, x, y uint8, id uint, bState *battleState, logMsg string) {
+func (u *unit) addAndMove(resolver ObjectResolver, board *boardData, pathfindingBudget *int, cmdType commandType, x, y uint8, id uint, bState *battleState, logMsg string) {
 	if u.Command != cmdType || u.TargetX != x || u.TargetY != y {
 		// Tu naprawiamy błąd "unused parameter": używamy logMsg
 		if logMsg != "" {
@@ -290,7 +290,7 @@ func (u *unit) addAndMove(cmdType commandType, x, y uint8, id uint, bState *batt
 		u.addUnitCommand(cmd, bState)
 	}
 
-	u.move(bState)
+	u.move(resolver, board, pathfindingBudget, bState)
 }
 
 // Przekazuje mleko do gracza.
@@ -321,7 +321,7 @@ func (u *unit) performMilking(bState *battleState) uint16 {
 }
 
 // Wykonuje czynność oddania mleka (gdy stoi w punkcie dojenia).
-func (u *unit) performMilkingAction(bState *battleState) {
+func (u *unit) performMilkingAction(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	transferredMilk := u.performMilking(bState)
 
 	u.IsInQueue = false
@@ -337,7 +337,7 @@ func (u *unit) performMilkingAction(bState *battleState) {
 			// Pusta → Koniec dojenia → Idź na pastwisko
 			// To nadpisze CMD_FLEE na CMD_GRAZE/CMD_MOVE
 			log.Printf("Krowa %d nie ma już mleka %d. Idzie się paść.", u.ID, u.Udder)
-			u.grazeCowPhase(bState)
+			u.grazeCowPhase(resolver, board, pathfindingBudget, bState)
 		} else {
 			// Nadal ma mleko → MUSI ZOSTAĆ w OBORZE
 			// Ustawiamy CMD_FLEE, aby handleCowBehavior w następnej klatce
@@ -352,7 +352,7 @@ func (u *unit) performMilkingAction(bState *battleState) {
 			log.Printf("Krowa %d ma jeszcze mleko %d, ale nie ma miejsca na mleko %d", u.ID, u.Udder, bState.HumanPlayerState.Milk)
 		} else {
 			// Pusta → Pastwisko
-			u.grazeCowPhase(bState)
+			u.grazeCowPhase(resolver, board, pathfindingBudget, bState)
 		}
 	}
 }

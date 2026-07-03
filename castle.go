@@ -290,8 +290,8 @@ func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *bat
 	}
 
 	path := findPath(
-		bState,
-		u.ID,
+		bState.Board,
+		u,
 		u.X,
 		u.Y,
 		cmd.TargetX,
@@ -340,7 +340,7 @@ func (bState *battleState) getUnitByID(unitID uint) (*unit, bool) {
 	return nil, false
 }
 
-func (bState *battleState) getObjectByID(objectID uint) (*unit, *building) {
+func (bState *battleState) GetObjectByID(objectID uint) (*unit, *building) {
 	if currentUnit, ok := bState.getUnitByID(objectID); ok {
 		return currentUnit, nil
 	}

@@ -493,6 +493,8 @@ func processCommands(bState *battleState) {
 
 // odświeża jednostki, sprawdza, która została zabita itd.
 func updateUnits(bState *battleState) {
+	bState.PathfindingBudget = 0
+
 	for _, currentUnit := range bState.Units {
 		if currentUnit.Exists {
 			currentUnit.updateUnit(bState)
