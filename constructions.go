@@ -103,100 +103,12 @@ func (bld *building) repair(amount uint16) {
 	bld.increaseHPBuilding(amount)
 }
 
-func (bld *building) build(amount uint16, bState *battleState) {
+func (bld *building) build(amount uint16) {
 	if !bld.Exists || !bld.IsUnderConstruction {
 		return
 	}
 
 	bld.increaseHPBuilding(amount)
-
-	if bld.HP >= bld.MaxHP/2 {
-		bld.applyPhase2Graphics(bState)
-	}
-
-	if bld.HP >= bld.MaxHP {
-		bld.completeConstruction(bState)
-	}
-}
-
-// completeConstruction domyka budowę, zmienia flagi grafikę
-func (bld *building) completeConstruction(bState *battleState) {
-	bld.IsUnderConstruction = false
-	bld.HP = bld.MaxHP
-
-	bld.applyFinishedGraphics(bState)
-
-	if bld.Owner == bState.PlayerID {
-		bState.CurrentMessage.Text = "Budowa %s zakończona!"
-		bState.CurrentMessage.Duration = 60
-	}
-
-	if bld.Type == buildingBridge {
-		// wywalamy most z listy budynków?
-		// wtedy będzie tak samo jak załadowane z mapy mosty
-		bld.convertToTerrain(bState)
-
-		return
-	}
-
-	log.Printf("INFO: Budynek ID %d (Typ %d) został ukończony.", bld.ID, bld.Type)
-}
-
-func (bld *building) applyFinishedGraphics(bState *battleState) {
-	switch bld.Type {
-	case buildingPalisade:
-		if bld.Type == buildingPalisade && len(bld.OccupiedTiles) > 0 {
-			pt := bld.OccupiedTiles[0]
-			joinRoadsPalisade(pt.X, pt.Y, bld, bState)
-		}
-
-		return
-
-	case buildingBridge:
-		bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].IsWalkable = true
-		bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteBridge01
-
-		return
-
-	default:
-		template, ok := buildingTemplates[bld.Type]
-		if !ok {
-			fmt.Println("Bład przy próbie zastosowania grafiki ukończonej budowy.")
-		}
-
-		minX, minY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
-
-		for dy, row := range template {
-			for dx, texID := range row {
-				tx, ty := minX+uint8(dx), minY+uint8(dy)
-				if tx < boardMaxX && ty < boardMaxY {
-					bState.Board.Tiles[tx][ty].TextureID = uint16(texID)
-				}
-			}
-		}
-	}
-}
-
-func (bld *building) applyPhase2Graphics(bState *battleState) {
-	if bld.Type == buildingPalisade {
-		return
-	}
-
-	template, ok := constructionTemplatesPhase02[bld.Type]
-	if !ok {
-		return
-	}
-
-	minX, minY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
-
-	for dy, row := range template {
-		for dx, texID := range row {
-			tx, ty := uint16(minX)+uint16(dx), uint16(minY)+uint16(dy)
-			if tx < uint16(boardMaxX) && ty < uint16(boardMaxY) {
-				bState.Board.Tiles[tx][ty].TextureID = texID
-			}
-		}
-	}
 }
 
 func (bldType buildingType) isRegularBuilding() bool {
@@ -769,27 +681,6 @@ func (bld *building) increaseHPBuilding(amount uint16) {
 	if bld.HP >= bld.MaxHP {
 		bld.HP = bld.MaxHP
 	}
-}
-
-func (bld *building) convertToTerrain(bState *battleState) {
-	// 1. Rozsprzężamy kafelki i budynek
-	for _, tilePoint := range bld.OccupiedTiles {
-		// W granicach planszy
-		if tilePoint.X >= boardMaxX || tilePoint.Y >= boardMaxY {
-			continue
-		}
-
-		currentTile := &bState.Board.Tiles[tilePoint.X][tilePoint.Y]
-
-		currentTile.Building = nil
-		// @reminder: sprawdź, czy trzeba ustawić przechodniość na sztywno
-		// @reminder: sprawdź, czy trzeb zmieniać teksturę
-	}
-
-	// 2. Usuwamy z bs
-	bState.Buildings = slices.DeleteFunc(bState.Buildings, func(b *building) bool {
-		return b.ID == bld.ID
-	})
 }
 
 // getButtonCommand zastępuje przestarzałe GetProductionCommand.

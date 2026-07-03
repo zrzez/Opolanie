@@ -3,24 +3,9 @@ package main
 // effects.go
 
 // Funkcja do łączenia dróg/palisad
-func joinRoadsPalisade(x, y uint8, bld *building, bState *battleState) {
-	if x >= boardMaxX || y >= boardMaxY {
-		return
-	}
-
-	// tile := &bs.Board.Tiles[x][y]
-
-	switch bld.Type {
-	// case buildingRoad: // droga
-	// 	if tile.TextureID >= spriteRoadStart && tile.TextureID <= spriteRoadEnd {
-	// 		tile.TextureID = spriteRoadStart + 4
-	// 	}
-	case buildingPalisade:
-		applyPalisadeProcessing(x, y, bState.Board)
-		updateAdjacentPalisades(x, y, bState.Board)
-	default:
-		return
-	}
+func joinPalisade(x, y uint8, board *boardData) {
+	applyPalisadeProcessing(x, y, board)
+	updateAdjacentPalisades(x, y, board)
 }
 
 func updateAdjacentPalisades(x, y uint8, board *boardData) {

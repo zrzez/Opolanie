@@ -535,8 +535,22 @@ func updateBuildings(bState *battleState) {
 
 			bld.AccumulatedDamage = 0
 		}
+
+		if bld.IsUnderConstruction {
+			if bld.HP >= bld.MaxHP/2 {
+				applyPhase2Graphics(bld, bState.Board)
+			}
+
+			if bld.HP >= bld.MaxHP {
+				if completeConstruction(bld, bState.Board, bState.PlayerID) {
+					bState.CurrentMessage.Text = fmt.Sprintf("Budowa %s zakończona!", buildingDefs[bld.Type].Name)
+					bState.CurrentMessage.Duration = 60
+				}
+			}
+		}
 	}
 
+	cleanupConvertedBuildings(bState)
 	cleanupDestroyedBuildings(bState)
 }
 
@@ -768,5 +782,93 @@ func cleanupDestroyedBuildings(bState *battleState) {
 
 	if removedCount > 0 {
 		log.Printf("INFO: Wyczyszczono %d zniszczonych budynków.", removedCount)
+	}
+}
+
+func cleanupConvertedBuildings(bState *battleState) {
+	newBuildingList := make([]*building, 0, len(bState.Buildings))
+
+	for _, bld := range bState.Buildings {
+		if bld.IsPendingRemoval {
+			// @reminder: Nie da się zasadzić budowy poza granicami
+			// planszy więc nie trzeba sprawdzać przy usuwaniu
+			// czy zajmowane kafelki mieszczą się w planszy
+			currentTile := &bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y]
+			currentTile.Building = nil
+			currentTile.IsWalkable = true
+		} else {
+			// zachowujemy budynek
+			newBuildingList = append(newBuildingList, bld)
+		}
+	}
+	// lista budynków staje się listą zachowanych budowli
+	bState.Buildings = newBuildingList
+}
+
+func applyPhase2Graphics(bld *building, board *boardData) {
+	if bld.Type == buildingPalisade {
+		return
+	}
+
+	template, ok := constructionTemplatesPhase02[bld.Type]
+	if !ok {
+		return
+	}
+
+	minX, minY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
+
+	for dy, row := range template {
+		for dx, texID := range row {
+			tx, ty := uint16(minX)+uint16(dx), uint16(minY)+uint16(dy)
+			board.Tiles[tx][ty].TextureID = texID
+		}
+	}
+}
+
+func completeConstruction(bld *building, board *boardData, playerID uint8) bool {
+	bld.IsUnderConstruction = false
+	bld.HP = bld.MaxHP
+
+	applyFinishedGraphics(bld, board)
+
+	if bld.Type == buildingBridge {
+		bld.IsPendingRemoval = true
+	}
+
+	return bld.Owner == playerID
+}
+
+func applyFinishedGraphics(bld *building, board *boardData) {
+	switch bld.Type {
+	case buildingPalisade:
+		if bld.Type == buildingPalisade {
+			pt := bld.OccupiedTiles[0]
+			joinPalisade(pt.X, pt.Y, board)
+		}
+
+		return
+
+	case buildingBridge:
+		board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].IsWalkable = true
+		board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteBridge01
+
+		return
+
+	default:
+		template, ok := buildingTemplates[bld.Type]
+		if !ok {
+			fmt.Println("Bład przy próbie zastosowania grafiki ukończonej budowy.")
+		}
+
+		minX, minY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
+
+		for dy, row := range template {
+			for dx, texID := range row {
+				tx, ty := minX+uint8(dx), minY+uint8(dy)
+				if tx < boardMaxX && ty < boardMaxY {
+					board.Tiles[tx][ty].TextureID = uint16(texID)
+				}
+			}
+		}
 	}
 }

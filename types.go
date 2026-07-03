@@ -194,8 +194,9 @@ type buildingStats struct {
 
 // building określa pojedynczy budynek podczas bitwy.
 type building struct {
-	ID                uint         // Unikatowy numer budynku
-	Exists            bool         // Czy budynek nie został jeszcze zniszczony
+	ID                uint // Unikatowy numer budynku
+	Exists            bool // Czy budynek nie został jeszcze zniszczony
+	IsPendingRemoval  bool
 	Owner             uint8        // Kto jest właścicielem. colorRed gracz, inne SI
 	Type              buildingType // Rodzaj budynku (obora = buildingBarn itd.)
 	HP                uint16       // Bieżący wskaźnik wytrzymałości

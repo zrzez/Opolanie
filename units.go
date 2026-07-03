@@ -1612,7 +1612,7 @@ func (u *unit) build(bState *battleState) {
 	}
 
 	if distance == 1 {
-		targetBuilding.build(amount, bState)
+		targetBuilding.build(amount)
 	}
 }
 
