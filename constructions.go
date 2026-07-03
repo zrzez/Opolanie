@@ -573,7 +573,7 @@ func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8,
 }
 
 func (bld *building) isValidWalkableTile(x, y uint8, board *boardData) bool {
-	if x < 0 || x >= boardMaxX || y < 0 || y >= boardMaxY {
+	if x >= boardMaxX || y >= boardMaxY {
 		return false
 	}
 
