@@ -20,7 +20,7 @@ const (
 )
 
 func (u *unit) initUnit(unitType unitType, x, y uint8, command commandType, bState *battleState) {
-	u.ID = bState.NextUniqueObjectID
+	u.ID = UnitID(bState.NextUniqueObjectID)
 	bState.NextUniqueObjectID++
 	u.Exists = true
 	u.Type = unitType
@@ -420,7 +420,7 @@ func (ut unitType) canDamagePalisades() bool {
 	return ut == unitAxeman || ut == unitPriest
 }
 
-func (u *unit) findApproachTileForTarget(intentionX, intentionY uint8, targetID uint, bState *battleState) (uint8, uint8, error) {
+func (u *unit) findApproachTileForTarget(intentionX, intentionY uint8, targetID ObjectID, bState *battleState) (uint8, uint8, error) {
 	targetUnit, targetBuilding := bState.GetObjectByID(targetID)
 
 	// Cel jest budynkiem
@@ -571,12 +571,12 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	u.applyCommandState(cmd.ActionType)
 }
 
-func (u *unit) shouldSkipDuplicate(command commandType, targetX, targetY uint8, targetID uint) bool {
+func (u *unit) shouldSkipDuplicate(command commandType, targetX, targetY uint8, targetID ObjectID) bool {
 	return u.Command == command && u.TargetX == targetX &&
-		u.TargetY == targetY && u.TargetID == targetID
+		u.TargetY == targetY && ObjectID(u.TargetID) == targetID
 }
 
-func (u *unit) calculateApproachTile(intentionX, intentionY uint8, command commandType, targetID uint, bState *battleState) (uint8, uint8, error) {
+func (u *unit) calculateApproachTile(intentionX, intentionY uint8, command commandType, targetID ObjectID, bState *battleState) (uint8, uint8, error) {
 	// Gromobicie oraz deszcz ognia
 	if u.CurrentSpell == spellMagicShower {
 		// Intencja, to TargetX/Y
@@ -608,7 +608,7 @@ func (ct commandType) isInteraction() bool {
 	}
 }
 
-func (u *unit) validateCommand(command commandType, targetID uint, intentionX, intentionY uint8, bState *battleState) bool {
+func (u *unit) validateCommand(command commandType, targetID ObjectID, intentionX, intentionY uint8, bState *battleState) bool {
 	switch command {
 	case cmdUAttack:
 		return u.canAttack(targetID, intentionX, intentionY, bState)
@@ -633,7 +633,7 @@ func (u *unit) canDamageTree(treeTile *tile) bool {
 	}
 }
 
-func (u *unit) canAttack(targetID uint, intentionX, intentionY uint8, bState *battleState) bool {
+func (u *unit) canAttack(targetID ObjectID, intentionX, intentionY uint8, bState *battleState) bool {
 	// Drzewa
 	// dany kafelek musi istnieć więc nie robię != nil
 	if targetID == 0 {
@@ -654,7 +654,7 @@ func (u *unit) canAttack(targetID uint, intentionX, intentionY uint8, bState *ba
 		return false
 	}
 
-	targetUnit, targetBuilding := bState.GetObjectByID(targetID)
+	targetUnit, targetBuilding := bState.GetObjectByID(ObjectID(targetID))
 
 	// Jednostki
 	// musi istnieć
@@ -691,7 +691,7 @@ func (u *unit) canAttack(targetID uint, intentionX, intentionY uint8, bState *ba
 	return false
 }
 
-func (u *unit) prepareForNewCommand(cmdType commandType, intentionX, intentionY uint8, targetID uint, approachX, approachY uint8) {
+func (u *unit) prepareForNewCommand(cmdType commandType, intentionX, intentionY uint8, targetID ObjectID, approachX, approachY uint8) {
 	u.clearPath()
 	u.History = nil
 	u.LoopCount = 0
@@ -865,7 +865,7 @@ func (u *unit) hasValidPath(resolver ObjectResolver, board *boardData) bool {
 	}
 
 	if target.Building != nil {
-		return u.TargetID == target.Building.ID
+		return u.TargetID == ObjectID(target.Building.ID)
 	}
 
 	if target.Unit != nil {
@@ -1097,7 +1097,7 @@ func (u *unit) handleTargetReached(resolver ObjectResolver, board *boardData, bS
 }
 
 func (bState *battleState) assignGroupCommand(
-	command commandType, mainTargetX, mainTargetY uint8, mainTargetID uint,
+	command commandType, mainTargetX, mainTargetY uint8, mainTargetID ObjectID,
 	selectedUnits []*unit,
 ) {
 	if len(selectedUnits) == 0 {
@@ -1114,7 +1114,7 @@ func (bState *battleState) assignGroupCommand(
 	bState.assignScatteredGroupTargets(selectedUnits, command, targetX, targetY, mainTargetID)
 }
 
-func (bState *battleState) resolveActualTarget(mainTargetX, mainTargetY uint8, mainTargetID uint) (uint8, uint8) {
+func (bState *battleState) resolveActualTarget(mainTargetX, mainTargetY uint8, mainTargetID ObjectID) (uint8, uint8) {
 	if mainTargetID == 0 {
 		return mainTargetX, mainTargetY
 	}
@@ -1135,7 +1135,7 @@ func (bState *battleState) resolveActualTarget(mainTargetX, mainTargetY uint8, m
 	return mainTargetX, mainTargetY
 }
 
-func (bState *battleState) assignSmallGroupTargets(units []*unit, cmdType commandType, targetX, targetY uint8, targetID uint) {
+func (bState *battleState) assignSmallGroupTargets(units []*unit, cmdType commandType, targetX, targetY uint8, targetID ObjectID) {
 	for _, currentUnit := range units {
 		cmd := &command{
 			ActionType:          cmdType,
@@ -1147,7 +1147,7 @@ func (bState *battleState) assignSmallGroupTargets(units []*unit, cmdType comman
 	}
 }
 
-func (bState *battleState) assignScatteredGroupTargets(units []*unit, cmdType commandType, targetX, targetY uint8, targetID uint) {
+func (bState *battleState) assignScatteredGroupTargets(units []*unit, cmdType commandType, targetX, targetY uint8, targetID ObjectID) {
 	positions := bState.generateFormationPositions(targetX, targetY, uint8(len(units)))
 
 	for i, currentUnit := range units {
@@ -2095,14 +2095,14 @@ func (u *unit) handleTargetSearchForAI(resolver ObjectResolver, board *boardData
 }
 
 func (u *unit) handleUnitTarget(targetUnit *unit, resolver ObjectResolver, board *boardData, bState *battleState) {
-	u.TargetID = targetUnit.ID
+	u.TargetID = ObjectID(targetUnit.ID)
 	u.setMoveTargetForUnit(targetUnit, bState)
 
 	u.executeActionBasedOnDistance(resolver, board, bState)
 }
 
 func (u *unit) handleBuildingTarget(targetBuilding *building, bState *battleState) {
-	u.TargetID = targetBuilding.ID
+	u.TargetID = ObjectID(targetBuilding.ID)
 	u.startDirectAttack(u.X, u.Y, bState)
 }
 

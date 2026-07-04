@@ -547,7 +547,7 @@ func getRenderDirection(u *unit, bState *battleState) (int, int) {
 
 		// 1. Sprawdź, czy mamy cel ataku (Unit lub Building)
 		if u.TargetID != 0 {
-			targetUnit, targetBld := bState.GetObjectByID(u.TargetID)
+			targetUnit, targetBld := bState.GetObjectByID(ObjectID(u.TargetID))
 
 			if targetUnit != nil && targetUnit.Exists {
 				targetX = targetUnit.X

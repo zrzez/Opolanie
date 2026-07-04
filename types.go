@@ -29,6 +29,13 @@ type unitState int
 // unitType opisuje rodzaj jednostki (drwal, krowa itd.)
 type unitType uint8
 
+type ObjectID uint
+
+type (
+	UnitID     ObjectID
+	BuildingID ObjectID
+)
+
 // unitStats to definicja statystyk bazowych dla danego rodzaju jednostki.
 type unitStats struct {
 	Name string
@@ -65,7 +72,7 @@ const (
 
 // unit określa pojedynczą jednostkę podczas bitwy.
 type unit struct {
-	ID           uint        // Unikatowy numer jednostki
+	ID           UnitID      // Unikatowy numer jednostki
 	Exists       bool        // Czy jednostka nie została jeszcze zabita
 	X, Y         uint8       // Współrzędne jednostki
 	Owner        uint8       // Kto jest właścicielem. colorRed gracz, inne SI
@@ -74,7 +81,7 @@ type unit struct {
 	MaxHP        uint16      // Górna granica wskaźnika życia
 	Command      commandType // Bieżący rozkaz (cmdMove, cmdAttack itd.)
 	CurrentSpell spellID     // Jaki czar ma rzucić
-	TargetID     uint        // Identyfikator przedmiotu (jednostka bądź budynek) rozkazu
+	TargetID     ObjectID    // Identyfikator przedmiotu (jednostka bądź budynek) rozkazu
 	TargetX      uint8       // Intencja: Współrzędna X celu (dla cmdMove. cmdAttack)
 	TargetY      uint8       // Intencja: Współrzędna Y celu (dla cmdMove. cmdAttack)
 	// ↓↓↓↓↓↓ NOWOŚĆ! TYLKO OD ZRZEZA!
@@ -194,8 +201,8 @@ type buildingStats struct {
 
 // building określa pojedynczy budynek podczas bitwy.
 type building struct {
-	ID                uint // Unikatowy numer budynku
-	Exists            bool // Czy budynek nie został jeszcze zniszczony
+	ID                BuildingID // Unikatowy numer budynku
+	Exists            bool       // Czy budynek nie został jeszcze zniszczony
 	IsPendingRemoval  bool
 	Owner             uint8        // Kto jest właścicielem. colorRed gracz, inne SI
 	Type              buildingType // Rodzaj budynku (obora = buildingBarn itd.)
@@ -205,9 +212,9 @@ type building struct {
 	MaxHP             uint16       // Górna granica wskaźnika wytrzymałości
 	Food              uint8        // Bieżący wskaźnik liczby jednostek w budynku
 	MaxFood           uint8        // Górna granica wskaźnika liczby jednostek w budynku;
-	AssignedUnits     []uint       // Identyfikatory jednostek przypisanych do budynku
+	AssignedUnits     []UnitID     // Identyfikatory jednostek przypisanych do budynku
 	OccupiedTiles     []point      // Współrzędne budynku
-	MilkingQueue      []uint       // Wycinek z ID krowami będącymi w kolejce do dojenia w danej oborze
+	MilkingQueue      []UnitID     // Wycinek z ID krowami będącymi w kolejce do dojenia w danej oborze
 	// Budowa
 	IsUnderConstruction bool // Wskazuje, czy budowla jest w trakcie wznoszenia
 }
@@ -232,7 +239,7 @@ type (
 type command struct {
 	// ExecutorID - ID konkretnego obiektu, który MA WYKONAĆ rozkaz.
 	// Jeśli Category=0, to jest to ID Budynku. Jeśli Category=1, to ID Jednostki.
-	ExecutorID uint
+	ExecutorID ObjectID
 
 	// === CO? ===
 	ActionType commandType // Co ma zostać zrobione (cmdMove, cmdAttack, cmdRepairStructure)
@@ -245,7 +252,7 @@ type command struct {
 	// InteractionTargetID - ID obiektu, NA KTÓRYM wykonujemy akcję.
 	// Np. ID Budynku do naprawy lub ID Wroga do ataku.
 	// WAŻNE: w przyciskach UI to pole jest zazwyczaj puste (0)! Wypełnia je dopiero Input po kliknięciu w mapę.
-	InteractionTargetID uint
+	InteractionTargetID ObjectID
 
 	TargetX uint8 // Współrzędna x kliknięcia w mapę (dla ruchu/ataku obszarowego)
 	TargetY uint8 // Współrzędna y kliknięcia w mapę
@@ -308,14 +315,14 @@ type selectionState struct {
 	OwnerID uint8 // Identyfikator zaznaczonego przedmiotu (colorRed, colorYellow itd.)
 	IsUnit  bool  // Określa, czy zaznaczony przedmiot jest jednostką (prawda), czy budynkiem (fałsz)
 	// Nie wiem, co ze zgliszczami
-	UnitID     uint // Identyfikator przedmiotu zaznaczenia jeżeli jednostka
-	BuildingID uint // Identyfikator przedmiotu zaznaczenia jeżeli budynek
+	UnitID     UnitID     // Identyfikator przedmiotu zaznaczenia jeżeli jednostka
+	BuildingID BuildingID // Identyfikator przedmiotu zaznaczenia jeżeli budynek
 }
 
 // controlGroupUnit określa jednostkę w zarządzanym zespole - 02.01.2026 ciekawe co miałem na myśli pisząc to.
 // @todo: czy to powód przekazywania rozkazu tylko jednej jednostce w całej drużynie?
 type controlGroupUnit struct {
-	UnitID uint // Identyfikator jednostki
+	UnitID UnitID // Identyfikator jednostki
 }
 
 // controlGroup określa zarządzany zespół (przypisany do cyfr od 1 do 0?)
@@ -418,9 +425,9 @@ type battleState struct {
 	// === PRZEDMIOTY I JEDNOSTKI NA MAPIE ===
 	Units              []*unit                // Żyjące jednostki
 	Buildings          []*building            // Działające budynki
-	NextUnitID         uint                   // Licznik do tworzenia nowych identyfikatorów dla jednostek
-	NextBuildingID     uint                   // Licznik do tworzenia nowych identyfikatorów dla budynków
-	NextUniqueObjectID uint                   // Ogólny licznik identyfikatorów dla wszystkich.
+	NextUnitID         UnitID                 // Licznik do tworzenia nowych identyfikatorów dla jednostek
+	NextBuildingID     BuildingID             // Licznik do tworzenia nowych identyfikatorów dla budynków
+	NextUniqueObjectID ObjectID               // Ogólny licznik identyfikatorów dla wszystkich.
 	Board              *boardData             // Wszystko co związane z przechowywaniem współrzędnych na planszy
 	Projectiles        []*projectile          // Pociski
 	HealingShrines     []point                // Wykaz współrzędnych miejsc leczenia
@@ -618,5 +625,5 @@ type unitDirection uint8
 
 // ============ INTERFACE
 type ObjectResolver interface {
-	GetObjectByID(id uint) (*unit, *building)
+	GetObjectByID(id ObjectID) (*unit, *building)
 }

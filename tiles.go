@@ -340,11 +340,11 @@ func (t *tile) ghost(ghostDamage uint16, bState *battleState) {
 
 // Służy do zwrócenia ID celu z danego kafelka
 // @reminder: zwracanie właściciela „zero” jako brak będzie pewnie kłopotliwe.
-func (t *tile) getTargetFromTile() (targetID uint, targetOwner uint8) {
+func (t *tile) getTargetFromTile() (targetID ObjectID, targetOwner uint8) {
 	if t.Unit != nil {
-		return t.Unit.ID, t.Unit.Owner
+		return ObjectID(t.Unit.ID), t.Unit.Owner
 	} else if t.Building != nil {
-		return t.Building.ID, t.Building.Owner
+		return ObjectID(t.Building.ID), t.Building.Owner
 	}
 
 	return 0, 0

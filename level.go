@@ -221,7 +221,7 @@ func classifyTreeFromTexture(textureID uint16) (treeState, bool, bool) {
 func (l *jsonLevelLoader) spawnPalisade(tileX, tileY uint8, graphicID uint16, bState *battleState) {
 	if graphicID == spritePalisadeNE {
 		newPalisade := &building{}
-		newPalisade.initConstruction(buildingPalisade, colorNone, bState.NextUniqueObjectID)
+		newPalisade.initConstruction(buildingPalisade, colorNone, BuildingID(bState.NextUniqueObjectID))
 		bState.NextUniqueObjectID++
 		placeConstructionOnBoard(newPalisade, tileX, tileY, bState.Board)
 
@@ -296,7 +296,7 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bStat
 		newBuilding := &building{}
 
 		// Wywołujemy init z przeliczonymi współrzędnymi Top-Left
-		newBuilding.initConstruction(bldType, ownerID, bState.NextUniqueObjectID)
+		newBuilding.initConstruction(bldType, ownerID, BuildingID(bState.NextUniqueObjectID))
 		bState.NextUniqueObjectID++
 
 		placeConstructionOnBoard(newBuilding, topLeftX, topLeftY, bState.Board)

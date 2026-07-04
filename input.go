@@ -414,7 +414,7 @@ func handleGameShortcuts(bState *battleState) bool {
 				}
 
 				log.Printf("SKRÓT: Zapamiętywanie grupy %d", i)
-				var selectedUnitIDs []uint
+				var selectedUnitIDs []UnitID
 				for _, currentUnit := range bState.Units {
 					if currentUnit.Exists && currentUnit.Owner == bState.PlayerID && currentUnit.IsSelected {
 						selectedUnitIDs = append(selectedUnitIDs, currentUnit.ID)
@@ -642,7 +642,7 @@ func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY 
 
 // Odpowiada za dopasowanie rozkazu dla jednostki do sytuacji na planszy.
 func resolveRightClickCommandType(
-	targetTile *tile, targetID uint, targetOwner uint8,
+	targetTile *tile, targetID ObjectID, targetOwner uint8,
 	selectedUnits []*unit, bState *battleState, iState inputState,
 ) (cmdType commandType, isCommandValid bool) {
 	cmdType = cmdUMove
@@ -764,7 +764,7 @@ func handleMouseStateWorking(tileX, tileY uint8, bState *battleState, iState inp
 
 	// Określiliśmy co dokładnie robić, dobieramy brakujące dane
 	cmd.TargetX, cmd.TargetY = tileX, tileY
-	cmd.InteractionTargetID = targetBuilding.ID
+	cmd.InteractionTargetID = ObjectID(targetBuilding.ID)
 	cmd.FriendlyFire = iState.IsCtrlKeyDown
 
 	// Całkowity rozkaz idzie do węzła

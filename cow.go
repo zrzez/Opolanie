@@ -274,9 +274,8 @@ func (u *unit) returnToBarnArea(resolver ObjectResolver, board *boardData, pathf
 }
 
 // Pomocnik do wykonania ruchu
-func (u *unit) addAndMove(resolver ObjectResolver, board *boardData, pathfindingBudget *int, cmdType commandType, x, y uint8, id uint, bState *battleState, logMsg string) {
+func (u *unit) addAndMove(resolver ObjectResolver, board *boardData, pathfindingBudget *int, cmdType commandType, x, y uint8, id ObjectID, bState *battleState, logMsg string) {
 	if u.Command != cmdType || u.TargetX != x || u.TargetY != y {
-		// Tu naprawiamy błąd "unused parameter": używamy logMsg
 		if logMsg != "" {
 			log.Printf("unit %d (COW): %s", u.ID, logMsg)
 		}
@@ -422,7 +421,7 @@ func (bld *building) getMilkingSpotCoords() (uint8, uint8) {
 }
 
 // Szuka wolnego miejsca w pobliżu obory (spiralnie), żeby krowy nie stały na sobie
-func findNearestAvailableWaitingSpot(targetX, targetY uint8, bState *battleState, myUnitID uint) (uint8, uint8, bool) {
+func findNearestAvailableWaitingSpot(targetX, targetY uint8, bState *battleState, myUnitID UnitID) (uint8, uint8, bool) {
 	// Radius w pętli niech będzie int, łatwiej się operuje
 	for radius := 1; radius <= 5; radius++ {
 		for dx := -radius; dx <= radius; dx++ {

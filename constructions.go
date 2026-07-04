@@ -11,7 +11,7 @@ import (
 
 // initConstruction odpowiada tylko za techniczne utworzenie obiektu w pamięci i na planszy.
 // Nie mylić z tryBuildStructure.
-func (bld *building) initConstruction(buildingType buildingType, owner uint8, nextUniqueObjectID uint) {
+func (bld *building) initConstruction(buildingType buildingType, owner uint8, nextUniqueObjectID BuildingID) {
 	// 1. Sprawdzamy, czy dany rodzaj budynku był określony wcześniej
 	stats, ok := buildingDefs[buildingType]
 	if !ok {
@@ -21,7 +21,7 @@ func (bld *building) initConstruction(buildingType buildingType, owner uint8, ne
 	}
 
 	// 2. Podstawowe właściwości
-	bld.ID = nextUniqueObjectID
+	bld.ID = BuildingID(nextUniqueObjectID)
 	bld.Type = buildingType
 	bld.Owner = owner
 	bld.Exists = true
@@ -29,7 +29,7 @@ func (bld *building) initConstruction(buildingType buildingType, owner uint8, ne
 	bld.MaxHP = stats.MaxHP
 	bld.HP = stats.MaxHP
 	bld.MaxFood = stats.MaxFood
-	bld.AssignedUnits = make([]uint, 0)
+	bld.AssignedUnits = make([]UnitID, 0)
 }
 
 func (bld *building) startConstruction(bState *battleState) {
@@ -137,7 +137,7 @@ func placeConstructionSite(tileX, tileY, bldOwner uint8, bldStats buildingStats,
 	newBld := &building{}
 
 	// init teraz przyjmie tileX, tileY jako lewy górny róg
-	newBld.initConstruction(bldType, bldOwner, bState.NextUniqueObjectID)
+	newBld.initConstruction(bldType, bldOwner, BuildingID(bState.NextUniqueObjectID))
 	bState.NextUniqueObjectID++
 
 	placeConstructionOnBoard(newBld, tileX, tileY, bState.Board)
@@ -197,22 +197,22 @@ func isObstacle(texID uint16) bool {
 	return false
 }
 
-func (bld *building) registerUnit(unitID uint) bool {
+func (bld *building) registerUnit(uID UnitID) bool {
 	if uint8(len(bld.AssignedUnits)) >= bld.MaxFood {
 		return false
 	}
-	if slices.Contains(bld.AssignedUnits, unitID) {
+	if slices.Contains(bld.AssignedUnits, uID) {
 		return false
 	}
 
-	bld.AssignedUnits = append(bld.AssignedUnits, unitID)
+	bld.AssignedUnits = append(bld.AssignedUnits, uID)
 	bld.Food = uint8(len(bld.AssignedUnits))
 	return true
 }
 
-func (bld *building) unregisterUnit(unitID uint) bool {
+func (bld *building) unregisterUnit(uID UnitID) bool {
 	for i, id := range bld.AssignedUnits {
-		if id == unitID {
+		if id == uID {
 			bld.AssignedUnits = append(bld.AssignedUnits[:i], bld.AssignedUnits[i+1:]...)
 			bld.Food = uint8(len(bld.AssignedUnits))
 
@@ -241,7 +241,7 @@ func (bld *building) getAssignedUnits(bState *battleState) []*unit {
 }
 
 func (bld *building) cleanupDeadUnits(bState *battleState) {
-	var validUnits []uint
+	var validUnits []UnitID
 
 	for _, unitID := range bld.AssignedUnits {
 		currentUnit, ok := bState.getUnitByID(unitID)
@@ -676,7 +676,7 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		// Indeks 6: Budowa drogi/palisady (w zależności od kontekstu UI)
 		if actionIndex == 6 {
 			cmd.ActionType = cmdBPlaceConstruction
-			cmd.InteractionTargetID = uint(buildingPalisade)
+			cmd.InteractionTargetID = ObjectID(buildingPalisade)
 		}
 
 	case buildingBarn:
@@ -688,7 +688,7 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		// Indeks 6: Budowa nowej Obory
 		if actionIndex == 6 {
 			cmd.ActionType = cmdBPlaceConstruction
-			cmd.InteractionTargetID = uint(buildingBarn)
+			cmd.InteractionTargetID = ObjectID(buildingBarn)
 		}
 
 	case buildingBarracks:
@@ -705,7 +705,7 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		// Indeks 6: Budowa Chaty Mieszkalnej
 		if actionIndex == 6 {
 			cmd.ActionType = cmdBPlaceConstruction
-			cmd.InteractionTargetID = uint(buildingBarracks)
+			cmd.InteractionTargetID = ObjectID(buildingBarracks)
 		}
 
 	case buildingTemple:
@@ -737,7 +737,7 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		// Indeks 7: Budowa Palisady (stare CMD_BUILD_FENCE)
 		if actionIndex == 7 {
 			cmd.ActionType = cmdBPlaceConstruction
-			cmd.InteractionTargetID = uint(buildingPalisade)
+			cmd.InteractionTargetID = ObjectID(buildingPalisade)
 		}
 
 	case buildingAcademy:

@@ -27,7 +27,7 @@ func updateActionButtons(bState *battleState) {
 }
 
 // Wypełnia przyciski na podstawie przepisu budynku.
-func fillBuildingActions(bState *battleState, buildingID uint) {
+func fillBuildingActions(bState *battleState, buildingID BuildingID) {
 	bld, ok := bState.getBuildingByID(buildingID)
 	// Jeśli budynek został zniszczony lub jest w trakcie budowy, to nie może działać.
 	if !ok || !bld.Exists || bld.IsUnderConstruction {
@@ -73,7 +73,7 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 				action.Cmd = command{
 					ActionType: cmdBProduce, // cmdB oznacza, że to „budynkowy rozkaz”
 					// na wypadek gdyby categoryBuilding nie było widoczne w kodzie i powstała wątpliwość
-					ExecutorID: bld.ID,                 // tenże budynek ma wykonać rozkaz
+					ExecutorID: ObjectID(bld.ID),       // tenże budynek ma wykonać rozkaz
 					CreateType: uint8(recipe.UnitType), // rodzaj jednostki do wytworzenia
 				}
 			}
@@ -84,7 +84,7 @@ func fillBuildingActions(bState *battleState, buildingID uint) {
 }
 
 // Wypełnia przyciski na podstawie rodzaju jednostki.
-func fillUnitActions(bState *battleState, unitID uint) {
+func fillUnitActions(bState *battleState, unitID UnitID) {
 	currentUnit, ok := bState.getUnitByID(unitID)
 
 	if !ok || !currentUnit.Exists || currentUnit.Owner != bState.PlayerID {
@@ -124,7 +124,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Cmd: command{
 				ActionType: cmdUCastSpell,
 				Spell:      spellMagicShield,
-				ExecutorID: unitID,
+				ExecutorID: ObjectID(unitID),
 			},
 		}
 	}
@@ -138,7 +138,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Cmd: command{
 				ActionType: cmdUCastSpell,
 				Spell:      spellMagicShower,
-				ExecutorID: unitID,
+				ExecutorID: ObjectID(unitID),
 			},
 		}
 	}
@@ -152,7 +152,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Cmd: command{
 				ActionType: cmdUCastSpell,
 				Spell:      spellMagicSight,
-				ExecutorID: unitID,
+				ExecutorID: ObjectID(unitID),
 			},
 		}
 	}
@@ -166,7 +166,7 @@ func fillUnitActions(bState *battleState, unitID uint) {
 			Cmd: command{
 				ActionType: cmdUCastSpell,
 				Spell:      spellMagicShower,
-				ExecutorID: unitID,
+				ExecutorID: ObjectID(unitID),
 			},
 		}
 	}

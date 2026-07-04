@@ -99,7 +99,7 @@ func (econ *economyAI) produceCows(bState *battleState) bool {
 	// Wytwarzamy krowę
 	cmd := command{
 		ActionType:          cmdBProduce,
-		InteractionTargetID: barn.ID,
+		InteractionTargetID: ObjectID(barn.ID),
 		CreateType:          uint8(unitCow),
 	}
 	bState.CurrentCommands[1] = cmd
@@ -423,7 +423,7 @@ func findNearestEnemyExtended(seeker *unit, bState *battleState) (*unit, *buildi
 	return nil, nil, false
 }
 
-func findNearestEnemyCached(seeker *unit, bState *battleState) (*unit, *building, bool) {
+/*func findNearestEnemyCached(seeker *unit, bState *battleState) (*unit, *building, bool) {
 	if entry, exists := bState.EnemyCache[seeker.ID]; exists {
 		if (bState.GlobalFrameCounter - entry.LastUpdateTick) < entry.CacheValidFor {
 			return entry.NearestEnemyUnit, entry.NearestEnemyBuilding, entry.Found
@@ -442,7 +442,7 @@ func findNearestEnemyCached(seeker *unit, bState *battleState) (*unit, *building
 		return nil, nil, false
 	}
 
-	unit, building, found := findNearestEnemyExtended(seeker, bState)
+	u, bld, found := findNearestEnemyExtended(seeker, bState)
 
 	var cacheTime uint16 = 15
 	if !found {
@@ -450,16 +450,16 @@ func findNearestEnemyCached(seeker *unit, bState *battleState) (*unit, *building
 	}
 
 	bState.EnemyCache[seeker.ID] = &enemyCacheEntry{
-		NearestEnemyUnit:     unit,
-		NearestEnemyBuilding: building,
+		NearestEnemyUnit:     u,
+		NearestEnemyBuilding: bld,
 		Found:                found,
 		LastUpdateTick:       bState.GlobalFrameCounter,
 		CacheValidFor:        cacheTime,
 	}
 
 	bState.enemyCacheUpdatesThisTick++
-	return unit, building, found
-}
+	return u, bld, found
+}*/
 
 // findGrass znajduje odpowiedni kafelek trawy do wypasu krów.
 // @todo: czemu to jest w ai.go a nie cow.go?
@@ -521,18 +521,18 @@ func findGrass(xp, yp uint8, xe, ye *uint8, bState *battleState) {
 }
 */
 // who sprawdza do kogo przynależy dana jednostka
-func who(objectID uint, bState *battleState) uint8 {
-	if objectID == 0 {
+func who(oID ObjectID, bState *battleState) uint8 {
+	if oID == 0 {
 		return 0
 	}
 	// Ta funkcja iteruje po listach, więc jest niezależna od zmian w BoardData
-	for _, unit := range bState.Units {
-		if unit != nil && unit.Exists && unit.ID == objectID {
-			return unit.Owner
+	for _, u := range bState.Units {
+		if u != nil && u.Exists && ObjectID(u.ID) == oID {
+			return u.Owner
 		}
 	}
 	for _, bld := range bState.Buildings {
-		if bld != nil && bld.Exists && bld.ID == objectID {
+		if bld != nil && bld.Exists && ObjectID(bld.ID) == oID {
 			return bld.Owner
 		}
 	}
