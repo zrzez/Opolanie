@@ -11,24 +11,16 @@ import (
 
 // initConstruction odpowiada tylko za techniczne utworzenie obiektu w pamięci i na planszy.
 // Nie mylić z tryBuildStructure.
-func (bld *building) initConstruction(buildingType buildingType, owner PlayerID, nextUniqueObjectID BuildingID) {
-	// 1. Sprawdzamy, czy dany rodzaj budynku był określony wcześniej
-	stats, ok := buildingDefs[buildingType]
-	if !ok {
-		log.Printf("BŁĄD KRYTYCZNY: Brak określenia dla budynku rodzaju %d!", bld.Type)
-
-		return
-	}
-
+func (bld *building) initConstruction(buildingType buildingType, owner PlayerID, MaxHP uint16, MaxFood uint8, nextUniqueObjectID BuildingID) {
 	// 2. Podstawowe właściwości
-	bld.ID = BuildingID(nextUniqueObjectID)
+	bld.ID = nextUniqueObjectID
 	bld.Type = buildingType
 	bld.Owner = owner
 	bld.Exists = true
 	bld.Armor = buildingArmor
-	bld.MaxHP = stats.MaxHP
-	bld.HP = stats.MaxHP
-	bld.MaxFood = stats.MaxFood
+	bld.MaxHP = MaxHP
+	bld.HP = MaxHP
+	bld.MaxFood = MaxFood
 	bld.AssignedUnits = make([]UnitID, 0)
 }
 
@@ -137,7 +129,7 @@ func placeConstructionSite(tileX, tileY uint8, bldOwner PlayerID, bldStats build
 	newBld := &building{}
 
 	// init teraz przyjmie tileX, tileY jako lewy górny róg
-	newBld.initConstruction(bldType, bldOwner, BuildingID(bState.NextUniqueObjectID))
+	newBld.initConstruction(bldType, bldOwner, bldStats.MaxHP, bldStats.MaxFood, BuildingID(bState.NextUniqueObjectID))
 	bState.NextUniqueObjectID++
 
 	placeConstructionOnBoard(newBld, tileX, tileY, bState.Board)

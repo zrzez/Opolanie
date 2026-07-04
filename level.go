@@ -75,7 +75,8 @@ func (l *jsonLevelLoader) applyJSONLevel(jsonLevel *jsonLevel, bState *battleSta
 	bState.AI.PastureX = jsonLevel.AISettings.Pasture.X
 	bState.AI.PastureY = jsonLevel.AISettings.Pasture.Y
 
-	// Specjalne lokacje
+	// Specjalne miejsca
+	// @todo: wywal w osobną metodę/funkcję, bo zaciemnia co się dzieje
 	if jsonLevel.SpecialLocations.TransformationPoint != nil {
 		bState.CampaignData.TransformationSiteX = jsonLevel.SpecialLocations.TransformationPoint.X
 		bState.CampaignData.TransformationSiteY = jsonLevel.SpecialLocations.TransformationPoint.Y
@@ -91,13 +92,10 @@ func (l *jsonLevelLoader) applyJSONLevel(jsonLevel *jsonLevel, bState *battleSta
 		bState.CampaignData.RescueTargetY = jsonLevel.SpecialLocations.RescueTarget.Y
 	}
 
-	// Zastosuj surowy teren
+	// Środowisko oraz palisady
 	l.applyTerrain(&jsonLevel.Terrain, bState)
 
-	// Zastosuj budynki
 	l.applyBuildings(jsonLevel.Buildings, bState)
-
-	// Zastosuj jednostki
 	l.applyUnits(jsonLevel.Units, bState)
 
 	// Zasoby graczy
@@ -221,7 +219,7 @@ func classifyTreeFromTexture(textureID uint16) (treeState, bool, bool) {
 func (l *jsonLevelLoader) spawnPalisade(tileX, tileY uint8, graphicID uint16, bState *battleState) {
 	if graphicID == spritePalisadeNE {
 		newPalisade := &building{}
-		newPalisade.initConstruction(buildingPalisade, colorNone, BuildingID(bState.NextUniqueObjectID))
+		newPalisade.initConstruction(buildingPalisade, colorNone, buildingBridgeMaxHP, buildingZeroMaxFood, BuildingID(bState.NextUniqueObjectID))
 		bState.NextUniqueObjectID++
 		placeConstructionOnBoard(newPalisade, tileX, tileY, bState.Board)
 
@@ -232,7 +230,7 @@ func (l *jsonLevelLoader) spawnPalisade(tileX, tileY uint8, graphicID uint16, bS
 func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bState *battleState) {
 	log.Println("INFO: Nakładanie terenu...")
 
-	// Bezpieczne granice pętli (zamiast rzutowania uint w każdym obiegu)
+	// Bezpieczne granice pętli
 	maxY := min(len(terrain.Tiles), int(boardMaxY))
 
 	for yAxis := range maxY {
@@ -290,13 +288,16 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bStat
 		// Przeliczenie współrzędnych
 		// JSON zawiera współrzędne Prawego-Dolnego rogu (stary system).
 		// Funkcja init() wymaga teraz Lewego-Górnego rogu (nowy system).
+		// @todo: sprawdź, czy da się to jakoś zmienić w JSON-nie, bo to głupie i zbędne
+		// przeliczanie różnych pozycji - 04.07.2026
 		topLeftX := data.Position.X - stats.Width + 1
 		topLeftY := data.Position.Y - stats.Height + 1
 
+		// @todo: brakuje sprawdzenia, czy budynek+szerokość/wysokość mieści się w planszy - 04.07.2026
 		newBuilding := &building{}
 
 		// Wywołujemy init z przeliczonymi współrzędnymi Top-Left
-		newBuilding.initConstruction(bldType, ownerID, BuildingID(bState.NextUniqueObjectID))
+		newBuilding.initConstruction(bldType, ownerID, stats.MaxHP, stats.MaxFood, BuildingID(bState.NextUniqueObjectID))
 		bState.NextUniqueObjectID++
 
 		placeConstructionOnBoard(newBuilding, topLeftX, topLeftY, bState.Board)

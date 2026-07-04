@@ -485,66 +485,99 @@ var (
 	enemyFrameColor    = rl.NewColor(112, 0, 0, 255)     //nolint:mnd
 )
 
+const (
+	// Cena budynków
+	buildingMainCost      uint16 = 0
+	buildingBarnCost      uint16 = 650
+	buildingBarracksCost  uint16 = 850
+	buildingTempleCost    uint16 = 1050
+	buildingBarracks2Cost uint16 = 9999
+	buildingAcademyCost   uint16 = 1050
+	buildingPalisadeCost  uint16 = 60
+	buildingBridgeCost    uint16 = 60
+	buildingRoardCost     uint16 = 45
+)
+
+const (
+	// Górna granica PŻ dla budynków
+	buildingMainMaxHP      uint16 = 400
+	buildingBarnMaxHP      uint16 = 350
+	buildingBarracksMaxHP  uint16 = 350
+	buildingTempleMaxHP    uint16 = 350
+	buildingBarracks2MaxHP uint16 = 350
+	buildingAcademyMaxHP   uint16 = 400
+	buildingPalisadeMaxHP  uint16 = 120
+	buildingBridgeMaxHP    uint16 = 120
+	buildingRoadMaxHP      uint16 = 0
+)
+
+const (
+	// Górna granica pojemności budynku
+	buildingZeroMaxFood      uint8 = 0
+	buildingBarnMaxFood      uint8 = 3
+	buildingBarracksMaxFood  uint8 = 6
+	buildingTempleMaxFood    uint8 = 3
+	buildingBarracks2MaxFood uint8 = 4
+	buildingAcademyMaxFood   uint8 = 1
+)
+
 // @todo: Do zrobienia:
-// Co z mostami?! cena 80.
-// Co z drogami?! cena 45.
+// - czemu drogi oraz mosty „są palisadą”?
 var buildingDefs = map[buildingType]buildingStats{
 	buildingMain:
 	//nolint:mnd
 	{
 		Name:  "Budynek Główny",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 400, MaxFood: 0,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: buildingMainCost, MaxHP: buildingMainMaxHP, MaxFood: buildingZeroMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	},
 	//nolint:mnd
 	buildingBarn: {
 		Name:  "Obora",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 3,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: buildingBarnMaxHP, MaxFood: buildingBarnMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	},
-	// @todo: cost 650
 	//nolint:mnd
 	buildingBarracks: {
 		Name:  "Chata mieszkalna",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 6,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: buildingBarracksMaxHP, MaxFood: buildingBarracksMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
-	}, // @todo: 850
+	},
 	//nolint:mnd
 	buildingTemple: {
 		Name:  "Dwór mocy",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 3,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: buildingTempleMaxHP, MaxFood: buildingTempleMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
-	}, // @todo: 1050
+	},
 	//nolint:mnd
 	buildingBarracks2: {
 		Name:  "Chata wojów",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 350, MaxFood: 4,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: buildingBarracks2MaxHP, MaxFood: buildingBarracks2MaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	}, // @todo ILE TO KOSZTOWAŁO?!
 	//nolint:mnd
 	buildingAcademy: {
 		Name:  "Dwór rycerza",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: 400, MaxFood: 1,
+		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: buildingAcademyMaxHP, MaxFood: buildingAcademyMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
-	}, // @todo: 1050
+	},
 	//nolint:mnd
 	buildingPalisade: {
 		Name:  "Palisada",
-		Width: smallBuildingSize, Height: smallBuildingSize, Cost: 0, MaxHP: 120, MaxFood: 0,
+		Width: smallBuildingSize, Height: smallBuildingSize, Cost: buildingPalisadeCost, MaxHP: buildingPalisadeMaxHP, MaxFood: buildingZeroMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: true,
-	}, // @todo: 60
+	},
 	//nolint:mnd
 	buildingBridge: {
-		Name:  "Most", // todo: wszystkie staty! te są tymczasowe!
-		Width: smallBuildingSize, Height: smallBuildingSize, Cost: 0, MaxHP: 120, MaxFood: 0,
+		Name:  "Most",
+		Width: smallBuildingSize, Height: smallBuildingSize, Cost: buildingBridgeCost, MaxHP: buildingBridgeMaxHP, MaxFood: buildingZeroMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: true,
-	}, // @todo: 60
-	// @todo: dodaj drogę!
+	},
 	buildingRoad: {
-		Name:  "Droga", // todo: wszystkie staty! te są tymczasowe!
-		Width: smallBuildingSize, Height: smallBuildingSize, Cost: 0, MaxHP: 0, MaxFood: 0,
+		Name:  "Droga",
+		Width: smallBuildingSize, Height: smallBuildingSize, Cost: buildingRoardCost, MaxHP: buildingRoadMaxHP, MaxFood: buildingZeroMaxFood,
 		BaseTextureID: spriteRoadButton, IsPalisade: true,
-	}, // @todo: 45
+	},
 }
 
 // Ważne: jednostki czarujące rozpoczynają grę z połową many i maxmana = 60, strzyga 0 many.
