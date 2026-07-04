@@ -157,7 +157,7 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 	return spriteCursorCrossWhite
 }
 
-func cursorForNoSelection(targetOwner int, playerID uint8) uint16 {
+func cursorForNoSelection(targetOwner int, playerID PlayerID) uint16 {
 	// Wróg
 	if targetOwner != -1 && targetOwner != int(playerID) {
 		return spriteCursorFrameRed

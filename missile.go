@@ -23,7 +23,7 @@ type projectile struct {
 	ID     uint
 	Kind   uint8
 	Sprite uint16
-	Owner  uint8
+	Owner  PlayerID
 
 	// Pozycja
 	X, Y float32
@@ -49,7 +49,7 @@ type projectile struct {
 	Phase1, Phase2 float64
 }
 
-func (p *projectile) initProjectile(kind, owner uint8, startX, startY, targetX, targetY uint16, damage uint16) {
+func (p *projectile) initProjectile(kind uint8, owner PlayerID, startX, startY, targetX, targetY uint16, damage uint16) {
 	p.Kind = kind
 	p.Owner = owner
 	p.TargetX = targetX

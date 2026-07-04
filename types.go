@@ -75,7 +75,7 @@ type unit struct {
 	ID           UnitID      // Unikatowy numer jednostki
 	Exists       bool        // Czy jednostka nie została jeszcze zabita
 	X, Y         uint8       // Współrzędne jednostki
-	Owner        uint8       // Kto jest właścicielem. colorRed gracz, inne SI
+	Owner        PlayerID    // Kto jest właścicielem. colorRed gracz, inne SI
 	Type         unitType    // Rodzaj jednostki (Drwal = unitAxeman itd.)
 	HP           uint16      // Bieżący wskaźnik życia
 	MaxHP        uint16      // Górna granica wskaźnika życia
@@ -166,7 +166,7 @@ type corpse struct {
 	SkeletonType uint8    // wskazuje na rodzaj szkieletu w ostatniej fazie rozkładu
 	Rotation     float32  // kąd pod którym narysujemy zwłoki
 	Alpha        uint8    // do zanikania kości
-	Owner        uint8
+	Owner        PlayerID
 }
 
 // struktura do przedstawiania celu bojowego.
@@ -204,7 +204,7 @@ type building struct {
 	ID                BuildingID // Unikatowy numer budynku
 	Exists            bool       // Czy budynek nie został jeszcze zniszczony
 	IsPendingRemoval  bool
-	Owner             uint8        // Kto jest właścicielem. colorRed gracz, inne SI
+	Owner             PlayerID     // Kto jest właścicielem. colorRed gracz, inne SI
 	Type              buildingType // Rodzaj budynku (obora = buildingBarn itd.)
 	HP                uint16       // Bieżący wskaźnik wytrzymałości
 	Armor             uint8        // Obrona budynku, zawsze równa 10
@@ -221,11 +221,11 @@ type building struct {
 
 // playerState przedstawia usposobienie gracza.
 type playerState struct {
-	PlayerID          uint8  // Identyfikator gracza (colorRed, colorYellow)
-	Milk              uint16 // Ilość mleka
-	MaxMilk           uint16 // górna granica wskaźnika mleka
-	CurrentPopulation uint8  // Do pilnowania liczby jednostek
-	CurrentBuildings  uint8  // Do pilnowania liczby budynków
+	PlayerID          PlayerID // Identyfikator gracza (colorRed, colorYellow)
+	Milk              uint16   // Ilość mleka
+	MaxMilk           uint16   // górna granica wskaźnika mleka
+	CurrentPopulation uint8    // Do pilnowania liczby jednostek
+	CurrentBuildings  uint8    // Do pilnowania liczby budynków
 	// Brakuje określenia fazy, potrzebnej do SI
 	// Brakuje określenia górnych granic liczby budynków tudzież jednostek
 }
@@ -312,8 +312,8 @@ type message struct {
 
 // Opisuje bieżący przedmiot zaznaczenia.
 type selectionState struct {
-	OwnerID uint8 // Identyfikator zaznaczonego przedmiotu (colorRed, colorYellow itd.)
-	IsUnit  bool  // Określa, czy zaznaczony przedmiot jest jednostką (prawda), czy budynkiem (fałsz)
+	OwnerID PlayerID // Identyfikator zaznaczonego przedmiotu (colorRed, colorYellow itd.)
+	IsUnit  bool     // Określa, czy zaznaczony przedmiot jest jednostką (prawda), czy budynkiem (fałsz)
 	// Nie wiem, co ze zgliszczami
 	UnitID     UnitID     // Identyfikator przedmiotu zaznaczenia jeżeli jednostka
 	BuildingID BuildingID // Identyfikator przedmiotu zaznaczenia jeżeli budynek
@@ -410,12 +410,14 @@ type dragContext struct {
 	CurrentPos rl.Vector2 // Gdzie jest teraz mysz
 }
 
+type PlayerID uint8
+
 // battleState przechowuje opis bitwy
 // @todo: czemu nazywamy to „battle” skoro powinien przechowywać też dane o całej wyprawie?
 type battleState struct {
 	// === GRACZE I ZASOBY === //
-	PlayerID         uint8        // Identyfikator gracza (domyślnie colorRed)
-	AIPlayerID       uint8        // Identyfikator SI
+	PlayerID         PlayerID     // Identyfikator gracza (domyślnie colorRed)
+	AIPlayerID       PlayerID     // Identyfikator SI
 	HumanPlayerState *playerState // Opis usposobienia gracza
 	AIEnemyState     *playerState // Opis usposobienia wroga
 	AI               aiState      // Pamięć i usposobienie SI

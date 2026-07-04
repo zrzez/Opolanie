@@ -113,12 +113,12 @@ func (econ *economyAI) produceCows(bState *battleState) bool {
 // TODO: nie bardzo rozumiem czemu mamy takie dziwne poszukiwania zamiast liniowego
 func (econ *economyAI) findAvailableBarn(bState *battleState) *building {
 	for i := 0; i < len(bState.Buildings); i++ {
-		building := bState.Buildings[i]
-		if building != nil && building.Exists &&
-			building.Owner == bState.AIEnemyState.PlayerID &&
-			building.Type == buildingBarn &&
-			building.Food < building.MaxFood {
-			return building
+		bld := bState.Buildings[i]
+		if bld != nil && bld.Exists &&
+			bld.Owner == bState.AIEnemyState.PlayerID &&
+			bld.Type == buildingBarn &&
+			bld.Food < bld.MaxFood {
+			return bld
 		}
 	}
 
@@ -521,7 +521,7 @@ func findGrass(xp, yp uint8, xe, ye *uint8, bState *battleState) {
 }
 */
 // who sprawdza do kogo przynależy dana jednostka
-func who(oID ObjectID, bState *battleState) uint8 {
+func who(oID ObjectID, bState *battleState) PlayerID {
 	if oID == 0 {
 		return 0
 	}

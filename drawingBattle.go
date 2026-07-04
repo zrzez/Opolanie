@@ -324,7 +324,7 @@ func calculateWaterTileID(x, y uint8, board *boardData) uint16 {
 	return newID
 }
 
-func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColor uint8) {
+func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColor PlayerID) {
 	// 1. Walidacja ID
 	if id >= maxSpriteID {
 		return
@@ -361,7 +361,7 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 	rl.DrawTexturePro(tex, srcRect, destRect, rl.NewVector2(0, 0), 0, rl.White)
 }
 
-func drawSpriteEx(id uint16, destX, destY float32, ownerColor uint8, tint rl.Color, ps *programState) {
+func drawSpriteEx(id uint16, destX, destY float32, ownerColor PlayerID, tint rl.Color, ps *programState) {
 	if id >= maxSpriteID {
 		return
 	}

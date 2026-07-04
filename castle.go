@@ -12,7 +12,7 @@ import (
 // ============================================================================
 
 // Inicjuje stan zamku gracza/SI.
-func (playerS *playerState) init(factionID uint8, maxMilk uint16) {
+func (playerS *playerState) init(factionID PlayerID, maxMilk uint16) {
 	playerS.PlayerID = factionID
 	playerS.MaxMilk = maxMilk
 	playerS.Milk = maxMilk // Początkowe mleko ustawione na MaxMilk

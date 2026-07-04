@@ -96,13 +96,13 @@ const (
 	outcomeDefeat  uint8 = 2
 
 	// Barwy graczy.
-	colorNone     uint8 = 0 // Niczyje
-	colorRed      uint8 = 1 // Czerwień
-	colorGreen    uint8 = 2 // Zieleń
-	colorYellow   uint8 = 3 // Żółć
-	colorBlue     uint8 = 4 // Niebieski
-	colorGray     uint8 = 5 // Szary
-	maxGameColors uint8 = 6 // @reminder: jeżeli chciałbym dodać nową barwę, to muszę tutaj to uwzględnić
+	colorNone     PlayerID = 0 // Niczyje
+	colorRed      PlayerID = 1 // Czerwień
+	colorGreen    PlayerID = 2 // Zieleń
+	colorYellow   PlayerID = 3 // Żółć
+	colorBlue     PlayerID = 4 // Niebieski
+	colorGray     PlayerID = 5 // Szary
+	maxGameColors PlayerID = 6 // @reminder: jeżeli chciałbym dodać nową barwę, to muszę tutaj to uwzględnić
 
 	// Rozmiary wiadomości.
 	msgFontColor = 255
@@ -556,7 +556,7 @@ var attackTime = [8]int{400, 0, 0, 0, 200, 400, 600, 700}
 
 // Opisuje do kogo przynależą poszczególne ziemie.
 // @todo: widok krain do zrobienia.
-var provinceInit = [25]uint8{
+var provinceInit = [25]PlayerID{
 	colorGreen, colorGreen, colorGreen, colorYellow, colorGreen, colorGreen, colorBlue,
 	colorBlue, colorYellow, colorYellow, colorGreen, colorBlue, colorYellow, colorYellow, colorGray, colorBlue,
 	colorBlue, colorYellow, colorGray, colorGray, colorGray, colorGray, colorGray, colorGray, colorGray,
@@ -817,7 +817,7 @@ var (
 	// Mapowanie kolorów wrogich plemion.
 	// @reminder: są to wartości dobrane w oparciu o oryginalne
 	// grafiki. Dodałem nolint, żeby ograniczyć szum.
-	enemyColors = map[uint8][]rl.Color{
+	enemyColors = map[PlayerID][]rl.Color{
 		colorGreen: {
 			{R: 0, G: 128, B: 0, A: 255},     //nolint:mnd
 			{R: 0, G: 180, B: 0, A: 255},     //nolint:mnd

@@ -797,7 +797,7 @@ func makeGrassVariations(bState *battleState) {
 	}
 }
 
-func getEnemyColor(levelNumber uint8) uint8 {
+func getEnemyColor(levelNumber uint8) PlayerID {
 	provinceIndex := levelNumber - 1
 
 	if provinceIndex < uint8(len(provinceInit)) {

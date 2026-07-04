@@ -642,7 +642,7 @@ func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY 
 
 // Odpowiada za dopasowanie rozkazu dla jednostki do sytuacji na planszy.
 func resolveRightClickCommandType(
-	targetTile *tile, targetID ObjectID, targetOwner uint8,
+	targetTile *tile, targetID ObjectID, targetOwner PlayerID,
 	selectedUnits []*unit, bState *battleState, iState inputState,
 ) (cmdType commandType, isCommandValid bool) {
 	cmdType = cmdUMove

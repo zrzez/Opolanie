@@ -117,7 +117,7 @@ func (am *assetManager) loadRawAssetScaled(specialID int, def rawAssetDef) error
 	return nil
 }
 
-func (am *assetManager) loadBattleAssets(activePlayers []uint8) error {
+func (am *assetManager) loadBattleAssets(activePlayers []PlayerID) error {
 	log.Println("Zasoby: Ładowanie zasobów (jednostki, budynki)...")
 
 	// Wykaz atlasów do przetworzenia dla każdego gracza
@@ -147,7 +147,7 @@ func (am *assetManager) loadBattleAssets(activePlayers []uint8) error {
 	return nil
 }
 
-func (am *assetManager) loadAndProcess(atlasID battleAtlasID, def rawAssetDef, ownerColor uint8, palette []rl.Color) error {
+func (am *assetManager) loadAndProcess(atlasID battleAtlasID, def rawAssetDef, ownerColor PlayerID, palette []rl.Color) error {
 	// Jeśli mamy już atlasy dla czerwonego, to nie ma sensu znowu go ładować
 	if ownerColor < maxGameColors && am.Atlases[ownerColor][atlasID].ID != 0 {
 		return nil
@@ -258,7 +258,7 @@ func (am *assetManager) unload() {
 	}
 }
 
-func (am *assetManager) getAtlas(id battleAtlasID, ownerColor uint8) rl.Texture2D {
+func (am *assetManager) getAtlas(id battleAtlasID, ownerColor PlayerID) rl.Texture2D {
 	if ownerColor >= maxGameColors {
 		return am.Atlases[colorRed][id]
 	}

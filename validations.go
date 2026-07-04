@@ -32,7 +32,7 @@ const (
 // ========
 // KONTEKSTOWE
 // =======
-func validateConstructionContext(bType buildingType, owner uint8, bState *battleState) (bool, uint8) {
+func validateConstructionContext(bType buildingType, owner PlayerID, bState *battleState) (bool, uint8) {
 	stats, ok := buildingDefs[bType]
 
 	if !ok {
@@ -388,7 +388,7 @@ func validateRepairContext(u *unit, targetBld *building) (bool, uint8) {
 	return true, workErrNone
 }
 
-func isValidWorkTarget(targetBld *building, playerID uint8) bool {
+func isValidWorkTarget(targetBld *building, playerID PlayerID) bool {
 	if targetBld == nil || !targetBld.Exists {
 		return false
 	}

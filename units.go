@@ -1881,7 +1881,7 @@ func (u *unit) takeDamage(damage uint16, bState *battleState) {
 	}
 }
 
-func (bState *battleState) decreasePopulation(owner uint8) {
+func (bState *battleState) decreasePopulation(owner PlayerID) {
 	switch owner {
 	case bState.HumanPlayerState.PlayerID:
 		bState.HumanPlayerState.CurrentPopulation--

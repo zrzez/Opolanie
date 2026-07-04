@@ -263,7 +263,7 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bStat
 	log.Printf("INFO: Ładowanie %d budynków do battleState...", len(buildingsData))
 
 	for _, data := range buildingsData {
-		var ownerID uint8
+		var ownerID PlayerID
 
 		switch data.Owner {
 		case "ENEMY":
@@ -333,7 +333,7 @@ func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) 
 	log.Printf("INFO: Ładowanie %d jednostek do battleState...", len(units))
 
 	for _, unitData := range units {
-		var ownerID uint8
+		var ownerID PlayerID
 		if unitData.Owner == "ENEMY" {
 			ownerID = bState.AIPlayerID
 		} else {

@@ -135,7 +135,7 @@ func startFirstCampaign(ps *programState, bState *battleState) {
 	// KROK 3: Grafika (Assets)
 	ps.Assets.unloadBattleAssets()
 
-	activePlayers := []uint8{colorRed, enemyColor}
+	activePlayers := []PlayerID{colorRed, enemyColor}
 	err := ps.Assets.loadBattleAssets(activePlayers)
 	if err != nil {
 		log.Printf("KRYTYCZNY BŁĄD GRAFIKI: %v", err)

@@ -11,7 +11,7 @@ import (
 
 // initConstruction odpowiada tylko za techniczne utworzenie obiektu w pamięci i na planszy.
 // Nie mylić z tryBuildStructure.
-func (bld *building) initConstruction(buildingType buildingType, owner uint8, nextUniqueObjectID BuildingID) {
+func (bld *building) initConstruction(buildingType buildingType, owner PlayerID, nextUniqueObjectID BuildingID) {
 	// 1. Sprawdzamy, czy dany rodzaj budynku był określony wcześniej
 	stats, ok := buildingDefs[buildingType]
 	if !ok {
@@ -133,7 +133,7 @@ func placeRoad(tileX, tileY uint8, bState *battleState) {
 	log.Printf("BUDOWA: Postawiono drogę na (%d,%d).", tileX, tileY)
 }
 
-func placeConstructionSite(tileX, tileY, bldOwner uint8, bldStats buildingStats, bldType buildingType, bState *battleState) {
+func placeConstructionSite(tileX, tileY uint8, bldOwner PlayerID, bldStats buildingStats, bldType buildingType, bState *battleState) {
 	newBld := &building{}
 
 	// init teraz przyjmie tileX, tileY jako lewy górny róg
@@ -152,7 +152,7 @@ func placeConstructionSite(tileX, tileY, bldOwner uint8, bldStats buildingStats,
 }
 
 // Stawia plac budowy we wskazanym miejscu
-func tryBuildStructure(bldType buildingType, tileX, tileY uint8, owner uint8, bState *battleState) {
+func tryBuildStructure(bldType buildingType, tileX, tileY uint8, owner PlayerID, bState *battleState) {
 	bldStats := buildingDefs[bldType]
 	ownerState := bState.getPlayerState(owner)
 
@@ -511,7 +511,7 @@ func (bld *building) allowedUnitTypes(unitType unitType, bState *battleState) bo
 	return true
 }
 
-func (bState *battleState) getPlayerState(ownerID uint8) *playerState {
+func (bState *battleState) getPlayerState(ownerID PlayerID) *playerState {
 	if ownerID == bState.HumanPlayerState.PlayerID {
 		return bState.HumanPlayerState
 	}
@@ -775,7 +775,7 @@ func (bld *building) bounds() bounds {
 	}
 }
 
-func (bld *building) isRepairable(playerID uint8) bool {
+func (bld *building) isRepairable(playerID PlayerID) bool {
 	if bld == nil || !bld.Exists || bld.HP >= bld.MaxHP {
 		return false
 	}
@@ -849,7 +849,7 @@ func applyPhase2Graphics(bld *building, board *boardData) {
 	}
 }
 
-func completeConstruction(bld *building, board *boardData, playerID uint8) bool {
+func completeConstruction(bld *building, board *boardData, playerID PlayerID) bool {
 	bld.IsUnderConstruction = false
 	bld.HP = bld.MaxHP
 
