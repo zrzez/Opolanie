@@ -217,14 +217,16 @@ func classifyTreeFromTexture(textureID uint16) (treeState, bool, bool) {
 }
 
 func (l *jsonLevelLoader) spawnPalisade(tileX, tileY uint8, graphicID uint16, bState *battleState) {
-	if graphicID == spritePalisadeNE {
-		newPalisade := &building{}
-		newPalisade.initConstruction(buildingPalisade, colorNone, buildingBridgeMaxHP, buildingZeroMaxFood, BuildingID(bState.NextUniqueObjectID))
-		bState.NextUniqueObjectID++
-		placeConstructionOnBoard(newPalisade, tileX, tileY, bState.Board)
-
-		bState.Buildings = append(bState.Buildings, newPalisade)
+	if graphicID != spritePalisadeNE {
+		return
 	}
+
+	newPalisade := &building{}
+	newPalisade.initConstruction(buildingPalisade, colorNone, buildingBridgeMaxHP, buildingZeroMaxFood, BuildingID(bState.NextUniqueObjectID))
+	bState.NextUniqueObjectID++
+	placeConstructionOnBoard(newPalisade, tileX, tileY, bState.Board)
+
+	bState.Buildings = append(bState.Buildings, newPalisade)
 }
 
 func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bState *battleState) {
@@ -250,13 +252,17 @@ func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bState *battleS
 
 			// 4. Przetworzenie
 			configureTile(currentTile, graphicID)
-			l.spawnPalisade(tX, tY, graphicID, bState)
+			// l.spawnPalisade(tX, tY, graphicID, bState)
+			if graphicID == spritePalisadeNE {
+				bState.createFinishedPalisade(tX, tY)
+			}
 		}
 	}
 
 	log.Println("INFO: Teren nałożony pomyślnie.")
 }
 
+/*
 func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bState *battleState) {
 	log.Printf("INFO: Ładowanie %d budynków do battleState...", len(buildingsData))
 
@@ -328,8 +334,84 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bStat
 		}
 	}
 }
+*/
 
-// levelLoader.go - applyUnits
+// Testuję nowe podejście do ładowania budynków „normalnych” z plików JSON ponieważ przebudowuję
+// funkcje i metody odpowiedzialne za zasadzanie i stawianie ukończonych budynków.
+// Ma to na celu naprostowanie architektonicznego bałaganu do którego dopuściłem.
+// 04.07.2026
+func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bState *battleState) {
+	log.Printf("INFO: Ładowanie %d budynków do battleState...", len(buildingsData))
+
+	// dla każdego obiektu z jsonowej listy
+	for _, data := range buildingsData {
+		var ownerID PlayerID
+
+		// Ustalamy do kogo należy dany budynek
+		// @reminder: jest to założenie na sztywno, że mamy 2 graczy
+		switch data.Owner {
+		case "ENEMY":
+			ownerID = bState.AIPlayerID
+		case "PLAYER":
+			ownerID = bState.PlayerID
+		default:
+			ownerID = colorNone
+		}
+
+		// Pobieramy dane z zestawienia ze statami budynków
+		// Może się wykrzaczyć, bo nie ma gwarancji, że json jest prawidłowy!
+		bldType, exists := buildingTypeMap[data.Type]
+		if !exists {
+			log.Printf("OSTRZEŻENIE: Nieznany typ budynku: %s", data.Type)
+			continue
+		}
+
+		// Pobieramy definicję.
+		// Jeśli JSON zawiera śmieciowy rodzaj budynku, to się
+		// nie uda i zamiast wykrzaczać pomijamy.
+		stats, ok := buildingDefs[bldType]
+		if !ok {
+			log.Printf("BŁĄD: Brak definicji statystyk dla budynku typu %d", bldType)
+			continue
+		}
+
+		// Przeliczenie współrzędnych
+		// JSON zawiera współrzędne Prawego-Dolnego rogu (stary system).
+		// Funkcja init() wymaga Lewego-Górnego rogu (nowy system).
+		// @reminder: @todo: to będzie do wypierdzielenia, gdy ogarnę mapy i edytor
+		// być może kiedyś do tego dobrnę xD - 04.07.2026
+		topLeftX := data.Position.X - stats.Width + 1
+		topLeftY := data.Position.Y - stats.Height + 1
+
+		// ============================================================
+		// WALIDACJA – sprawdzamy, czy budynek z JSON jest poprawny
+		// ============================================================
+
+		// 1. Walidacja
+		// @reminder: znowu sprawdzamy, czy stats, ok := buildingDefs[bType]
+		// @reminder: powinno się sprawdząc jedynie, czy mieścimy się w planszy…
+		valid, errCode := validateConstructionSite(bldType, topLeftX, topLeftY, bState)
+		if !valid {
+			log.Printf("BŁĄD ŁADOWANIA: Budynek %s na (%d,%d) – nieprawidłowe miejsce (kod %d). Pomijam.",
+				data.Type, topLeftX, topLeftY, errCode)
+			continue
+		}
+
+		// ============================================================
+		// TWORZENIE – zakładamy, że dane są poprawne
+		// ============================================================
+
+		newBuilding := bState.createFinishedBuilding(bldType, topLeftX, topLeftY, ownerID)
+		if newBuilding == nil {
+			log.Printf("BŁĄD ŁADOWANIA: Nie udało się utworzyć budynku %s na (%d,%d). Pomijam.",
+				data.Type, topLeftX, topLeftY)
+			continue
+		}
+	}
+}
+
+// levelLoader.go - applyUnits - wspaniały i bardzo pouczający komentarz! 04.07.2026.
+// Z pewnością w przyszłości będzie wszystko jasne!
 func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) {
 	log.Printf("INFO: Ładowanie %d jednostek do battleState...", len(units))
 

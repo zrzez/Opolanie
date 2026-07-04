@@ -155,7 +155,14 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 	}
 
 	// 1. Wykonanie
-	tryBuildStructure(bType, cmd.TargetX, cmd.TargetY, playerS.PlayerID, bState)
+	// tryBuildStructure(bType, cmd.TargetX, cmd.TargetY, playerS.PlayerID, bState)
+	err := bState.tryBuildStructure(bType, cmd.TargetX, cmd.TargetY, playerS.PlayerID)
+	if err != nil {
+		// Nigdy nie powinno się wydarzyć
+		log.Printf("BłĄD KRYTYCZNY PRZY BUDOWIE %v", err)
+		bState.CurrentMessage.Text = "Błąd budowyyyy"
+		bState.CurrentMessage.Duration = 60
+	}
 
 	if bType == buildingRoad || bType == buildingPalisade || bType == buildingBridge {
 		return

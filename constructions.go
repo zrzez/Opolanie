@@ -11,16 +11,15 @@ import (
 
 // initConstruction odpowiada tylko za techniczne utworzenie obiektu w pamięci i na planszy.
 // Nie mylić z tryBuildStructure.
-func (bld *building) initConstruction(buildingType buildingType, owner PlayerID, MaxHP uint16, MaxFood uint8, nextUniqueObjectID BuildingID) {
-	// 2. Podstawowe właściwości
+func (bld *building) initConstruction(buildingType buildingType, owner PlayerID, maxHP uint16, maxFood uint8, nextUniqueObjectID BuildingID) {
 	bld.ID = nextUniqueObjectID
 	bld.Type = buildingType
 	bld.Owner = owner
 	bld.Exists = true
 	bld.Armor = buildingArmor
-	bld.MaxHP = MaxHP
-	bld.HP = MaxHP
-	bld.MaxFood = MaxFood
+	bld.MaxHP = maxHP
+	bld.HP = maxHP
+	bld.MaxFood = maxFood
 	bld.AssignedUnits = make([]UnitID, 0)
 }
 
@@ -128,7 +127,6 @@ func placeRoad(tileX, tileY uint8, bState *battleState) {
 func placeConstructionSite(tileX, tileY uint8, bldOwner PlayerID, bldStats buildingStats, bldType buildingType, bState *battleState) {
 	newBld := &building{}
 
-	// init teraz przyjmie tileX, tileY jako lewy górny róg
 	newBld.initConstruction(bldType, bldOwner, bldStats.MaxHP, bldStats.MaxFood, BuildingID(bState.NextUniqueObjectID))
 	bState.NextUniqueObjectID++
 
@@ -801,7 +799,7 @@ func cleanupDestroyedBuildings(bState *battleState) {
 	}
 }
 
-func cleanupConvertedBuildings(bState *battleState) {
+func cleanupConvertedBridges(bState *battleState) {
 	newBuildingList := make([]*building, 0, len(bState.Buildings))
 
 	for _, bld := range bState.Buildings {
@@ -916,4 +914,194 @@ func placeConstructionOnBoard(bld *building, x, y uint8, board *boardData) {
 			}
 		}
 	}
+}
+
+func (bState *battleState) createBuilding(bldType buildingType, topLeftX, topLeftY uint8, owner PlayerID) *building {
+	stats, ok := buildingDefs[bldType]
+	if !ok {
+		log.Printf("BŁĄD: Nieznany rodzaj budynku %d", bldType)
+
+		return nil
+	}
+
+	newBld := &building{
+		ID:            BuildingID(bState.NextUniqueObjectID),
+		Type:          bldType,
+		Owner:         owner,
+		Exists:        true,
+		Armor:         buildingArmor,
+		MaxHP:         stats.MaxHP,
+		MaxFood:       stats.MaxFood,
+		AssignedUnits: make([]UnitID, 0, stats.MaxFood),
+	}
+
+	bState.NextUniqueObjectID++
+
+	bState.Board.registerBuilding(newBld, topLeftX, topLeftY)
+	bState.Buildings = append(bState.Buildings, newBld)
+
+	switch owner {
+	case bState.HumanPlayerState.PlayerID:
+		bState.HumanPlayerState.CurrentBuildings++
+	case bState.AIEnemyState.PlayerID:
+		bState.AIEnemyState.CurrentBuildings++
+	}
+
+	return newBld
+}
+
+func (board *boardData) registerBuilding(bld *building, startX, startY uint8) error {
+	stats, ok := buildingDefs[bld.Type]
+	if !ok {
+		return fmt.Errorf("nieznany rodzaj budynku %d", bld.Type)
+	}
+
+	bld.OccupiedTiles = make([]point, 0, stats.Width*stats.Height)
+
+	for ox := range stats.Width {
+		for oy := range stats.Height {
+			px, py := startX+ox, startY+oy
+
+			// Bezpiecznik przed wyjściem poza planszę
+			// @todo: sprawdź, czy jest potrzebny
+			// @todo: czemu przepuszczamy a nie wypierdzielamy?
+			// przecież wyjście poza planszę, to błąd krytyczny!
+			if px >= boardMaxX || py >= boardMaxY {
+				continue
+			}
+
+			currentTile := &board.Tiles[px][py]
+			// @reminder: sprawdź, czy poszła walidacja wcześniej!
+			// jeśli nie to może się napatoczyć budynek i zablokować
+			bld.OccupiedTiles = append(bld.OccupiedTiles, point{X: px, Y: py})
+
+			currentTile.Building = bld
+			currentTile.IsWalkable = false
+		}
+	}
+
+	return nil
+}
+
+func (bState *battleState) placeConstructionSite(bldType buildingType, tileX, tileY uint8, owner PlayerID) *building {
+	// 0. Walidacja, być może zbędna
+	stats, ok := buildingDefs[bldType]
+	if !ok {
+		log.Printf("nieznany rodzaj budynku %d", bldType)
+
+		return nil
+	}
+
+	// 1. Zasadzamy budowę
+	newBld := bState.createBuilding(bldType, tileX, tileY, owner)
+	if newBld == nil {
+		return nil
+	}
+
+	// 2. Ustawiamy jako plac budowy
+	newBld.IsUnderConstruction = true
+	newBld.HP = initialConstructionHP
+
+	// 3. Wygląd
+	newBld.applyConstructionGraphics(bState.Board)
+
+	// 4. Informacja dla gracza
+	bState.CurrentMessage.Text = fmt.Sprintf("Wznoszenie: %s", stats.Name)
+	bState.CurrentMessage.Duration = 60
+
+	log.Printf("BUDOWA: Rozpoczęto %s (ID: %d) na (%d,%d).", stats.Name, newBld.ID, tileX, tileY)
+
+	return newBld
+}
+
+func (bState *battleState) tryBuildStructure(bldType buildingType, tileX, tileY uint8, owner PlayerID) error {
+	stats, ok := buildingDefs[bldType]
+	if !ok {
+		return fmt.Errorf("neznany rodzaj budynku")
+	}
+
+	ownerState := bState.getPlayerState(owner)
+
+	if ownerState.Milk < stats.Cost {
+		return fmt.Errorf("za mało mleka")
+	}
+
+	ownerState.Milk -= stats.Cost
+
+	if bldType == buildingRoad {
+		placeRoad(tileX, tileY, bState)
+
+		return nil
+	}
+
+	if bldType.isRegularBuilding() {
+		clearConstructionSite(tileX, tileY, stats, bState)
+	}
+
+	bState.placeConstructionSite(bldType, tileX, tileY, owner)
+
+	return nil
+}
+
+// applyConstructionGraphics nakłada tekstury budowy na kafelki zajmowane przez budynek.
+// Metoda ta zakłada, że bld.OccupiedTiles jest już poprawnie zainicjalizowane
+// (zrobione przez boardData.RegisterBuilding).
+func (bld *building) applyConstructionGraphics(board *boardData) {
+	for index, tilePoint := range bld.OccupiedTiles {
+		currentTile := &board.Tiles[tilePoint.X][tilePoint.Y]
+
+		// Ustalenie tekstury i właściwości w zależności od typu budynku
+		switch bld.Type {
+		case buildingBridge:
+			currentTile.TextureID = spriteBridgeConstruction
+
+		case buildingPalisade:
+			currentTile.TextureID = spritePalisadeDestroyed
+			// Wyjątek: zniszczona palisada w budowie jest przechodnia
+			currentTile.IsWalkable = true
+
+		default:
+			// Standardowe budynki - użycie szablonu budowy (faza 01)
+			row := index / int(normalBuildingSize)
+			column := index % int(normalBuildingSize)
+			currentTile.TextureID = constructionTemplatePhase01[column][row]
+		}
+	}
+}
+
+// Zakładamy, że każda palisada tworzona z mapy jest prawidłowo umiejscowiona
+func (bState *battleState) createFinishedPalisade(tileX, tileY uint8) *building {
+	// 1. Tworzymy obiekt
+	newBld := bState.createBuilding(buildingPalisade, tileX, tileY, colorNone)
+	//                                  Palisada zawsze jest niczyja ↑↑↑↑↑
+	if newBld == nil {
+		return nil
+	}
+
+	// 2. Jest to gotowy budynek „zaciągnięty” z mapy
+	newBld.IsUnderConstruction = false // niby wartość myślna, ale dla pewności
+	newBld.HP = newBld.MaxHP
+
+	// 3. Aktualizujemy tekstury z planszy
+	joinPalisade(tileX, tileY, bState.Board)
+
+	return newBld
+}
+
+// Zakładamy, że każdy budynek jest prawidłowo umiejscowiony
+func (bState *battleState) createFinishedBuilding(bldType buildingType, tileX, tileY uint8, owner PlayerID) *building {
+	// 1. Tworzymy obiekt
+	newBld := bState.createBuilding(bldType, tileX, tileY, owner)
+	if newBld == nil {
+		return nil
+	}
+
+	// 2. Jest to gotowy budynek „zaciągnięty” z mapy
+	newBld.IsUnderConstruction = false
+	newBld.HP = newBld.MaxHP
+
+	// 3. Aktualizujemy tekstury w planszy
+	applyFinishedGraphics(newBld, bState.Board)
+
+	return newBld
 }

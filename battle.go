@@ -550,7 +550,7 @@ func updateBuildings(bState *battleState) {
 		}
 	}
 
-	cleanupConvertedBuildings(bState)
+	cleanupConvertedBridges(bState)
 	cleanupDestroyedBuildings(bState)
 }
 
