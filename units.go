@@ -1921,6 +1921,7 @@ func (bState *battleState) createCorpses(u *unit) {
 func (u *unit) unregisterFromBuilding() {
 	if u.BelongsTo != nil {
 		log.Printf("Jednostka %d próbuje się wyrejestrować z budynku %d", u.ID, u.BelongsTo.ID)
+		// @reminder: metoda unregisterUnit zwraca bool, który ignorujemy
 		u.BelongsTo.unregisterUnit(u.ID)
 		u.BelongsTo = nil
 	}

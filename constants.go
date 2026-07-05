@@ -456,8 +456,8 @@ var unitDefs = map[unitType]unitStats{
 
 const (
 	// Wymiary budowli.
-	normalBuildingSize uint8 = 3
-	smallBuildingSize  uint8 = 1
+	regularBuildingSize uint8 = 3
+	smallBuildingSize   uint8 = 1
 
 	// === Nakładka dla budynków
 	// Wymiary ramek.
@@ -528,37 +528,37 @@ var buildingDefs = map[buildingType]buildingStats{
 	//nolint:mnd
 	{
 		Name:  "Budynek Główny",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: buildingMainCost, MaxHP: buildingMainMaxHP, MaxFood: buildingZeroMaxFood,
+		Width: regularBuildingSize, Height: regularBuildingSize, Cost: buildingMainCost, MaxHP: buildingMainMaxHP, MaxFood: buildingZeroMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	},
 	//nolint:mnd
 	buildingBarn: {
 		Name:  "Obora",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: buildingBarnMaxHP, MaxFood: buildingBarnMaxFood,
+		Width: regularBuildingSize, Height: regularBuildingSize, Cost: 0, MaxHP: buildingBarnMaxHP, MaxFood: buildingBarnMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	},
 	//nolint:mnd
 	buildingBarracks: {
 		Name:  "Chata mieszkalna",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: buildingBarracksMaxHP, MaxFood: buildingBarracksMaxFood,
+		Width: regularBuildingSize, Height: regularBuildingSize, Cost: 0, MaxHP: buildingBarracksMaxHP, MaxFood: buildingBarracksMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	},
 	//nolint:mnd
 	buildingTemple: {
 		Name:  "Dwór mocy",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: buildingTempleMaxHP, MaxFood: buildingTempleMaxFood,
+		Width: regularBuildingSize, Height: regularBuildingSize, Cost: 0, MaxHP: buildingTempleMaxHP, MaxFood: buildingTempleMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	},
 	//nolint:mnd
 	buildingBarracks2: {
 		Name:  "Chata wojów",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: buildingBarracks2MaxHP, MaxFood: buildingBarracks2MaxFood,
+		Width: regularBuildingSize, Height: regularBuildingSize, Cost: 0, MaxHP: buildingBarracks2MaxHP, MaxFood: buildingBarracks2MaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	}, // @todo ILE TO KOSZTOWAŁO?!
 	//nolint:mnd
 	buildingAcademy: {
 		Name:  "Dwór rycerza",
-		Width: normalBuildingSize, Height: normalBuildingSize, Cost: 0, MaxHP: buildingAcademyMaxHP, MaxFood: buildingAcademyMaxFood,
+		Width: regularBuildingSize, Height: regularBuildingSize, Cost: 0, MaxHP: buildingAcademyMaxHP, MaxFood: buildingAcademyMaxFood,
 		BaseTextureID: spriteConstructionStart, IsPalisade: false,
 	},
 	//nolint:mnd

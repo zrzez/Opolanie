@@ -297,7 +297,7 @@ func updateGame(bState *battleState) {
 	// 3. Czyszczenie pamięci
 	// @todo: zastanów się, czy nie dodać czyszczenia innych list, jak budynki, zwłoki, czy płonące kafelki.
 	if bState.GlobalFrameCounter%120 == 0 {
-		performPeriodicCleanup(bState)
+		updateUnitsList(bState)
 		updateBurningTilesList(bState)
 		updateFallingTreesList(bState)
 		updateGhostList(bState)
@@ -372,13 +372,16 @@ func updateMessageTimer(bState *battleState) {
 	}
 }
 
-// Sprawdza, czy w budynku znajdują się zabite jednostki i zwalnia im miejsce.
-func performPeriodicCleanup(bState *battleState) {
-	for _, bld := range bState.Buildings {
-		if bld != nil && bld.Exists {
-			bld.cleanupDeadUnits(bState)
+func updateUnitsList(bState *battleState) {
+	aliveUnits := make([]*unit, 0, len(bState.Units))
+
+	for _, u := range bState.Units {
+		if u.Exists {
+			aliveUnits = append(aliveUnits, u)
 		}
 	}
+
+	bState.Units = aliveUnits
 }
 
 // Sprawdza, czy można usunąć kafelki, które zakończyły cykl płonięcia.
@@ -500,8 +503,6 @@ func updateUnits(bState *battleState) {
 			currentUnit.updateUnit(bState)
 		}
 	}
-
-	cleanupDeadUnits(bState)
 }
 
 // updateProjectiles odświeża pociski, sprawdza, czy dodać nowe.
@@ -582,6 +583,16 @@ func removeBuilding(bld *building, bState *battleState) {
 }
 
 func placeDestroyedBuilding(bld *building, bState *battleState) {
+	// Trzeba dać znać jednostkom, że nie mają już domu
+	for _, uID := range bld.AssignedUnits {
+		u, ok := bState.getUnitByID(uID)
+
+		if ok && u.Exists {
+			u.BelongsTo = nil
+		}
+	}
+
+	// Wywalamy budynek
 	bld.Exists = false
 	log.Printf("building %d destroyed!", bld.ID)
 
@@ -736,25 +747,4 @@ func placeRuins(bState *battleState, bld *building) {
 		// Zgliszcza uniemożliwiają ruch
 		occupedTile.IsWalkable = false
 	}
-}
-
-// Usuwa uśmiercone jednostki z bs.
-// Nie mylić z logiką rozkładu zwłok updateCorpses().
-func cleanupDeadUnits(bState *battleState) {
-	if bState.GlobalFrameCounter%6000 != 0 {
-		return
-	}
-
-	if len(bState.Units) < int(maxUnitsPerPlayer)*4 {
-		return
-	}
-
-	newUnitsList := make([]*unit, 0, len(bState.Units))
-	for _, u := range bState.Units {
-		if u.Exists {
-			newUnitsList = append(newUnitsList, u)
-		}
-	}
-
-	bState.Units = newUnitsList
 }

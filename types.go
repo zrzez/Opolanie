@@ -212,9 +212,10 @@ type building struct {
 	MaxHP             uint16       // Górna granica wskaźnika wytrzymałości
 	Food              uint8        // Bieżący wskaźnik liczby jednostek w budynku
 	MaxFood           uint8        // Górna granica wskaźnika liczby jednostek w budynku;
-	AssignedUnits     []UnitID     // Identyfikatory jednostek przypisanych do budynku
-	OccupiedTiles     []point      // Współrzędne budynku
-	MilkingQueue      []UnitID     // Wycinek z ID krowami będącymi w kolejce do dojenia w danej oborze
+	AssignedUnits     []UnitID     // Identyfikatory jednostek przypisanych do budynku @todo: sprawdź, czy potrzebne
+	// czemu nie wskaźnik?↑↑↑
+	OccupiedTiles []point  // Współrzędne budynku
+	MilkingQueue  []UnitID // Wycinek z ID krowami będącymi w kolejce do dojenia w danej oborze
 	// Budowa
 	IsUnderConstruction bool // Wskazuje, czy budowla jest w trakcie wznoszenia
 }

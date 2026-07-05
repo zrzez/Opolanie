@@ -6,9 +6,26 @@ import "slices"
 
 // Pomagierzy do sprawdzania rodzaju tekstury kafelka.
 
-// =============
-// ↓↓↓FUNKCJE↓↓↓
-// =============
+func isObstacle(texID uint16) bool {
+	switch {
+	case isRockNonWalkable(texID):
+		return true
+	case isCompletedBridge(texID):
+		return true
+	case isGadget(texID):
+		return true
+	case isTreeStump(texID):
+		return true
+	case texID >= spriteTreeBurntStump00 && texID <= spriteTreeBurntStump01:
+		return true
+	case isSpecialTile(texID):
+		return true
+	case !isLandOrOther(texID):
+		return true
+	}
+
+	return false
+}
 
 // Sprawdza, czy tekstura jest kapliczką leczącą (świętym miejscem).
 func isHealingShire(tileTexID uint16) bool {
@@ -107,10 +124,6 @@ func isTree(tileTexID uint16) bool {
 	return tileTexID >= spriteTreeStumpStart && tileTexID <= spriteTreeTopEnd || // drzewa żywe oraz suche
 		tileTexID >= spriteTreeBurntStump00 && tileTexID <= spriteTreeBurntTop01 // spalone drzewa
 }
-
-// =============
-/// ↓↓↓METODY↓↓↓
-// =============
 
 // @reminder: dodaję metody do sprawdzenia, czy drzewa. Wydaje się to być potrzebne do
 // rozdzielenia stanu od wyglądu ORAZ tego co używamy w grze od tego co potrzebne przy ładowaniu

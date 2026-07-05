@@ -1158,6 +1158,7 @@ func drawWorldAndUnits(bState *battleState, pState *programState) {
 }
 
 // @todo: rozdziel logikę od rysowania, bo to zwyczajne pomieszanie z poplątaniem.
+// @todo: rysowanie kusznika się popsuło i nawet nie wiem kiedy 05.07.2026
 func drawUnit(u *unit, bState *battleState, ps *programState) {
 	// 1. Bazowa pozycja to CEL (bo w units.go X,Y zmieniają się na początku kroku)
 	screenX := float32(u.X) * float32(tileWidth)
