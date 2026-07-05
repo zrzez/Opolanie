@@ -216,19 +216,20 @@ func classifyTreeFromTexture(textureID uint16) (treeState, bool, bool) {
 	}
 }
 
-func (l *jsonLevelLoader) spawnPalisade(tileX, tileY uint8, graphicID uint16, bState *battleState) {
-	if graphicID != spritePalisadeNE {
-		return
+/*
+	func (l *jsonLevelLoader) spawnPalisade(tileX, tileY uint8, graphicID uint16, bState *battleState) {
+		if graphicID != spritePalisadeNE {
+			return
+		}
+
+		newPalisade := &building{}
+		newPalisade.initConstruction(buildingPalisade, colorNone, buildingBridgeMaxHP, buildingZeroMaxFood, BuildingID(bState.NextUniqueObjectID))
+		bState.NextUniqueObjectID++
+		placeConstructionOnBoard(newPalisade, tileX, tileY, bState.Board)
+
+		bState.Buildings = append(bState.Buildings, newPalisade)
 	}
-
-	newPalisade := &building{}
-	newPalisade.initConstruction(buildingPalisade, colorNone, buildingBridgeMaxHP, buildingZeroMaxFood, BuildingID(bState.NextUniqueObjectID))
-	bState.NextUniqueObjectID++
-	placeConstructionOnBoard(newPalisade, tileX, tileY, bState.Board)
-
-	bState.Buildings = append(bState.Buildings, newPalisade)
-}
-
+*/
 func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bState *battleState) {
 	log.Println("INFO: Nakładanie terenu...")
 
@@ -262,149 +263,71 @@ func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bState *battleS
 	log.Println("INFO: Teren nałożony pomyślnie.")
 }
 
-/*
-func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bState *battleState) {
-	log.Printf("INFO: Ładowanie %d budynków do battleState...", len(buildingsData))
-
-	for _, data := range buildingsData {
-		var ownerID PlayerID
-
-		switch data.Owner {
-		case "ENEMY":
-			ownerID = bState.AIPlayerID
-		case "PLAYER":
-			ownerID = bState.PlayerID
-		default:
-			ownerID = colorNone
-		}
-
-		bldType, exists := buildingTypeMap[data.Type]
-		if !exists {
-			continue
-		}
-
-		// Pobieramy definicję, aby znać wymiary (Width/Height)
-		stats, ok := buildingDefs[bldType]
-		if !ok {
-			log.Printf("BŁĄD: Brak definicji statystyk dla budynku typu %d", bldType)
-
-			continue
-		}
-
-		// Przeliczenie współrzędnych
-		// JSON zawiera współrzędne Prawego-Dolnego rogu (stary system).
-		// Funkcja init() wymaga teraz Lewego-Górnego rogu (nowy system).
-		// @todo: sprawdź, czy da się to jakoś zmienić w JSON-nie, bo to głupie i zbędne
-		// przeliczanie różnych pozycji - 04.07.2026
-		topLeftX := data.Position.X - stats.Width + 1
-		topLeftY := data.Position.Y - stats.Height + 1
-
-		// @todo: brakuje sprawdzenia, czy budynek+szerokość/wysokość mieści się w planszy - 04.07.2026
-		newBuilding := &building{}
-
-		// Wywołujemy init z przeliczonymi współrzędnymi Top-Left
-		newBuilding.initConstruction(bldType, ownerID, stats.MaxHP, stats.MaxFood, BuildingID(bState.NextUniqueObjectID))
-		bState.NextUniqueObjectID++
-
-		placeConstructionOnBoard(newBuilding, topLeftX, topLeftY, bState.Board)
-
-		bState.Buildings = append(bState.Buildings, newBuilding)
-
-		// Liczniki
-		switch newBuilding.Owner {
-		case bState.HumanPlayerState.PlayerID:
-			bState.HumanPlayerState.CurrentBuildings++
-		case bState.AIEnemyState.PlayerID:
-			bState.AIEnemyState.CurrentBuildings++
-		}
-
-		// Nakładanie grafiki przy użyciu wyliczonego Top-Left
-		template, templateExists := buildingTemplates[bldType]
-		if templateExists {
-			for dy, row := range template {
-				for dx, graphicID := range row {
-					tileX := topLeftX + uint8(dx)
-					tileY := topLeftY + uint8(dy)
-
-					if tileX < boardMaxX && tileY < boardMaxY {
-						bState.Board.Tiles[tileX][tileY].TextureID = uint16(graphicID)
-					}
-				}
-			}
-		}
-	}
-}
-*/
-
-// Testuję nowe podejście do ładowania budynków „normalnych” z plików JSON ponieważ przebudowuję
+// Sprawdzam nowe podejście do ładowania budynków „normalnych” z plików JSON ponieważ przebudowuję
 // funkcje i metody odpowiedzialne za zasadzanie i stawianie ukończonych budynków.
 // Ma to na celu naprostowanie architektonicznego bałaganu do którego dopuściłem.
 // 04.07.2026
 func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bState *battleState) {
 	log.Printf("INFO: Ładowanie %d budynków do battleState...", len(buildingsData))
 
-	// dla każdego obiektu z jsonowej listy
-	for _, data := range buildingsData {
-		var ownerID PlayerID
+	// dla każdego budynku z jsonowej listy
+	for _, bldData := range buildingsData {
+		var bldOwnerID PlayerID
 
 		// Ustalamy do kogo należy dany budynek
 		// @reminder: jest to założenie na sztywno, że mamy 2 graczy
-		switch data.Owner {
+		switch bldData.Owner {
 		case "ENEMY":
-			ownerID = bState.AIPlayerID
+			bldOwnerID = bState.AIPlayerID
 		case "PLAYER":
-			ownerID = bState.PlayerID
+			bldOwnerID = bState.PlayerID
 		default:
-			ownerID = colorNone
+			bldOwnerID = colorNone
 		}
 
-		// Pobieramy dane z zestawienia ze statami budynków
-		// Może się wykrzaczyć, bo nie ma gwarancji, że json jest prawidłowy!
-		bldType, exists := buildingTypeMap[data.Type]
+		// Tłumaczymy łańcuch znaków z JSON-a na stałe przedstawiające rodzaje budynków w silniku gry.
+		// Może się nie udać, bo nie ma gwarancji, że JSON jest prawidłowy!
+		// W takim przypadku pomijamy.
+		bldType, exists := buildingTypeMap[bldData.Type]
 		if !exists {
-			log.Printf("OSTRZEŻENIE: Nieznany typ budynku: %s", data.Type)
+			log.Printf("OSTRZEŻENIE: Nieznany typ budynku: %s", bldData.Type)
+
 			continue
 		}
 
-		// Pobieramy definicję.
-		// Jeśli JSON zawiera śmieciowy rodzaj budynku, to się
-		// nie uda i zamiast wykrzaczać pomijamy.
-		stats, ok := buildingDefs[bldType]
+		// Pobieramy definicję budynku.
+		// Jeśli JSON zawiera nieprawidłowy rodzaj budynku, to się nie uda i zamiast wykrzaczać pomijamy.
+		bldStats, ok := buildingDefs[bldType]
 		if !ok {
 			log.Printf("BŁĄD: Brak definicji statystyk dla budynku typu %d", bldType)
 			continue
 		}
 
 		// Przeliczenie współrzędnych
-		// JSON zawiera współrzędne Prawego-Dolnego rogu (stary system).
-		// Funkcja init() wymaga Lewego-Górnego rogu (nowy system).
+		// JSON zawiera współrzędne prawego-dolnego rogu (stary układ).
+		// Funkcja init() wymaga Lewego-Górnego rogu (nowy układ).
 		// @reminder: @todo: to będzie do wypierdzielenia, gdy ogarnę mapy i edytor
 		// być może kiedyś do tego dobrnę xD - 04.07.2026
-		topLeftX := data.Position.X - stats.Width + 1
-		topLeftY := data.Position.Y - stats.Height + 1
+		topLeftX := bldData.Position.X - bldStats.Width + 1
+		topLeftY := bldData.Position.Y - bldStats.Height + 1
 
-		// ============================================================
-		// WALIDACJA – sprawdzamy, czy budynek z JSON jest poprawny
-		// ============================================================
-
-		// 1. Walidacja
+		// Sprawdzanie poprawności umiejscowienia budynków.
 		// @reminder: znowu sprawdzamy, czy stats, ok := buildingDefs[bType]
 		// @reminder: powinno się sprawdząc jedynie, czy mieścimy się w planszy…
 		valid, errCode := validateConstructionSite(bldType, topLeftX, topLeftY, bState)
 		if !valid {
 			log.Printf("BŁĄD ŁADOWANIA: Budynek %s na (%d,%d) – nieprawidłowe miejsce (kod %d). Pomijam.",
-				data.Type, topLeftX, topLeftY, errCode)
+				bldData.Type, topLeftX, topLeftY, errCode)
+
 			continue
 		}
 
-		// ============================================================
-		// TWORZENIE – zakładamy, że dane są poprawne
-		// ============================================================
-
-		newBuilding := bState.createFinishedBuilding(bldType, topLeftX, topLeftY, ownerID)
+		// Przesło sprawdzenia, możemy stawiać na planszy
+		newBuilding := bState.createFinishedBuilding(bldType, topLeftX, topLeftY, bldOwnerID)
 		if newBuilding == nil {
 			log.Printf("BŁĄD ŁADOWANIA: Nie udało się utworzyć budynku %s na (%d,%d). Pomijam.",
-				data.Type, topLeftX, topLeftY)
+				bldData.Type, topLeftX, topLeftY)
+
 			continue
 		}
 	}
@@ -416,31 +339,32 @@ func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) 
 	log.Printf("INFO: Ładowanie %d jednostek do battleState...", len(units))
 
 	for _, unitData := range units {
-		var ownerID PlayerID
+		var unitOwnerID PlayerID
 		if unitData.Owner == "ENEMY" {
-			ownerID = bState.AIPlayerID
+			unitOwnerID = bState.AIPlayerID
 		} else {
-			ownerID = bState.PlayerID
+			unitOwnerID = bState.PlayerID
 		}
 
 		uType, exists := unitTypeMap[unitData.Type]
 		if !exists {
 			log.Printf("OSTRZEŻENIE: Pomięto nieznany typ jednostki: %s", unitData.Type)
+
 			continue
 		}
 
 		newUnit := &unit{}
-		// Inicjalizacja nowej jednostki
+		// Tworzymy nową jednostkę
 		newUnit.initUnit(uType, unitData.Position.X, unitData.Position.Y, cmdUIdle, bState)
-		newUnit.Owner = ownerID
+		newUnit.Owner = unitOwnerID
 
-		// Wstawienie na mapę
+		// Wstawiamy na planszę
 		newUnit.show(bState.Board)
 
-		// Dodanie do głównej listy
+		// Dodajemy do listy jednostek
 		bState.Units = append(bState.Units, newUnit)
 
-		// Zliczamy jednostki startowe, aby limit 40 działał poprawnie od początku gry.
+		// Zliczamy jednostki początkowe
 		switch newUnit.Owner {
 		case bState.HumanPlayerState.PlayerID:
 			bState.HumanPlayerState.CurrentPopulation++

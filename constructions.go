@@ -9,20 +9,23 @@ import (
 
 // constructions.go
 
+/*
 // initConstruction odpowiada tylko za techniczne utworzenie obiektu w pamięci i na planszy.
 // Nie mylić z tryBuildStructure.
-func (bld *building) initConstruction(buildingType buildingType, owner PlayerID, maxHP uint16, maxFood uint8, nextUniqueObjectID BuildingID) {
-	bld.ID = nextUniqueObjectID
-	bld.Type = buildingType
-	bld.Owner = owner
-	bld.Exists = true
-	bld.Armor = buildingArmor
-	bld.MaxHP = maxHP
-	bld.HP = maxHP
-	bld.MaxFood = maxFood
-	bld.AssignedUnits = make([]UnitID, 0)
-}
 
+	func (bld *building) initConstruction(buildingType buildingType, owner PlayerID, maxHP uint16, maxFood uint8, nextUniqueObjectID BuildingID) {
+		bld.ID = nextUniqueObjectID
+		bld.Type = buildingType
+		bld.Owner = owner
+		bld.Exists = true
+		bld.Armor = buildingArmor
+		bld.MaxHP = maxHP
+		bld.HP = maxHP
+		bld.MaxFood = maxFood
+		bld.AssignedUnits = make([]UnitID, 0)
+	}
+*/
+/*
 func (bld *building) startConstruction(bState *battleState) {
 	// Pobieramy informacje o budynku
 	stats, ok := buildingDefs[bld.Type]
@@ -62,7 +65,7 @@ func (bld *building) startConstruction(bState *battleState) {
 		currentTile.Building = bld
 		currentTile.IsWalkable = currentTile.TextureID == spritePalisadeDestroyed
 	}
-}
+}*/
 
 func (bld *building) repair(amount uint16) {
 	if !bld.Exists || bld.HP >= bld.MaxHP {
@@ -124,7 +127,7 @@ func placeRoad(tileX, tileY uint8, bState *battleState) {
 	log.Printf("BUDOWA: Postawiono drogę na (%d,%d).", tileX, tileY)
 }
 
-func placeConstructionSite(tileX, tileY uint8, bldOwner PlayerID, bldStats buildingStats, bldType buildingType, bState *battleState) {
+/*func placeConstructionSite(tileX, tileY uint8, bldOwner PlayerID, bldStats buildingStats, bldType buildingType, bState *battleState) {
 	newBld := &building{}
 
 	newBld.initConstruction(bldType, bldOwner, bldStats.MaxHP, bldStats.MaxFood, BuildingID(bState.NextUniqueObjectID))
@@ -140,8 +143,8 @@ func placeConstructionSite(tileX, tileY uint8, bldOwner PlayerID, bldStats build
 
 	log.Printf("BUDOWA: Rozpoczęto %s (ID: %d) na (%d,%d).", bldStats.Name, newBld.ID, tileX, tileY)
 }
-
-// Stawia plac budowy we wskazanym miejscu
+*/
+/*// Stawia plac budowy we wskazanym miejscu
 func tryBuildStructure(bldType buildingType, tileX, tileY uint8, owner PlayerID, bState *battleState) {
 	bldStats := buildingDefs[bldType]
 	ownerState := bState.getPlayerState(owner)
@@ -165,7 +168,7 @@ func tryBuildStructure(bldType buildingType, tileX, tileY uint8, owner PlayerID,
 
 	placeConstructionSite(tileX, tileY, bldOwner, bldStats, bldType, bState)
 }
-
+*/
 func isObstacle(texID uint16) bool {
 	switch {
 	case isRockNonWalkable(texID):
@@ -408,53 +411,54 @@ func (bld *building) getClosestWalkableTile(bState *battleState) (uint8, uint8, 
 	return 0, 0, false
 }
 
-func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8, board *boardData) (uint8, uint8, bool) {
-	centerX, centerY, ok := bld.getCenter()
-	if !ok {
-		return 0, 0, false
-	}
-	candidates := []point{
-		{centerX + attackRange, centerY},
-		{centerX - attackRange, centerY},
-		{centerX, centerY + attackRange},
-		{centerX, centerY - attackRange},
-		{centerX + attackRange, centerY + attackRange},
-		{centerX - attackRange, centerY - attackRange},
-		{centerX + attackRange, centerY - attackRange},
-		{centerX - attackRange, centerY + attackRange},
-	}
-
-	if attackRange > 2 {
-		halfRange := attackRange / 2
-		candidates = append(candidates, []point{
-			{centerX + halfRange, centerY},
-			{centerX - halfRange, centerY},
-			{centerX, centerY + halfRange},
-			{centerX, centerY - halfRange},
-		}...)
-	}
-
-	bestX, bestY := uint8(255), uint8(255)
-	minDistance := math.MaxFloat64
-
-	for _, candidate := range candidates {
-		if !bld.isValidWalkableTile(candidate.X, candidate.Y, board) {
-			continue
+/*
+	func (bld *building) getOptimalRangedAttackTile(unitX, unitY, attackRange uint8, board *boardData) (uint8, uint8, bool) {
+		centerX, centerY, ok := bld.getCenter()
+		if !ok {
+			return 0, 0, false
+		}
+		candidates := []point{
+			{centerX + attackRange, centerY},
+			{centerX - attackRange, centerY},
+			{centerX, centerY + attackRange},
+			{centerX, centerY - attackRange},
+			{centerX + attackRange, centerY + attackRange},
+			{centerX - attackRange, centerY - attackRange},
+			{centerX + attackRange, centerY - attackRange},
+			{centerX - attackRange, centerY + attackRange},
 		}
 
-		if bld.getDistanceToUnit(candidate.X, candidate.Y) <= attackRange {
-			distance := math.Abs(float64(unitX-candidate.X)) + math.Abs(float64(unitY-candidate.Y))
+		if attackRange > 2 {
+			halfRange := attackRange / 2
+			candidates = append(candidates, []point{
+				{centerX + halfRange, centerY},
+				{centerX - halfRange, centerY},
+				{centerX, centerY + halfRange},
+				{centerX, centerY - halfRange},
+			}...)
+		}
 
-			if distance < minDistance {
-				minDistance = distance
-				bestX, bestY = candidate.X, candidate.Y
+		bestX, bestY := uint8(255), uint8(255)
+		minDistance := math.MaxFloat64
+
+		for _, candidate := range candidates {
+			if !bld.isValidWalkableTile(candidate.X, candidate.Y, board) {
+				continue
+			}
+
+			if bld.getDistanceToUnit(candidate.X, candidate.Y) <= attackRange {
+				distance := math.Abs(float64(unitX-candidate.X)) + math.Abs(float64(unitY-candidate.Y))
+
+				if distance < minDistance {
+					minDistance = distance
+					bestX, bestY = candidate.X, candidate.Y
+				}
 			}
 		}
+
+		return bestX, bestY, true
 	}
-
-	return bestX, bestY, true
-}
-
+*/
 func (bld *building) isValidWalkableTile(x, y uint8, board *boardData) bool {
 	if x >= boardMaxX || y >= boardMaxY {
 		return false
@@ -475,32 +479,6 @@ func (bld *building) takeDamage(damage uint16) {
 	log.Printf("building %d received %d damage (accumulated: %d)", bld.ID, damage, bld.AccumulatedDamage)
 }
 
-// @todo: trzeba to wpiąć w logikę odblokowywania przycisków dla SI oraz rysowania dla ludzi.
-func (bld *building) allowedUnitTypes(unitType unitType, bState *battleState) bool {
-	switch bld.Type {
-	case buildingBarn:
-		if unitType == unitCow {
-			return true
-		}
-
-		if unitType == unitShepherd {
-			return shepherdLevel >= bState.CurrentLevel
-		}
-	case buildingTemple:
-		if unitType == unitMage {
-			return bState.CurrentLevel >= mageLevel
-		}
-	case buildingAcademy:
-		if unitType == unitCrossbowman {
-			return bState.CurrentLevel >= crossbowmanLevel
-		}
-	default:
-		return true
-	}
-
-	return true
-}
-
 func (bState *battleState) getPlayerState(ownerID PlayerID) *playerState {
 	if ownerID == bState.HumanPlayerState.PlayerID {
 		return bState.HumanPlayerState
@@ -519,7 +497,7 @@ func (bld *building) canProduceUnit(unitType unitType, bState *battleState) bool
 		return false
 	}
 
-	fmt.Println("sprawdzam, czy da się zrobić jednostkę.")
+	fmt.Println("sprawdzam, czy da się stworzyć jednostkę.")
 
 	// 1. Czy jest wolne miejsce w budynku?
 	if !bld.hasSpace() {
@@ -743,7 +721,7 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 		}
 		// Indeks 6: Pusty
 	default:
-		panic("unhandled default case")
+		panic("getButtonCommand unhandled default case")
 	}
 
 	return cmd
@@ -882,35 +860,6 @@ func applyFinishedGraphics(bld *building, board *boardData) {
 				if tx < boardMaxX && ty < boardMaxY {
 					board.Tiles[tx][ty].TextureID = uint16(texID)
 				}
-			}
-		}
-	}
-}
-
-func placeConstructionOnBoard(bld *building, x, y uint8, board *boardData) {
-	// 1. Sprawdzamy, czy dany rodzaj budynku był określony wcześniej
-	stats, ok := buildingDefs[bld.Type]
-	if !ok {
-		log.Printf("BŁĄD KRYTYCZNY: Brak określenia dla budynku rodzaju %d!", bld.Type)
-
-		return
-	}
-	// 3. Zajmowanie kafelków
-	bld.OccupiedTiles = make([]point, 0, stats.Width*stats.Height)
-
-	startX := x
-	startY := y
-
-	for ox := range stats.Width {
-		for oy := range stats.Height {
-			px, py := startX+ox, startY+oy
-
-			if px < boardMaxX && py < boardMaxY {
-				bld.OccupiedTiles = append(bld.OccupiedTiles, point{X: px, Y: py})
-
-				occupieTile := &board.Tiles[px][py]
-				occupieTile.Building = bld
-				occupieTile.IsWalkable = false
 			}
 		}
 	}
