@@ -324,37 +324,3 @@ func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *bat
 		cmd.TargetY,
 	)
 }
-
-// szuka budynku w battleState.Buildings.
-func (bState *battleState) getBuildingByID(bldID BuildingID) (*building, bool) {
-	for _, bld := range bState.Buildings {
-		if bld.ID == bldID {
-			return bld, true
-		}
-	}
-
-	return nil, false
-}
-
-// szuka jednostki w battleState.Units.
-func (bState *battleState) getUnitByID(uID UnitID) (*unit, bool) {
-	for _, currentUnit := range bState.Units {
-		if currentUnit.ID == uID {
-			return currentUnit, true
-		}
-	}
-
-	return nil, false
-}
-
-func (bState *battleState) GetObjectByID(oID ObjectID) (*unit, *building) {
-	if currentUnit, ok := bState.getUnitByID(UnitID(oID)); ok {
-		return currentUnit, nil
-	}
-
-	if currentBuilding, ok := bState.getBuildingByID(BuildingID(oID)); ok {
-		return nil, currentBuilding
-	}
-
-	return nil, nil
-}
