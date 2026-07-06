@@ -13,7 +13,7 @@ func (bld *building) repair(amount uint16) {
 		return
 	}
 
-	bld.increaseHPBuilding(amount)
+	bld.increaseHP(amount)
 }
 
 func (bld *building) build(amount uint16) {
@@ -21,7 +21,20 @@ func (bld *building) build(amount uint16) {
 		return
 	}
 
-	bld.increaseHPBuilding(amount)
+	bld.increaseHP(amount)
+}
+
+// increaseHP dla każdej istniejącej budowli zwiększa PŻ o amount
+// Pilnuje, aby bld.HP <= bld.MaxHP; Służy do naprawy budynków
+func (bld *building) increaseHP(amount uint16) {
+	if !bld.Exists {
+		return
+	}
+
+	bld.HP += amount
+	if bld.HP >= bld.MaxHP {
+		bld.HP = bld.MaxHP
+	}
 }
 
 func (bldType buildingType) isRegularBuilding() bool {
@@ -368,19 +381,6 @@ func (bld *building) produceUnit(newUnitType unitType, bState *battleState) {
 	}
 }
 
-// increaseHPBuilding dla każdej istniejącej budowli zwiększa PŻ o amount
-// Pilnuje, aby bld.HP <= bld.MaxHP; Służy do naprawy budynków
-func (bld *building) increaseHPBuilding(amount uint16) {
-	if !bld.Exists {
-		return
-	}
-
-	bld.HP += amount
-	if bld.HP >= bld.MaxHP {
-		bld.HP = bld.MaxHP
-	}
-}
-
 // getButtonCommand zastępuje przestarzałe GetProductionCommand.
 // Tłumaczy kliknięcie przycisku (actionIndex) na pełny rozkaz (command).
 // @todo: sprawdź, czy te actionIndex muszą być zaczarodziejskie. 01.07.2026
@@ -544,98 +544,4 @@ func cleanupConvertedBridges(bState *battleState) {
 	}
 	// lista budynków staje się listą zachowanych budowli
 	bState.Buildings = newBuildingList
-}
-
-func applyPhase2Graphics(bld *building, board *boardData) {
-	if bld.Type == buildingPalisade {
-		return
-	}
-
-	template, ok := constructionTemplatesPhase02[bld.Type]
-	if !ok {
-		return
-	}
-
-	minX, minY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
-
-	for dy, row := range template {
-		for dx, texID := range row {
-			tx, ty := uint16(minX)+uint16(dx), uint16(minY)+uint16(dy)
-			board.Tiles[tx][ty].TextureID = texID
-		}
-	}
-}
-
-func completeConstruction(bld *building, board *boardData, playerID PlayerID) bool {
-	bld.IsUnderConstruction = false
-	bld.HP = bld.MaxHP
-
-	applyFinishedGraphics(bld, board)
-
-	if bld.Type == buildingBridge {
-		bld.IsPendingRemoval = true
-	}
-
-	return bld.Owner == playerID
-}
-
-func applyFinishedGraphics(bld *building, board *boardData) {
-	switch bld.Type {
-	case buildingPalisade:
-		if bld.Type == buildingPalisade {
-			pt := bld.OccupiedTiles[0]
-			joinPalisade(pt.X, pt.Y, board)
-		}
-
-		return
-
-	case buildingBridge:
-		board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].IsWalkable = true
-		board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteBridge01
-
-		return
-
-	default:
-		template, ok := buildingTemplates[bld.Type]
-		if !ok {
-			fmt.Println("Bład przy próbie zastosowania grafiki ukończonej budowy.")
-		}
-
-		minX, minY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
-
-		for dy, row := range template {
-			for dx, texID := range row {
-				tx, ty := minX+uint8(dx), minY+uint8(dy)
-				if tx < boardMaxX && ty < boardMaxY {
-					board.Tiles[tx][ty].TextureID = uint16(texID)
-				}
-			}
-		}
-	}
-}
-
-// applyConstructionGraphics nakłada tekstury budowy na kafelki zajmowane przez budynek.
-// Metoda ta zakłada, że bld.OccupiedTiles jest już poprawnie zainicjalizowane
-// (zrobione przez boardData.RegisterBuilding).
-func (bld *building) applyConstructionGraphics(board *boardData) {
-	for index, tilePoint := range bld.OccupiedTiles {
-		currentTile := &board.Tiles[tilePoint.X][tilePoint.Y]
-
-		// Ustalenie tekstury i właściwości w zależności od typu budynku
-		switch bld.Type {
-		case buildingBridge:
-			currentTile.TextureID = spriteBridgeConstruction
-
-		case buildingPalisade:
-			currentTile.TextureID = spritePalisadeDestroyed
-			// Wyjątek: zniszczona palisada w budowie jest przechodnia
-			currentTile.IsWalkable = true
-
-		default:
-			// Standardowe budynki - użycie szablonu budowy (faza 01)
-			row := index / int(regularBuildingSize)
-			column := index % int(regularBuildingSize)
-			currentTile.TextureID = constructionTemplatePhase01[column][row]
-		}
-	}
 }

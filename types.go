@@ -199,6 +199,8 @@ type buildingStats struct {
 	IsPalisade    bool   // Wskaźnik, czy budowla jest palisadą, potrzebna do napraw wrogich palisad
 }
 
+type constructionProgress uint8
+
 // building określa pojedynczy budynek podczas bitwy.
 type building struct {
 	ID                BuildingID // Unikatowy numer budynku
@@ -217,7 +219,8 @@ type building struct {
 	OccupiedTiles []point  // Współrzędne budynku
 	MilkingQueue  []UnitID // Wycinek z ID krowami będącymi w kolejce do dojenia w danej oborze
 	// Budowa
-	IsUnderConstruction bool // Wskazuje, czy budowla jest w trakcie wznoszenia
+	IsUnderConstruction bool                 // Wskazuje, czy budowla jest w trakcie wznoszenia
+	ConstructionPhase   constructionProgress // Wskaźnik zaawansowania 0 - początek budowy, 1 - połowa budowy, 2 - zakończona
 }
 
 // playerState przedstawia usposobienie gracza.

@@ -750,6 +750,12 @@ const (
 	buildingArmor         uint8  = 10
 )
 
+const (
+	constructionSite constructionProgress = iota
+	constructionMid
+	constructionFinished
+)
+
 // Jest to lewy górny róg tekstury, 135 prawy dolny.
 // Dodatkowo każdy budynek ma swoją indywidualną „w budowie”.
 // @reminder: chyba mogę to przepisać korzystając ze stałych w assets_*.go 1.05.2026.
@@ -793,7 +799,7 @@ var constructionTemplatesPhase02 = map[buildingType][][]uint16{
 }
 
 // Zestawienie rodzajów budynku z teksturami, które się na niego składają.
-var buildingTemplates = map[buildingType][][]uint8{
+var buildingTemplates = map[buildingType][][]uint16{
 	buildingMain: { // Budynek główny
 		{137, 138, 139},
 		{140, 141, 142},

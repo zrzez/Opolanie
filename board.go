@@ -78,3 +78,102 @@ func (board *boardData) placeRoad(tileX, tileY uint8) {
 
 	log.Printf("BUDOWA: Postawiono drogę na (%d,%d).", tileX, tileY)
 }
+
+// applyFinishedGraphics nakłada tekstury na kafelki zajmowane przez ukończone budynki.
+func (board *boardData) applyFinishedGraphics(bld *building) {
+	switch bld.Type {
+	case buildingPalisade:
+		occupiedTile := bld.OccupiedTiles[0]
+		// Palisady muszą tworzyc spójną sieć, dlatego trzeba odświeżyć też sąsiednie kafelki
+		joinPalisade(occupiedTile.X, occupiedTile.Y, board)
+
+		return
+
+	case buildingBridge:
+		occupiedTile := bld.OccupiedTiles[0]
+		board.Tiles[occupiedTile.X][occupiedTile.Y].IsWalkable = true
+		// Z tego, co rozumiem to mosty budowane przez graczy zawsze mają ten sam wygląd
+		board.Tiles[occupiedTile.X][occupiedTile.Y].TextureID = spriteBridge01
+
+		return
+
+	default:
+		// Pobieramy tekstury właściwe dla rodzaju budowy
+		template, ok := buildingTemplates[bld.Type]
+		if !ok {
+			fmt.Printf("Błąd przy próbie zastosowania grafiki ukończonej budowy rodzaju %d!\n", bld.Type)
+
+			return
+		}
+
+		// Pobieramy lewy górny kafelek
+		occupiedTile := bld.OccupiedTiles[0]
+
+		for offsetY, row := range template {
+			for offsetX, texID := range row {
+				targetX := occupiedTile.X + uint8(offsetX)
+				targetY := occupiedTile.Y + uint8(offsetY)
+
+				// Podmieniamy teksturę na ostateczną
+				board.Tiles[targetX][targetY].TextureID = texID
+			}
+		}
+	}
+}
+
+// applyConstructionGraphics nakłada tekstury budowy na kafelki zajmowane przez budowę.
+// Metoda ta zakłada, że bld.OccupiedTiles są poprawne dzięki zrobione przez boardData.RegisterBuilding.
+func (board *boardData) applyConstructionGraphics(bld *building) {
+	// Jest to „mechanicznie” wywoływane przez bState.placeConstructionSite
+	// przy każdym zasadzeniu budowy.
+	switch bld.Type {
+	case buildingBridge:
+		occupiedTile := bld.OccupiedTiles[0]
+		board.Tiles[occupiedTile.X][occupiedTile.Y].TextureID = spriteBridgeConstruction
+	case buildingPalisade:
+		occupiedTile := bld.OccupiedTiles[0]
+		board.Tiles[occupiedTile.X][occupiedTile.Y].TextureID = spritePalisadeDestroyed
+		board.Tiles[occupiedTile.X][occupiedTile.Y].IsWalkable = true
+	default:
+		occupiedTile := bld.OccupiedTiles[0]
+
+		for offsetY, row := range constructionTemplatePhase01 {
+			for offsetX, texID := range row {
+				targetX := occupiedTile.X + uint8(offsetX)
+				targetY := occupiedTile.Y + uint8(offsetY)
+				board.Tiles[targetX][targetY].TextureID = texID
+			}
+		}
+	}
+}
+
+// Nakładamy połowiczne tekstury na budynek, który jest w połowie skończony
+func (board *boardData) applyPhase2Graphics(bld *building) {
+	// Palisady oraz mosty nie mają wyglądu połowicznego
+	if bld.Type == buildingPalisade || bld.Type == buildingBridge {
+		return
+	}
+
+	// Pobieramy tekstury odpowiednie dla danego rodzaju budynku w budowie
+	template, ok := constructionTemplatesPhase02[bld.Type]
+	if !ok {
+		fmt.Printf("Ten rodzaj budynku nie ma tekstur połowicznych!\n")
+
+		return
+	}
+
+	// Pobieramy lewy górny róg placu budowy
+	occupiedTile := bld.OccupiedTiles[0]
+
+	// Przechodzimy przez wszystkie wiersze
+	for offsetY, row := range template {
+		// Przechodzimy przez wszystkie kolumny
+		for offsetX, texID := range row {
+			// Ustalamy któremu kafelekowi zmienić teksturę
+			targetX := occupiedTile.X + uint8(offsetX)
+			targetY := occupiedTile.Y + uint8(offsetY)
+			// Przypisujemy nową teksturę
+			board.Tiles[targetX][targetY].TextureID = texID
+		}
+	}
+}

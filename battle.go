@@ -527,32 +527,72 @@ func updateBuildings(bState *battleState) {
 			continue
 		}
 
-		if bld.AccumulatedDamage > uint16(bld.Armor) {
-			finalDamage := bld.AccumulatedDamage - uint16(bld.Armor)
-
-			if finalDamage > 0 {
-				applyBuildingDamage(bld, finalDamage, bState)
-			}
-
-			bld.AccumulatedDamage = 0
-		}
-
-		if bld.IsUnderConstruction {
-			if bld.HP >= bld.MaxHP/2 {
-				applyPhase2Graphics(bld, bState.Board)
-			}
-
-			if bld.HP >= bld.MaxHP {
-				if completeConstruction(bld, bState.Board, bState.PlayerID) {
-					bState.CurrentMessage.Text = fmt.Sprintf("Budowa %s zakończona!", buildingDefs[bld.Type].Name)
-					bState.CurrentMessage.Duration = 60
-				}
-			}
-		}
+		processBuildingConstruction(bld, bState)
+		processBuildingDamage(bld, bState)
 	}
 
 	cleanupConvertedBridges(bState)
 	cleanupDestroyedBuildings(bState)
+}
+
+// Ustawia tekstury w zależności od stopnia zaawansowania budowy.
+// Celowo nie cofamy grafiki jeśli zostanie ona zaatakowana.
+func processBuildingConstruction(bld *building, bState *battleState) {
+	// Tylko budowy
+	if !bld.IsUnderConstruction {
+		return
+	}
+
+	switch bld.ConstructionPhase {
+	// Połowiczne grafiki tylko jeśli HP przekroczy próg
+	case constructionSite:
+		if bld.HP < bld.MaxHP/2 {
+			return
+		}
+
+		bld.ConstructionPhase = constructionMid
+		bState.Board.applyPhase2Graphics(bld)
+
+	case constructionMid:
+		if bld.HP < bld.MaxHP {
+			return
+		}
+
+		bld.ConstructionPhase = constructionFinished
+
+		bState.Board.applyFinishedGraphics(bld)
+
+		if bld.Owner == bState.PlayerID {
+			bState.CurrentMessage.Text = fmt.Sprintf("Ukończono budowę: %s", buildingDefs[bld.Type].Name)
+			bState.CurrentMessage.Duration = 60
+		}
+
+		if bld.Type == buildingBridge {
+			bld.IsPendingRemoval = true
+		}
+
+		// Żeby uniknąć „zawieszenia” pomiędzy ukończeniem, a przestawieniem flagi na cały tik,
+		// jednocześnie zmieniamy fazę oraz flagę bld.IsUnderconstruction
+		bld.IsUnderConstruction = false
+
+	case constructionFinished:
+		// celowo puste
+	default:
+		// celowo puste
+	}
+}
+
+// Funkcja odpowiada za sprawdzanie, czy obrażenia zadane w „jednostce czasu” przekraczają próg
+// zniszczeń, które są wartością graniczną. Bez przekroczenia bld jest nienaruszone!
+func processBuildingDamage(bld *building, bState *battleState) {
+	// Odsiewamy nieistotne obrażenia
+	if bld.AccumulatedDamage <= uint16(bld.Armor) {
+		return
+	}
+
+	finalDamage := bld.AccumulatedDamage - uint16(bld.Armor)
+	applyBuildingDamage(bld, finalDamage, bState)
+	bld.AccumulatedDamage = 0
 }
 
 // @todo: CZEMU TO JEST W battle.go a nie constructions.go?! 26.05.2026

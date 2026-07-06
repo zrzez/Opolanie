@@ -69,7 +69,7 @@ func (bState *battleState) placeConstructionSite(bldType buildingType, tileX, ti
 	newBld.HP = initialConstructionHP
 
 	// 3. Wygląd
-	newBld.applyConstructionGraphics(bState.Board)
+	bState.Board.applyConstructionGraphics(newBld)
 
 	// 4. Informacja dla gracza
 	bState.CurrentMessage.Text = fmt.Sprintf("Wznoszenie: %s", stats.Name)
@@ -143,7 +143,7 @@ func (bState *battleState) createFinishedBuilding(bldType buildingType, tileX, t
 	newBld.HP = newBld.MaxHP
 
 	// 3. Aktualizujemy tekstury w planszy
-	applyFinishedGraphics(newBld, bState.Board)
+	bState.Board.applyFinishedGraphics(newBld)
 
 	return newBld
 }
