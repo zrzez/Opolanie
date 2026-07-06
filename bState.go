@@ -170,7 +170,7 @@ func (bState *battleState) getUnitByID(uID UnitID) (*unit, bool) {
 	return nil, false
 }
 
-func (bState *battleState) GetObjectByID(oID ObjectID) (*unit, *building) {
+func (bState *battleState) getObjectByID(oID ObjectID) (*unit, *building) {
 	if currentUnit, ok := bState.getUnitByID(UnitID(oID)); ok {
 		return currentUnit, nil
 	}
@@ -255,7 +255,7 @@ func (bState *battleState) resolveActualTarget(mainTargetX, mainTargetY uint8, m
 		return mainTargetX, mainTargetY
 	}
 
-	targetUnit, targetBuilding := bState.GetObjectByID(mainTargetID)
+	targetUnit, targetBuilding := bState.getObjectByID(mainTargetID)
 
 	if targetUnit != nil && targetUnit.Exists {
 		return targetUnit.X, targetUnit.Y

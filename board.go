@@ -177,3 +177,32 @@ func (board *boardData) applyPhase2Graphics(bld *building) {
 		}
 	}
 }
+
+// Palisady mają wyjątkowy cykl życia: zawsze można je odbudować.
+// Dlatego potrzebują osobnej metody. Jedynym sposobem pozbycia się ich jest
+// zbudowanie budynku na nich.
+func (board *boardData) handlePalisadeDestruction(bld *building) {
+	currentTile := &board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y]
+	currentTile.TextureID = spritePalisadeDestroyed
+	currentTile.IsWalkable = true
+	bld.IsUnderConstruction = true
+}
+
+// Usuwa budynek z planszy i wstawia ruiny na to miejsce.
+// Nie mylić z usuwaniem z bState.Buildings, bo to osobna sprawa.
+func (board *boardData) placeRuins(bld *building) {
+	occupiedTile := bld.OccupiedTiles[0]
+
+	for offsetY, row := range ruinsTemplate {
+		for offsetX, texID := range row {
+			targetX := occupiedTile.X + uint8(offsetX)
+			targetY := occupiedTile.Y + uint8(offsetY)
+
+			targetTile := &board.Tiles[targetX][targetY]
+
+			targetTile.TextureID = texID
+			targetTile.Building = nil
+			targetTile.IsWalkable = false
+		}
+	}
+}

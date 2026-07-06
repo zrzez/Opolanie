@@ -527,17 +527,20 @@ func updateBuildings(bState *battleState) {
 			continue
 		}
 
-		processBuildingConstruction(bld, bState)
-		processBuildingDamage(bld, bState)
+		bState.processBuildingConstruction(bld)
+		bState.processBuildingDamage(bld)
 	}
 
+	// @todo: zastanów się, czy jest sens mieć te dwie funkcje osobno
+	// dodatkowo, czy i jak powinny być usuwane z bState.Buildings mosty, bo
+	// to przypadek dość szczególny. W tej chwili co tik się to czyści!
 	cleanupConvertedBridges(bState)
 	cleanupDestroyedBuildings(bState)
 }
 
 // Ustawia tekstury w zależności od stopnia zaawansowania budowy.
 // Celowo nie cofamy grafiki jeśli zostanie ona zaatakowana.
-func processBuildingConstruction(bld *building, bState *battleState) {
+func (bState *battleState) processBuildingConstruction(bld *building) {
 	// Tylko budowy
 	if !bld.IsUnderConstruction {
 		return
@@ -584,77 +587,58 @@ func processBuildingConstruction(bld *building, bState *battleState) {
 
 // Funkcja odpowiada za sprawdzanie, czy obrażenia zadane w „jednostce czasu” przekraczają próg
 // zniszczeń, które są wartością graniczną. Bez przekroczenia bld jest nienaruszone!
-func processBuildingDamage(bld *building, bState *battleState) {
+func (bState *battleState) processBuildingDamage(bld *building) {
 	// Odsiewamy nieistotne obrażenia
 	if bld.AccumulatedDamage <= uint16(bld.Armor) {
 		return
 	}
 
 	finalDamage := bld.AccumulatedDamage - uint16(bld.Armor)
-	applyBuildingDamage(bld, finalDamage, bState)
+	bld.applyBuildingDamage(finalDamage)
 	bld.AccumulatedDamage = 0
-}
 
-// @todo: CZEMU TO JEST W battle.go a nie constructions.go?! 26.05.2026
-func applyBuildingDamage(bld *building, finalDamage uint16, bState *battleState) {
-	// Bez tego bld.HP przekręca się na 65 tys.
-	if bld.HP >= finalDamage {
-		bld.HP -= finalDamage
-	} else {
-		bld.HP = 0
-	}
-
-	log.Printf("building %d took %d final damage. HP: %d/%d",
-		bld.ID, finalDamage, bld.HP, bld.MaxHP)
-
+	// Budynek został zniszczony
 	if bld.HP <= 0 {
-		removeBuilding(bld, bState)
+		bState.resolveBuildingDestruction(bld)
 	}
 }
 
-func removeBuilding(bld *building, bState *battleState) {
-	bld.HP = 0
-
+// Odpowiedzialna za dobór logiki obsługi zniszczonego budynku.
+// Palisady są odnawialne więc trzba potraktować inaczej
+func (bState *battleState) resolveBuildingDestruction(bld *building) {
+	// Wydaje mi się, że najczęściej atakowane będą inne rodzaje budynków
+	// dlatego jest to pierwsze wyrażenie
 	if bld.Type != buildingPalisade {
-		placeDestroyedBuilding(bld, bState)
+		bState.handleBuildingDestruction(bld)
 	} else {
-		placeDestroyedPalisade(bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, bld, bState)
+		bState.Board.handlePalisadeDestruction(bld)
 	}
 }
 
-func placeDestroyedBuilding(bld *building, bState *battleState) {
-	// Trzeba dać znać jednostkom, że nie mają już domu
-	for _, uID := range bld.AssignedUnits {
-		u, ok := bState.getUnitByID(uID)
-
-		if ok && u.Exists {
-			u.BelongsTo = nil
-		}
-	}
+// Ma na celu obsłużenie zniszczenia zwykłego budynku.
+// Składa się to z kilku kroków więc raczej nie będzie „wykonawcą”
+// Nazwa sugeruje, że główne zadanie spoczywa na planszy.
+// Dlatego nie rozumiem czemu cały bState jest argumentem.
+func (bState *battleState) handleBuildingDestruction(bld *building) {
+	// Wywalamy jednostki z budynku
+	bld.unassignUnitsfromBuilding(bState)
 
 	// Wywalamy budynek
 	bld.Exists = false
 	log.Printf("building %d destroyed!", bld.ID)
 
-	switch bld.Owner {
+	// Budynek przestał działać, gracz powinien odzyskać miejsce
+	bState.decreaseBuildingCount(bld.Owner)
+
+	bState.Board.placeRuins(bld)
+}
+
+func (bState *battleState) decreaseBuildingCount(owner PlayerID) {
+	switch owner {
 	case bState.HumanPlayerState.PlayerID:
 		bState.HumanPlayerState.CurrentBuildings--
 	case bState.AIEnemyState.PlayerID:
 		bState.AIEnemyState.CurrentBuildings--
-	}
-
-	placeRuins(bState, bld)
-
-	for _, occupiedTile := range bld.OccupiedTiles {
-		if occupiedTile.X < boardMaxX && occupiedTile.Y < boardMaxY {
-			// Usuwamy odnośnik do budynku z kafelka
-			checkTile := bState.Board.Tiles[occupiedTile.X][occupiedTile.Y]
-
-			if checkTile.Building == bld {
-				checkTile.Building = nil
-				checkTile.IsWalkable = true
-			}
-		}
 	}
 }
 
@@ -733,58 +717,5 @@ func handleLevelEvents(bState *battleState) {
 				}
 			}
 		}
-	}
-}
-
-func placeDestroyedPalisade(x, y uint8, bld *building, bState *battleState) {
-	currentTile := &bState.Board.Tiles[x][y]
-	currentTile.TextureID = spritePalisadeDestroyed
-	currentTile.IsWalkable = true
-	bld.IsUnderConstruction = true
-}
-
-func placeRuins(bState *battleState, bld *building) {
-	if len(bld.OccupiedTiles) == 0 {
-		return
-	}
-
-	minX, minY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
-	maxX, maxY := bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
-
-	for _, pt := range bld.OccupiedTiles {
-		if pt.X < minX {
-			minX = pt.X
-		}
-
-		if pt.Y < minY {
-			minY = pt.Y
-		}
-
-		if pt.X > maxX {
-			maxX = pt.X
-		}
-
-		if pt.Y > maxY {
-			maxY = pt.Y
-		}
-	}
-
-	width := maxX - minX + 1
-
-	for _, pt := range bld.OccupiedTiles {
-		x, y := pt.X, pt.Y
-
-		occupedTile := &bState.Board.Tiles[x][y]
-
-		// Czyścimy wskaźnik na budynek
-		occupedTile.Building = nil
-
-		// Ustawiamy grafikę ruin
-		dx := pt.X - minX
-		dy := pt.Y - minY
-		idx := dy*width + dx
-		occupedTile.TextureID = spriteRuinStart + uint16(idx)
-		// Zgliszcza uniemożliwiają ruch
-		occupedTile.IsWalkable = false
 	}
 }

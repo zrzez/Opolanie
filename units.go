@@ -150,7 +150,7 @@ func (u *unit) show(board *boardData) {
 
 func (u *unit) updateUnit(bState *battleState) {
 	board := bState.Board
-	var resolver ObjectResolver = bState
+	var resolver objectResolver = bState
 	pathfindingBudget := &bState.PathfindingBudget
 
 	// Aktualizowanie ran
@@ -279,13 +279,13 @@ func (u *unit) handleWaitingToActiveTransition() {
 	}
 }
 
-func (u *unit) handleMovementTargetReached(resolver ObjectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleMovementTargetReached(resolver objectResolver, board *boardData, bState *battleState) {
 	if u.State == stateMoving && u.X == u.TargetX && u.Y == u.TargetY {
 		u.handleTargetReached(resolver, board, bState)
 	}
 }
 
-func (u *unit) executeCommandAction(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
+func (u *unit) executeCommandAction(resolver objectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	switch u.Type {
 	case unitCow:
 		u.handleCowBehavior(resolver, board, pathfindingBudget, bState)
@@ -294,7 +294,7 @@ func (u *unit) executeCommandAction(resolver ObjectResolver, board *boardData, p
 	}
 }
 
-func (u *unit) executeStandardUnitCommand(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
+func (u *unit) executeStandardUnitCommand(resolver objectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	switch u.Command {
 	case cmdUMove:
 		u.move(resolver, board, pathfindingBudget, bState)
@@ -408,7 +408,7 @@ func (ut unitType) canDamagePalisades() bool {
 }
 
 func (u *unit) findApproachTileForTarget(intentionX, intentionY uint8, targetID ObjectID, bState *battleState) (uint8, uint8, error) {
-	targetUnit, targetBuilding := bState.GetObjectByID(targetID)
+	targetUnit, targetBuilding := bState.getObjectByID(targetID)
 
 	// Cel jest budynkiem
 	if targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge) {
@@ -641,7 +641,7 @@ func (u *unit) canAttack(targetID ObjectID, intentionX, intentionY uint8, bState
 		return false
 	}
 
-	targetUnit, targetBuilding := bState.GetObjectByID(ObjectID(targetID))
+	targetUnit, targetBuilding := bState.getObjectByID(ObjectID(targetID))
 
 	// Jednostki
 	// musi istnieć
@@ -730,7 +730,7 @@ func (u *unit) isAtTarget() bool {
 	return u.X == u.ApproachX && u.Y == u.ApproachY
 }
 
-func (u *unit) move(resolver ObjectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
+func (u *unit) move(resolver objectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	if u.Command == cmdUAttack {
 		log.Printf("INFO: units.go move rozkaz to cmdAttack")
 
@@ -769,7 +769,7 @@ func (u *unit) move(resolver ObjectResolver, board *boardData, pathfindingBudget
 	u.executeAStarMovement(resolver, board, pathfindingBudget)
 }
 
-func (u *unit) canAttackTargetFromCurrentPosition(resolver ObjectResolver, board *boardData) bool {
+func (u *unit) canAttackTargetFromCurrentPosition(resolver objectResolver, board *boardData) bool {
 	log.Println("Sprawdzam, czy cel istnieje")
 
 	target, err := u.validateTargetExists(resolver, board)
@@ -813,7 +813,7 @@ func (u *unit) detectSimpleOscillation() bool {
 	return a.X == c.X && a.Y == c.Y && b.X == d.X && b.Y == d.Y
 }
 
-func (u *unit) executeAStarMovement(resolver ObjectResolver, board *boardData, pathfindingBudget *int) {
+func (u *unit) executeAStarMovement(resolver objectResolver, board *boardData, pathfindingBudget *int) {
 	if !u.ensureValidPath(resolver, board, pathfindingBudget) {
 		return
 	}
@@ -821,7 +821,7 @@ func (u *unit) executeAStarMovement(resolver ObjectResolver, board *boardData, p
 	u.moveAlongPath(board)
 }
 
-func (u *unit) ensureValidPath(resolver ObjectResolver, board *boardData, pathfindingBudget *int) bool {
+func (u *unit) ensureValidPath(resolver objectResolver, board *boardData, pathfindingBudget *int) bool {
 	if u.hasValidPath(resolver, board) {
 		return true
 	}
@@ -837,7 +837,7 @@ func (u *unit) ensureValidPath(resolver ObjectResolver, board *boardData, pathfi
 	return u.calculateNewPath(board)
 }
 
-func (u *unit) hasValidPath(resolver ObjectResolver, board *boardData) bool {
+func (u *unit) hasValidPath(resolver objectResolver, board *boardData) bool {
 	if len(u.Path) == 0 || u.PathIndex >= len(u.Path) {
 		return false
 	}
@@ -1061,7 +1061,7 @@ func (u *unit) setIdleWithReason(reason string) {
 	}
 }
 
-func (u *unit) handleTargetReached(resolver ObjectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleTargetReached(resolver objectResolver, board *boardData, bState *battleState) {
 	u.clearPath()
 
 	switch u.Command {
@@ -1192,7 +1192,7 @@ func (u *unit) updateMovementAnimation(prevX, prevY uint8) {
 }
 
 // attack zadaje obrażenia celowi lub ustawia ruch w jego kierunku.
-func (u *unit) attack(resolver ObjectResolver, board *boardData, bState *battleState) {
+func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleState) {
 	log.Printf("units.go attack weszliśmy do metody")
 
 	target, err := u.validateAttackTarget(resolver, board)
@@ -1264,7 +1264,7 @@ func (u *unit) faceTarget(target *combatTarget) {
 	}
 }
 
-func (u *unit) validateAttackTarget(resolver ObjectResolver, board *boardData) (*combatTarget, error) {
+func (u *unit) validateAttackTarget(resolver objectResolver, board *boardData) (*combatTarget, error) {
 	target, err := u.validateTargetExists(resolver, board)
 	if err != nil {
 		return nil, fmt.Errorf("cel zniknął")
@@ -1453,7 +1453,7 @@ func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
 
 func (u *unit) repair(bState *battleState) {
 	// Bezpiecznik, bo cel mógł się zmienić w międzyczasie
-	_, targetBuilding := bState.GetObjectByID(u.TargetID)
+	_, targetBuilding := bState.getObjectByID(u.TargetID)
 	validRepairTarget, _ := validateRepairContext(u, targetBuilding)
 
 	if !validRepairTarget {
@@ -1481,7 +1481,7 @@ func (u *unit) repair(bState *battleState) {
 
 func (u *unit) build(bState *battleState) {
 	// Bezpiecznik, bo budowa mogą się zmienić w międzyczasie
-	_, targetBuilding := bState.GetObjectByID(u.TargetID)
+	_, targetBuilding := bState.getObjectByID(u.TargetID)
 	validBuildTarget, _ := validateBuildingContext(u, targetBuilding)
 
 	if !validBuildTarget {
@@ -1807,7 +1807,7 @@ func (u *unit) findNearestPalisade(bState *battleState, radius uint8,
 	return best
 }
 
-func (u *unit) actOnIdle(resolver ObjectResolver, board *boardData, bState *battleState) {
+func (u *unit) actOnIdle(resolver objectResolver, board *boardData, bState *battleState) {
 	if !u.canActOnIdle() {
 		return
 	}
@@ -1827,11 +1827,11 @@ func (u *unit) canActOnIdle() bool {
 	return u.Type != unitCow && u.Type != unitShepherd
 }
 
-func (u *unit) shouldSearchForTarget(resolver ObjectResolver, board *boardData) bool {
+func (u *unit) shouldSearchForTarget(resolver objectResolver, board *boardData) bool {
 	return u.isReadyToAct(resolver, board)
 }
 
-func (u *unit) isReadyToAct(resolver ObjectResolver, board *boardData) bool {
+func (u *unit) isReadyToAct(resolver objectResolver, board *boardData) bool {
 	if u.State == stateIdle && u.Command == cmdUIdle {
 		return true
 	}
@@ -1886,7 +1886,7 @@ func (u *unit) isImportantPalisade(palisade *building, bState *battleState) bool
 	return false
 }
 
-func (u *unit) handleTargetSearch(resolver ObjectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleTargetSearch(resolver objectResolver, board *boardData, bState *battleState) {
 	if u.Owner == bState.HumanPlayerState.PlayerID {
 		u.handleTargetSearchForHumanPlayer(resolver, board, bState)
 	} else {
@@ -1894,7 +1894,7 @@ func (u *unit) handleTargetSearch(resolver ObjectResolver, board *boardData, bSt
 	}
 }
 
-func (u *unit) handleTargetSearchForHumanPlayer(resolver ObjectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleTargetSearchForHumanPlayer(resolver objectResolver, board *boardData, bState *battleState) {
 	primaryTargetUnit, primaryTargetBuilding, foundPrimary := findNearestEnemyExtended(u, bState)
 
 	if !foundPrimary {
@@ -1918,7 +1918,7 @@ func (u *unit) handleTargetSearchForHumanPlayer(resolver ObjectResolver, board *
 	u.setIdle()
 }
 
-func (u *unit) handleTargetSearchForAI(resolver ObjectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleTargetSearchForAI(resolver objectResolver, board *boardData, bState *battleState) {
 	isPalisadeBreaker := u.Type.canDamagePalisades()
 
 	primaryTargetUnit, primaryTargetBuilding, foundPrimary := findNearestEnemyExtended(u, bState)
@@ -1949,7 +1949,7 @@ func (u *unit) handleTargetSearchForAI(resolver ObjectResolver, board *boardData
 	}
 }
 
-func (u *unit) handleUnitTarget(targetUnit *unit, resolver ObjectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleUnitTarget(targetUnit *unit, resolver objectResolver, board *boardData, bState *battleState) {
 	u.TargetID = ObjectID(targetUnit.ID)
 	u.setMoveTargetForUnit(targetUnit, bState)
 
@@ -2055,8 +2055,8 @@ func (u *unit) isValidMoveTarget(x, y uint8, board *boardData) bool {
 		isWalkable(board, x, y)
 }
 
-func (u *unit) validateTargetExists(resolver ObjectResolver, board *boardData) (*combatTarget, error) {
-	targetUnit, targetBuilding := resolver.GetObjectByID(u.TargetID)
+func (u *unit) validateTargetExists(resolver objectResolver, board *boardData) (*combatTarget, error) {
+	targetUnit, targetBuilding := resolver.getObjectByID(u.TargetID)
 
 	// To chyba jest chodzenie po moście albo jego budowa.
 	// Szkoda, że nie zostawiłem komentarzy.
@@ -2121,7 +2121,7 @@ func (u *unit) executeActionByDistance(distance uint8, bState *battleState) {
 	}
 }
 
-func (u *unit) executeActionBasedOnDistance(resolver ObjectResolver, board *boardData, bState *battleState) {
+func (u *unit) executeActionBasedOnDistance(resolver objectResolver, board *boardData, bState *battleState) {
 	target, err := u.validateTargetExists(resolver, board)
 	if err != nil {
 		u.setIdle()
@@ -2138,7 +2138,7 @@ func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bState *battl
 	realTargetY := placeholderY
 
 	if u.TargetID != 0 {
-		targetUnit, targetBld := bState.GetObjectByID(u.TargetID)
+		targetUnit, targetBld := bState.getObjectByID(u.TargetID)
 
 		if targetUnit != nil && targetUnit.Exists {
 			realTargetX = targetUnit.X

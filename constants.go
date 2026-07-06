@@ -756,6 +756,13 @@ const (
 	constructionFinished
 )
 
+// @todo: całosć wygląda paskudnie!
+var ruinsTemplate = [][]uint16{
+	{spriteRuinStart, spriteRuinStart + 1, spriteRuinStart + 2},
+	{spriteRuinStart + 3, spriteRuinStart + 4, spriteRuinStart + 5},
+	{spriteRuinStart + 6, spriteRuinStart + 7, spriteRuinEnd},
+}
+
 // Jest to lewy górny róg tekstury, 135 prawy dolny.
 // Dodatkowo każdy budynek ma swoją indywidualną „w budowie”.
 // @reminder: chyba mogę to przepisać korzystając ze stałych w assets_*.go 1.05.2026.

@@ -37,6 +37,20 @@ func (bld *building) increaseHP(amount uint16) {
 	}
 }
 
+// Obniżamy bezpośrednio HP budynku. Nie mylić processingBuildingDamage, które
+// służa sa sito dla nieskutecznych ataków.
+func (bld *building) applyBuildingDamage(finalDamage uint16) {
+	// Bez tego bld.HP przekręca się na 65 tys.
+	if bld.HP >= finalDamage {
+		bld.HP -= finalDamage
+	} else {
+		bld.HP = 0
+	}
+
+	log.Printf("Budynek %s przyjął obrażenia w wysokości: %d. HP: %d/%d",
+		buildingDefs[bld.Type].Name, finalDamage, bld.HP, bld.MaxHP)
+}
+
 func (bldType buildingType) isRegularBuilding() bool {
 	return bldType != buildingRoad && bldType != buildingBridge && bldType != buildingPalisade
 }
@@ -544,4 +558,15 @@ func cleanupConvertedBridges(bState *battleState) {
 	}
 	// lista budynków staje się listą zachowanych budowli
 	bState.Buildings = newBuildingList
+}
+
+func (bld *building) unassignUnitsfromBuilding(resolver unitResolver) {
+	// Trzeba dać znać jednostkom, że nie mają już domu
+	for _, uID := range bld.AssignedUnits {
+		u, ok := resolver.getUnitByID(uID)
+
+		if ok && u.Exists {
+			u.BelongsTo = nil
+		}
+	}
 }

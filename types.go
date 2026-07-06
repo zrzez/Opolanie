@@ -630,6 +630,10 @@ type bounds struct {
 type unitDirection uint8
 
 // ============ INTERFACE
-type ObjectResolver interface {
-	GetObjectByID(id ObjectID) (*unit, *building)
+type objectResolver interface {
+	getObjectByID(id ObjectID) (*unit, *building)
+}
+
+type unitResolver interface {
+	getUnitByID(id UnitID) (*unit, bool)
 }
