@@ -519,12 +519,8 @@ func (bld *building) isRepairable(playerID PlayerID) bool {
 	return bld.Type == buildingPalisade || bld.Type == buildingBridge || bld.Owner == playerID
 }
 
-func cleanupDestroyedBuildings(bState *battleState) {
+func (bState *battleState) cleanupDestroyedBuildings() {
 	if bState.GlobalFrameCounter%6000 != 0 {
-		return
-	}
-
-	if len(bState.Buildings) < int(maxBuildingsPerPlayer)*4 {
 		return
 	}
 
@@ -540,29 +536,7 @@ func cleanupDestroyedBuildings(bState *battleState) {
 	removedCount := len(bState.Buildings) - len(newBuildingsList)
 	bState.Buildings = newBuildingsList
 
-	if removedCount > 0 {
-		log.Printf("INFO: Wyczyszczono %d zniszczonych budynków.", removedCount)
-	}
-}
-
-func cleanupConvertedBridges(bState *battleState) {
-	newBuildingList := make([]*building, 0, len(bState.Buildings))
-
-	for _, bld := range bState.Buildings {
-		if bld.IsPendingRemoval {
-			// @reminder: Nie da się zasadzić budowy poza granicami
-			// planszy więc nie trzeba sprawdzać przy usuwaniu
-			// czy zajmowane kafelki mieszczą się w planszy
-			currentTile := &bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y]
-			currentTile.Building = nil
-			currentTile.IsWalkable = true
-		} else {
-			// zachowujemy budynek
-			newBuildingList = append(newBuildingList, bld)
-		}
-	}
-	// lista budynków staje się listą zachowanych budowli
-	bState.Buildings = newBuildingList
+	log.Printf("INFO: Wyczyszczono %d zniszczonych budynków.", removedCount)
 }
 
 func (bld *building) unassignUnitsfromBuilding(resolver unitResolver) {

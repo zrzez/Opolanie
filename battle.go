@@ -536,11 +536,7 @@ func updateBuildings(bState *battleState) {
 		}
 	}
 
-	// @todo: zastanów się, czy jest sens mieć te dwie funkcje osobno
-	// dodatkowo, czy i jak powinny być usuwane z bState.Buildings mosty, bo
-	// to przypadek dość szczególny. W tej chwili co tik się to czyści!
-	cleanupConvertedBridges(bState)
-	cleanupDestroyedBuildings(bState)
+	bState.cleanupDestroyedBuildings()
 }
 
 // Ustawia tekstury w zależności od stopnia zaawansowania budowy.
@@ -570,13 +566,17 @@ func (bState *battleState) processBuildingConstruction(bld *building) {
 
 		bState.Board.applyFinishedGraphics(bld)
 
+		// @todo przecież mam getPlayerState, a samo bState.PlayerID wydaje się byc do wywalenia!
 		if bld.Owner == bState.PlayerID {
 			bState.CurrentMessage.Text = fmt.Sprintf("Ukończono budowę: %s", buildingDefs[bld.Type].Name)
 			bState.CurrentMessage.Duration = 60
 		}
 
 		if bld.Type == buildingBridge {
-			bld.IsPendingRemoval = true
+			bld.Exists = false
+			// Wywalamy wskaźnik w kafelku do mostu, bo będzie usunięty z gry
+			bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].Building = nil
+			// bState.Board.applyFinishedGraphics ustawiło dla mostu przechodniość więc tutaj
 		}
 
 		// Żeby uniknąć „zawieszenia” pomiędzy ukończeniem, a przestawieniem flagi na cały tik,
