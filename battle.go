@@ -329,9 +329,8 @@ func updateGame(bState *battleState) {
 	updateProjectiles(bState)
 
 	// 9. Budynki i niszczenie ich
-	// @todo: to brzmi, jak coś co powinno się rozdzielić
-	// ogarnij, czy da się tego potwora uprościć, ulepszyć
-	updateBuildings(bState)
+	// @reminder: sprawdzone i wyczyszczone 07.07.2026
+	bState.updateBuildings()
 
 	// 10. Efekty globalne
 	applyGlobalEffects(bState)
@@ -521,7 +520,7 @@ func updateProjectiles(bState *battleState) {
 	bState.Projectiles = activeProjectiles
 }
 
-func updateBuildings(bState *battleState) {
+func (bState *battleState) updateBuildings() {
 	for _, bld := range bState.Buildings {
 		if !bld.Exists {
 			continue
