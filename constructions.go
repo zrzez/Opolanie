@@ -96,36 +96,17 @@ func (bld *building) hasSpace() bool {
 	return len(bld.AssignedUnits) < int(bld.MaxFood)
 }
 
-// cx, cy, ok := bld.getCenter() if ok {}
+// @reminer: Zupełnie nie rozumiem po co obecnie miałbym mieć taką metodę.
+// Do czasu aż nie ogarnę units.go zostawię, ale czuję, że jest zbędna.
 func (bld *building) getCenter() (uint8, uint8, bool) {
-	if len(bld.OccupiedTiles) == 0 {
-		return 0, 0, false
+	switch bld.Type {
+	case buildingPalisade, buildingBridge:
+		// Te rodzaje budynków, zawsze mają dokładnie jeden kafelek
+		return bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].X, true
+	default:
+		// Zwyczajne budowle zawsze są 3na3 więc środek jest z góry znany
+		return bld.OccupiedTiles[1].X, bld.OccupiedTiles[1].Y, true
 	}
-
-	minX := bld.OccupiedTiles[0].X
-	minY := bld.OccupiedTiles[0].Y
-	maxX := bld.OccupiedTiles[0].X
-	maxY := bld.OccupiedTiles[0].Y
-
-	for _, pt := range bld.OccupiedTiles {
-		if pt.X < minX {
-			minX = pt.X
-		}
-		if pt.Y < minY {
-			minY = pt.Y
-		}
-		if pt.X > maxX {
-			maxX = pt.X
-		}
-		if pt.Y > maxY {
-			maxY = pt.Y
-		}
-	}
-
-	centerX := minX + (maxX-minX)/2
-	centerY := minY + (maxY-minY)/2
-
-	return centerX, centerY, true
 }
 
 func (bld *building) getDistanceToUnit(unitX, unitY uint8) uint8 {
@@ -164,34 +145,16 @@ func (bld *building) getDistanceToUnit(unitX, unitY uint8) uint8 {
 }
 
 // Zwraca granice budynku jako int.
+// @reminder: funkcja wydaje się całkowicie zbyteczna
+// bo teraz budynek ma .OccupiedTiles. Nie usuwam jeszcze.
 func (bld *building) getBounds() (int, int, int, int) {
-	if len(bld.OccupiedTiles) == 0 {
-		return 0, 0, 0, 0
+	switch bld.Type {
+
+	case buildingBridge, buildingPalisade:
+		return int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y), int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y)
+	default:
+		return int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y), int(bld.OccupiedTiles[2].X), int(bld.OccupiedTiles[2].Y)
 	}
-
-	minX, minY := math.MaxUint8, math.MaxUint8
-	maxX, maxY := 0, 0
-
-	for _, occupiedTile := range bld.OccupiedTiles {
-		tileX, tileY := int(occupiedTile.X), int(occupiedTile.Y)
-		if tileX < minX {
-			minX = tileX
-		}
-
-		if tileY < minY {
-			minY = tileY
-		}
-
-		if tileX > maxX {
-			maxX = tileX
-		}
-
-		if tileY > maxY {
-			maxY = tileY
-		}
-	}
-
-	return minX, minY, maxX, maxY
 }
 
 // Sprawdza, czy na danym polu można postawić jednostkę
