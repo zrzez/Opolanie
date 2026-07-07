@@ -22,6 +22,8 @@ const (
 	buildErrNoRoadAccess
 	buildErrAlreadyPath
 	buildErrNoDefinition
+	buildErrInvalidOwner
+	////////////////////////
 	workErrNone
 	workErrWrongWorkerType
 	workErrInvalidTarget
@@ -42,6 +44,10 @@ func validateConstructionContext(bType buildingType, owner PlayerID, bState *bat
 	regularBuilding := bType != buildingPalisade && bType != buildingBridge && bType != buildingRoad
 
 	ownerState := bState.getPlayerState(owner)
+
+	if ownerState == nil {
+		return false, buildErrInvalidOwner
+	}
 
 	if regularBuilding && ownerState.CurrentBuildings >= maxBuildingsPerPlayer {
 		return false, buildErrLimit

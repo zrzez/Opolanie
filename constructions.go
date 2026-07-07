@@ -298,6 +298,11 @@ func (bld *building) canProduceUnit(unitType unitType, bState *battleState) bool
 	// Ustalamy kto chce wykonać działanie
 	ownerState := bState.getPlayerState(bld.Owner)
 
+	if ownerState == nil {
+		fmt.Println("nieznany właściciel budynku")
+		return false
+	}
+
 	// 2. Czy nie przekraczamy odgórnego ograniczenia?
 	if ownerState.CurrentPopulation >= maxUnitsPerPlayer {
 		return reject("Ograniczenie jednostek!")

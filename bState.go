@@ -7,14 +7,6 @@ import (
 	"math/rand"
 )
 
-func (bState *battleState) getPlayerState(ownerID PlayerID) *playerState {
-	if ownerID == bState.HumanPlayerState.PlayerID {
-		return bState.HumanPlayerState
-	}
-
-	return bState.AIEnemyState
-}
-
 func (bState *battleState) createBuilding(bldType buildingType, topLeftX, topLeftY uint8, owner PlayerID) *building {
 	stats, ok := buildingDefs[bldType]
 	if !ok {
@@ -83,10 +75,14 @@ func (bState *battleState) placeConstructionSite(bldType buildingType, tileX, ti
 func (bState *battleState) tryBuildStructure(bldType buildingType, tileX, tileY uint8, owner PlayerID) error {
 	stats, ok := buildingDefs[bldType]
 	if !ok {
-		return fmt.Errorf("neznany rodzaj budynku")
+		return fmt.Errorf("nieznany rodzaj budynku")
 	}
 
 	ownerState := bState.getPlayerState(owner)
+
+	if ownerState == nil {
+		return fmt.Errorf("nieznany właściciel budynku")
+	}
 
 	if ownerState.Milk < stats.Cost {
 		return fmt.Errorf("za mało mleka")

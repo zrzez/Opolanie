@@ -528,7 +528,12 @@ func updateBuildings(bState *battleState) {
 		}
 
 		bState.processBuildingConstruction(bld)
-		bState.processBuildingDamage(bld)
+		bld.processBuildingDamage()
+
+		// Budynek został zniszczony
+		if bld.HP == 0 {
+			bState.resolveBuildingDestruction(bld)
+		}
 	}
 
 	// @todo: zastanów się, czy jest sens mieć te dwie funkcje osobno
@@ -587,7 +592,7 @@ func (bState *battleState) processBuildingConstruction(bld *building) {
 
 // Funkcja odpowiada za sprawdzanie, czy obrażenia zadane w „jednostce czasu” przekraczają próg
 // zniszczeń, które są wartością graniczną. Bez przekroczenia bld jest nienaruszone!
-func (bState *battleState) processBuildingDamage(bld *building) {
+func (bld *building) processBuildingDamage() {
 	// Odsiewamy nieistotne obrażenia
 	if bld.AccumulatedDamage <= uint16(bld.Armor) {
 		return
@@ -596,11 +601,6 @@ func (bState *battleState) processBuildingDamage(bld *building) {
 	finalDamage := bld.AccumulatedDamage - uint16(bld.Armor)
 	bld.applyBuildingDamage(finalDamage)
 	bld.AccumulatedDamage = 0
-
-	// Budynek został zniszczony
-	if bld.HP <= 0 {
-		bState.resolveBuildingDestruction(bld)
-	}
 }
 
 // Odpowiedzialna za dobór logiki obsługi zniszczonego budynku.
@@ -611,14 +611,14 @@ func (bState *battleState) resolveBuildingDestruction(bld *building) {
 	if bld.Type != buildingPalisade {
 		bState.handleBuildingDestruction(bld)
 	} else {
-		bState.Board.handlePalisadeDestruction(bld)
+		occupiedTile := &bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y]
+		bState.Board.handlePalisadeDestruction(occupiedTile)
+
+		bld.IsUnderConstruction = true
 	}
 }
 
 // Ma na celu obsłużenie zniszczenia zwykłego budynku.
-// Składa się to z kilku kroków więc raczej nie będzie „wykonawcą”
-// Nazwa sugeruje, że główne zadanie spoczywa na planszy.
-// Dlatego nie rozumiem czemu cały bState jest argumentem.
 func (bState *battleState) handleBuildingDestruction(bld *building) {
 	// Wywalamy jednostki z budynku
 	bld.unassignUnitsfromBuilding(bState)
@@ -628,18 +628,36 @@ func (bState *battleState) handleBuildingDestruction(bld *building) {
 	log.Printf("building %d destroyed!", bld.ID)
 
 	// Budynek przestał działać, gracz powinien odzyskać miejsce
-	bState.decreaseBuildingCount(bld.Owner)
+	player := bState.getPlayerState(bld.Owner)
+	player.decreaseBuildingCount()
 
-	bState.Board.placeRuins(bld)
+	if player != nil {
+		bState.Board.placeRuins(bld)
+	}
 }
 
-func (bState *battleState) decreaseBuildingCount(owner PlayerID) {
-	switch owner {
-	case bState.HumanPlayerState.PlayerID:
-		bState.HumanPlayerState.CurrentBuildings--
-	case bState.AIEnemyState.PlayerID:
-		bState.AIEnemyState.CurrentBuildings--
+// Obniżamy liczbę budynków wybranemu graczowi
+func (playerS *playerState) decreaseBuildingCount() {
+	if playerS.CurrentBuildings == 0 {
+		return
 	}
+
+	playerS.CurrentBuildings--
+}
+
+// Znając właściciela obiektu, bierzemy wskaźnik do stanu tegoż właściciela
+func (bState *battleState) getPlayerState(owner PlayerID) *playerState {
+	if owner == bState.HumanPlayerState.PlayerID {
+		return bState.HumanPlayerState
+	}
+
+	if owner == bState.AIEnemyState.PlayerID {
+		return bState.AIEnemyState
+	}
+
+	// Najwyraźniej jest to trzeci gracz, którego nie uwzględniłem
+	// @todo: dodaj loga, że coś się wykrzaczyło przy szukaniu gracza
+	return nil
 }
 
 func applyGlobalEffects(bState *battleState) {
