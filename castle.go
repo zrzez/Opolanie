@@ -84,11 +84,57 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 
 	switch cmd.ActionType {
 	case cmdBProduce:
-		bState.produceUnit(unitType(cmd.CreateType), targetBuilding)
+		playerS.handleProductionCommand(cmd, bState)
+
 	default:
 		log.Printf("handleBuildingCommand: Niezaimplementowany ActionType %d dla budynku %d.",
 			cmd.ActionType, targetBuilding.ID)
 	}
+}
+
+func (playerS *playerState) handleProductionCommand(cmd *command, bState *battleState) {
+	// 1. Sprawdzenie, czy da się wykonać rozkaz
+	newUnitType := unitType(cmd.CreateType)
+	execBld, bldOK := bState.getBuildingByID(BuildingID(cmd.ExecutorID))
+	if !bldOK {
+		// Tutaj przydałoby się coś zwrócić
+		return
+	}
+
+	ok, errCode := canProduceUnit(newUnitType, execBld, bState)
+	if !ok {
+		switch errCode {
+		case produceErrNoRoom:
+			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: NIE MA MIEJSCA W BUDYNKU!"
+			bState.CurrentMessage.Duration = 60
+		case produceErrInvalidOwner:
+			// nie powinno mieć miejsca
+			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: TO NIE TWÓJ BUDYNEK!"
+			bState.CurrentMessage.Duration = 60
+		case produceErrPopulationLimit:
+			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: NIE MOŻESZ MIEĆ WIĘCEJ JEDNOSTEK!"
+			bState.CurrentMessage.Duration = 60
+		case produceErrInvalidType:
+			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: NIEZNANY RODZAJ JEDNOSTKI!"
+			bState.CurrentMessage.Duration = 60
+		case produceErrMilk:
+			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: NIEDOBÓR MLEKA!"
+			bState.CurrentMessage.Duration = 60
+		case produceErrNoSpace:
+			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: NIE MA MIEJSCA PRZY BUDYNKU!"
+			bState.CurrentMessage.Duration = 60
+		default:
+			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: COŚ POSZŁO PIERUŃSKO NIE TAK ZE SPRAWDZENIEM!"
+			bState.CurrentMessage.Duration = 60
+		}
+
+		return
+	}
+
+	// 2. Wykonanie
+	// Jest to natychmiastowe wykonanie więc raczej nie powinno być potrzeby dalszego
+	// sprawdzania.
+	bState.produceUnit(unitType(cmd.CreateType), execBld)
 }
 
 func (playerS *playerState) handleConstructionCommand(cmd *command, bState *battleState) {
@@ -115,7 +161,7 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 			bState.CurrentMessage.Text = fmt.Sprintf("Niedobór mleka! (%d)", stats.Cost)
 			bState.CurrentMessage.Duration = 60
 		default:
-			bState.CurrentMessage.Text = "COŚ POSZŁO PIERUŃSKO NIE TAK Z KONTEKSTEM!"
+			bState.CurrentMessage.Text = "BUDOWA: COŚ POSZŁO PIERUŃSKO NIE TAK ZE SPRAWDZENIEM!"
 			bState.CurrentMessage.Duration = 60
 		}
 

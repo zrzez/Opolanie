@@ -636,3 +636,7 @@ type objectResolver interface {
 type unitResolver interface {
 	getUnitByID(id UnitID) (*unit, bool)
 }
+
+type buildingResolver interface {
+	getBuildingByID(id BuildingID) (*building, bool)
+}

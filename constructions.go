@@ -261,7 +261,7 @@ func canProduceUnit(unitType unitType, bld *building, bState *battleState) (bool
 
 	// 2. Czy nie przekraczamy odgórnego ograniczenia?
 	// spoko 08.07.2026
-	if ownerState.CurrentPopulation >= maxUnitsPerPlayer {
+	if ownerState.CurrentPopulation > maxUnitsPerPlayer {
 		return false, produceErrPopulationLimit
 	}
 
@@ -296,6 +296,8 @@ func canProduceUnit(unitType unitType, bld *building, bState *battleState) (bool
 	return true, produceErrNone
 }
 
+// To nie powinna być metoda budynku tylko bState lub board ponieważ w tej chwili
+// budynek zna szczegóły tworzenia jednostek, a nie powinien.
 func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *battleState) {
 	newUnit := &unit{}
 	newUnit.initUnit(unitType, spawnX, spawnY, cmdUIdle, bState)
@@ -325,46 +327,26 @@ func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *
 
 // produceUnit odpowiada za próbę wytworzenia jednostki.
 func (bState *battleState) produceUnit(newUnitType unitType, bld *building) {
-	// @todo: to powinno być osobną funkcją w castle.go!
-	// 1. Sprawdzamy, czy są jakieś przeszkody w stworzeniu jednostki
-	// @reminder: szybkie łatanie, trzeba poprawić!
-	ok, err := canProduceUnit(newUnitType, bld, bState)
-	// zwróciliśmy PRAWDA więć idziemy dalej
-	fmt.Println(ok)
-	if !ok {
-		fmt.Println(err)
+	// Bierzemy dane jednostki, nie sprawdzamy, bo już to zrobiliśmy
+	// @reminder: jeśli się przebuduje sygnaturę canProduceUnit to handleProductionComman
+	// mogłoby dać już staty i oszczędzić, ale też zaciemnić obraz
+	uStats := unitDefs[newUnitType]
 
+	// 3. Ustalamy właściciela
+	// mamy bld, a on owner więc bez sensu!
+	ownerState := bState.getPlayerState(bld.Owner)
+	if ownerState == nil {
+		// Wypadałoby coś tutaj zrobić, bo to krytyczny błąd
 		return
 	}
 
-	// 2. Weryfikujemy, czy taki rodzaj jednostki istnieje
-	uStats, ok2 := unitDefs[newUnitType]
-	fmt.Println(" WZIAŁEM STATY JEDNOSTEK")
-	fmt.Println(ok2)
-
-	if !ok2 {
-		panic(fmt.Sprintf("BŁĄD KRYTYCZNY: Brak definicji dla jednostki %d w unitDefs", newUnitType))
-	}
-
-	// 3. Ustalamy właściciela
-	owner := bState.HumanPlayerState
-	if bld.Owner == bState.AIPlayerID {
-		owner = bState.AIEnemyState
-	}
-
 	// 4. Tworzymy jednostkę
-	// Zostawiam bezpiecznik, bo nie potrafię udowodnić, że
-	// pomiędzy walidacją stworzeniem nic się nie stanie
-	// z wybranym kafelkiem. Dlatego też mleko pobieram po
-	// pojawieniu sięjednostki
-	coords, ok3 := bState.Board.electSpawnTile(bld)
-	if ok3 {
-		bld.spawnUnit(newUnitType, coords.X, coords.Y, bState)
-		log.Printf("INFO: Budynek ID %d zrobił jednostkę typu %v. Mleka gracza: %d.", bld.ID, newUnitType, owner.Milk)
+	coords, _ := bState.Board.electSpawnTile(bld)
 
-		// 5. Pobieramy mleko za jednostkę
-		owner.Milk -= uStats.Cost
-	}
+	bld.spawnUnit(newUnitType, coords.X, coords.Y, bState)
+
+	// 5. Pobieramy mleko za jednostkę
+	ownerState.Milk -= uStats.Cost
 }
 
 // getButtonCommand zastępuje przestarzałe GetProductionCommand.

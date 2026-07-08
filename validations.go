@@ -57,7 +57,7 @@ func validateConstructionContext(bType buildingType, owner PlayerID, bState *bat
 		return false, buildErrInvalidOwner
 	}
 
-	if regularBuilding && ownerState.CurrentBuildings >= maxBuildingsPerPlayer {
+	if regularBuilding && ownerState.CurrentBuildings > maxBuildingsPerPlayer {
 		return false, buildErrLimit
 	}
 
