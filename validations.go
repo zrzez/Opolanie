@@ -29,6 +29,14 @@ const (
 	workErrInvalidTarget
 	workErrNotUnderConstruction
 	workErrNotRepairable
+	////////////////////////
+	produceErrNoRoom
+	produceErrInvalidOwner
+	produceErrPopulationLimit
+	produceErrInvalidType
+	produceErrMilk
+	produceErrNoSpace
+	produceErrNone
 )
 
 // ========

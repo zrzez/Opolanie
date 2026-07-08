@@ -57,7 +57,7 @@ func (bldType buildingType) isRegularBuilding() bool {
 
 // Odpowiada za dodanie stworzonej jednostki do mieszkańców budynku.
 // Sprawdzenie zostało wykonane w canProduceUnit,
-// pojemność za pomocą hasSpace
+// pojemność za pomocą hasRoom
 // Zwracany bool jest całkowicie ignorowany
 func (bld *building) registerUnit(uID UnitID) bool {
 	// Budynek poszerza listę zameldowanych jednostek
@@ -92,7 +92,7 @@ func (bld *building) unregisterUnit(unregisterUnitID UnitID) bool {
 	return false
 }
 
-func (bld *building) hasSpace() bool {
+func (bld *building) hasRoom() bool {
 	return len(bld.AssignedUnits) < int(bld.MaxFood)
 }
 
@@ -219,18 +219,18 @@ func (bld *building) getClosestWalkableTile(bState *battleState) (uint8, uint8, 
 	return 0, 0, false
 }
 
-func (bld *building) isValidWalkableTile(x, y uint8, board *boardData) bool {
-	if x >= boardMaxX || y >= boardMaxY {
-		return false
-	}
-
-	currentTile := &board.Tiles[x][y]
-
-	// Jest przejezdne I nie ma tam nikogo
-	return currentTile.IsWalkable && currentTile.Unit == nil && currentTile.Building == nil
-}
-
+// @reminder: jak to powinno działać -- budynek gromadzi obrażenia w bld.AccumnulatedDamage
+// i jeśli w danym tiku przekroczyły one próg, to są zadawane „zbiorowo”.
+// Jeśli się tego progu nie przekroczyło, to budynek zostaje nienaruszony.
+// Tutaj mamy samo zbieranie, wewnątrz updateBuildings jest logika
+// „rozliczania tiku”.
 func (bld *building) takeDamage(damage uint16) {
+	// Od sprawdzenia poprawności rozkazu do jego wykonania
+	// budynek mógł już zostać zniszczony, dlatego zostawiam bezpiecznik.
+	// W tej chwili nie jestem wstanie udowodnić, że jest zbędny.
+	// Jednakże w bState.updateBuildings() najpierw ruszają się jednostki,
+	// potem przetwarzamy obrażenia zadane budynkom.
+	// Dopiero po tym zaczynamy sprzątać zniszczone budynki i budowy.
 	if !bld.Exists {
 		return
 	}
@@ -239,69 +239,60 @@ func (bld *building) takeDamage(damage uint16) {
 	log.Printf("building %d received %d damage (accumulated: %d)", bld.ID, damage, bld.AccumulatedDamage)
 }
 
-func (bld *building) canProduceUnit(unitType unitType, bState *battleState) bool {
-	// @todo: co to do cholery jest? Zupełnie nie pamiętam - 05.07.2026
-	reject := func(reason string) bool {
-		if bld.Owner == bState.PlayerID {
-			bState.CurrentMessage.Text = reason
-			bState.CurrentMessage.Duration = 60
-		}
-
-		return false
-	}
-
-	fmt.Println("sprawdzam, czy da się stworzyć jednostkę.")
-
+// @reminder: jeśli to jest sprawdzenie poprawności rozkazu to powinno mieć miejsce w castle.go
+// przed samym przekazaniem go do wykonania.
+// Dodatkowo jeśli ta metoda rzeczywiści odpowiada za sprawdzenie możności, to nie powinna
+// być metodą budynku i znajdować się w constructions. ponieważ potrzeba informacji o stanie
+// danego gracza oraz planszy.
+func canProduceUnit(unitType unitType, bld *building, bState *battleState) (bool, uint8) {
 	// 1. Czy jest wolne miejsce w budynku?
-	if !bld.hasSpace() {
-		return reject("Brak miejsca w budynku!")
+	// spoko 08.07.2026
+	if !bld.hasRoom() {
+		return false, produceErrNoRoom
 	}
 
-	fmt.Println("jest miejsce w budynku")
 	// Ustalamy kto chce wykonać działanie
+	// spoko 08.07.2026
 	ownerState := bState.getPlayerState(bld.Owner)
 
 	if ownerState == nil {
-		fmt.Println("nieznany właściciel budynku")
-		return false
+		return false, produceErrInvalidOwner
 	}
 
 	// 2. Czy nie przekraczamy odgórnego ograniczenia?
+	// spoko 08.07.2026
 	if ownerState.CurrentPopulation >= maxUnitsPerPlayer {
-		return reject("Ograniczenie jednostek!")
+		return false, produceErrPopulationLimit
 	}
 
-	fmt.Println("nie przekraczam populacji")
 	// Pobieramy dane o jednostce do stworzenia
-	stats, ok := unitDefs[unitType]
+	// spoko 08.07.2026
+	uStats, ok := unitDefs[unitType]
 
 	if !ok {
-		log.Printf("BŁĄD KRYTYCZNY: Brak definicji dla jednostki ID %d w unitDefs. Budynek ID: %d", unitType, bld.ID)
-		reject("Brak definicji jednostki!")
-
-		return false
+		return false, produceErrInvalidType
 	}
-
-	fmt.Println("pobrałem statystyki jednostki")
 
 	// 3. Czy stać gracza?
-	if ownerState.Milk < stats.Cost {
-		return reject("Za mało mleka!")
+	// spoko 08.07.2026
+	if ownerState.Milk < uStats.Cost {
+		return false, produceErrMilk
 	}
 
-	fmt.Println("jest dość mleka na zrobienie")
 	// 4. Czy jednostka może wyjść z budynku?
-	if _, _, ok := bld.getClosestWalkableTile(bState); !ok {
-		fmt.Println("getClosestWalkableTile FALSE")
+	// nie spoko 08.07.2026
+	// zamieniam bld.getClosestWalkableTile, które jest pomieszaniem z poplątaniem
+	// na metodę boardData, która zajmuje się jedynie sprawdzeniem sąsiadów budynku
+	// oraz lewego dolnego rogu - to jest specjalny warunek, który przeoczyłem wcześniej.
+	// Tworzenie budynków też tego nie wspiera, ale naprostuję
+	if !bState.Board.hasSpaceAroundBuilding(bld) {
+		fmt.Println("hasSpaceAroundBuilding FALSE")
 
-		return reject("Wyjście z budynku zastawione!")
+		return false, produceErrNoSpace
 	}
 
-	fmt.Println("jest miejsce obok budynku")
-
-	fmt.Println("wszystkie warunki spełnione")
-
-	return true
+	// Udało się, można tworzyć
+	return true, produceErrNone
 }
 
 func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *battleState) {
@@ -333,8 +324,13 @@ func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *
 
 // produceUnit odpowiada za próbę wytworzenia jednostki.
 func (bld *building) produceUnit(newUnitType unitType, bState *battleState) {
+	// @todo: to powinno być osobną funkcją w castle.go!
 	// 1. Sprawdzamy, czy są jakieś przeszkody w stworzeniu jednostki
-	if !bld.canProduceUnit(newUnitType, bState) {
+	// @reminder: szybkie łatanie, trzeba poprawić!
+	ok, err := canProduceUnit(newUnitType, bld, bState)
+	if !ok {
+		fmt.Println(err)
+
 		return
 	}
 

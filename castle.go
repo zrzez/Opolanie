@@ -57,9 +57,14 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 // Obsługuje np. produkcję jednostek.
 func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleState) {
 	// 1. Dla zasadzenia nowej budowy
+	// @reminder: zasadzanie budów korzysta już z poprawnego układu wydawania i przetwarzania
+	// rozkazów - 08.07.2026
 	if cmd.ActionType == cmdBPlaceConstruction {
 		playerS.handleConstructionCommand(cmd, bState)
 	}
+
+	// ↓↓↓↓↓↓↓↓↓ Poniżej tej linii trzeba posprzątać. Rozkazy mają wychodzić do wykonu już sprawdzone przez
+	// ↓↓↓↓↓↓↓↓↓ kod z validations.go!
 
 	// 2. Wytwarzanie jednostek
 	targetBuilding, ok := bState.getBuildingByID(BuildingID(cmd.ExecutorID))

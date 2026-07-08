@@ -2207,8 +2207,8 @@ func (u *unit) startMoveToAttack(bState *battleState) {
 		u.ID, u.TargetID, u.TargetX, u.TargetY)
 }
 
-func (t unitType) getLegacyUnitIndex() int {
-	return int(t)
+func (ut unitType) getLegacyUnitIndex() int {
+	return int(ut)
 }
 
 func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *building, board *boardData) (uint8, uint8, bool) {
@@ -2248,7 +2248,7 @@ func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *b
 	for _, candidate := range candidates {
 		x, y := candidate.X, candidate.Y
 
-		if !bld.isValidWalkableTile(x, y, board) {
+		if !board.isValidWalkableTile(x, y) {
 			continue
 		}
 

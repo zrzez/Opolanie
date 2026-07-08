@@ -204,3 +204,118 @@ func (board *boardData) placeRuins(bld *building) {
 		}
 	}
 }
+
+// @todo zweryfikuj, czy to technicznie możliwe aby dostać x,y >= boardMaxX.
+func (board *boardData) isValidWalkableTile(x, y uint8) bool {
+	// Ponieważ chodzi o znalezienie wolnego kafelka
+	// nie wykluczam jeszcze, że możemy dostać coś >= boardMax
+	if x >= boardMaxX || y >= boardMaxY {
+		return false
+	}
+
+	currentTile := &board.Tiles[x][y]
+
+	// Sprawdzamy kafelek jest przechodni i nie ma na nim żadnego obiektu
+	return currentTile.IsWalkable && currentTile.Unit == nil && currentTile.Building == nil
+}
+
+func (board *boardData) neighborCoords(bld *building) []point {
+	// LOGOWANIE
+	fmt.Println("=== neighborCoords: budynek ===")
+
+	for i, p := range bld.OccupiedTiles {
+		fmt.Printf("kafelek %d: (%d, %d)\n", i, p.X, p.Y)
+	}
+
+	fmt.Println("=== neighborCoords: budynek ===")
+
+	// 1. Bierzemy lewy górny róg budynku
+	occupiedTileX := int(bld.OccupiedTiles[0].X)
+	occupiedTileY := int(bld.OccupiedTiles[0].Y)
+
+	// 2. Ponieważ budynki są zawsze 3na3 to
+	// z góry znamy potencjalne współrzędne dla sąsiadów
+	offsets := [16][2]int{
+		{-1, -1},
+		{0, -1},
+		{1, -1},
+		{2, -1},
+		{3, -1},
+		{3, 0},
+		{3, 1},
+		{3, 2},
+		{3, 3},
+		{2, 3},
+		{1, 3},
+		{0, 3},
+		{-1, 3},
+		{-1, 2},
+		{-1, 1},
+		{-1, 0},
+	}
+
+	// 3. Tworzymy listę współrzędnych mieszczących się
+	//    w planszy
+	var electedCoords []point
+
+	// 4. Sprawdzamy, czy potencjalne wspołrzędne w rzeczywistości
+	//    mieszczą się w planszy
+	for _, offset := range offsets {
+		// Tworzymy potencjalne współrzędne sąsiada
+		electedTileX := occupiedTileX + offset[0]
+		electedTileY := occupiedTileY + offset[1]
+
+		// czy mamy legalny X
+		if electedTileX >= 0 && electedTileX < int(boardMaxX) &&
+			// czy mamy Y
+			electedTileY >= 0 && electedTileY < int(boardMaxY) {
+			// Obie współrzędne są poprawnymi współrzędnymi kafelków więc
+			// dodajemy do listy prawidłowych współrzędnych
+			electedCoords = append(electedCoords, point{
+				X: uint8(electedTileX),
+				Y: uint8(electedTileY),
+			})
+		}
+	}
+
+	fmt.Println("=== neighborCoords: sąsiedzi w planszy ===")
+
+	for i, p := range electedCoords {
+		fmt.Printf("sąsiad %d: (%d, %d)\n", i, p.X, p.Y)
+	}
+
+	fmt.Println("=== neighborCoords: sąsiedzi w planszy ===")
+
+	// Stworzyliśmy listę wszystkich sąsiadów budynku
+	return electedCoords
+}
+
+func (board *boardData) hasFreeTileInList(electedTiles []point) bool {
+	fmt.Println("=== hasFreeTileInList: sprawdzanie kafelków ===")
+
+	for _, electedTile := range electedTiles {
+		unitNil := board.Tiles[electedTile.X][electedTile.Y].Unit == nil
+		walkable := board.Tiles[electedTile.X][electedTile.Y].IsWalkable
+		fmt.Printf("   (%d, %d): Unit==nil = %v, IsWalkable = %v\n", electedTile.X, electedTile.Y, unitNil, walkable)
+		if unitNil && walkable {
+			return true
+		}
+	}
+
+	fmt.Println("=== hasFreeTileInList: sprawdzanie kafelków ===")
+
+	/*for _, electedTile := range electedTiles {
+		if board.Tiles[electedTile.X][electedTile.Y].Unit == nil &&
+			board.Tiles[electedTile.X][electedTile.Y].IsWalkable {
+			return true
+		}
+	}*/
+
+	return false
+}
+
+func (board *boardData) hasSpaceAroundBuilding(bld *building) bool {
+	coords := board.neighborCoords(bld)
+
+	return board.hasFreeTileInList(coords)
+}

@@ -655,7 +655,8 @@ func (bState *battleState) getPlayerState(owner PlayerID) *playerState {
 	}
 
 	// Najwyraźniej jest to trzeci gracz, którego nie uwzględniłem
-	// @todo: dodaj loga, że coś się wykrzaczyło przy szukaniu gracza
+	fmt.Println("BŁĄD: NIE UDAŁO SIĘ USTALIĆ WŁAŚCICIELA!")
+
 	return nil
 }
 
