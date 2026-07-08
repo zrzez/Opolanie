@@ -292,6 +292,7 @@ func canProduceUnit(unitType unitType, bld *building, bState *battleState) (bool
 	}
 
 	// Udało się, można tworzyć
+	fmt.Println("canProduceUnit DAJE TRUE")
 	return true, produceErrNone
 }
 
@@ -323,11 +324,13 @@ func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *
 }
 
 // produceUnit odpowiada za próbę wytworzenia jednostki.
-func (bld *building) produceUnit(newUnitType unitType, bState *battleState) {
+func (bState *battleState) produceUnit(newUnitType unitType, bld *building) {
 	// @todo: to powinno być osobną funkcją w castle.go!
 	// 1. Sprawdzamy, czy są jakieś przeszkody w stworzeniu jednostki
 	// @reminder: szybkie łatanie, trzeba poprawić!
 	ok, err := canProduceUnit(newUnitType, bld, bState)
+	// zwróciliśmy PRAWDA więć idziemy dalej
+	fmt.Println(ok)
 	if !ok {
 		fmt.Println(err)
 
@@ -335,9 +338,11 @@ func (bld *building) produceUnit(newUnitType unitType, bState *battleState) {
 	}
 
 	// 2. Weryfikujemy, czy taki rodzaj jednostki istnieje
-	stats, ok := unitDefs[newUnitType]
+	uStats, ok2 := unitDefs[newUnitType]
+	fmt.Println(" WZIAŁEM STATY JEDNOSTEK")
+	fmt.Println(ok2)
 
-	if !ok {
+	if !ok2 {
 		panic(fmt.Sprintf("BŁĄD KRYTYCZNY: Brak definicji dla jednostki %d w unitDefs", newUnitType))
 	}
 
@@ -347,15 +352,18 @@ func (bld *building) produceUnit(newUnitType unitType, bState *battleState) {
 		owner = bState.AIEnemyState
 	}
 
-	// 4. Pobieramy mleko za jednostkę
-	owner.Milk -= stats.Cost
-
-	// 5. Tworzymy jednostkę
-
-	spawnX, spawnY, ok := bld.getClosestWalkableTile(bState)
-	if ok {
-		bld.spawnUnit(newUnitType, spawnX, spawnY, bState)
+	// 4. Tworzymy jednostkę
+	// Zostawiam bezpiecznik, bo nie potrafię udowodnić, że
+	// pomiędzy walidacją stworzeniem nic się nie stanie
+	// z wybranym kafelkiem. Dlatego też mleko pobieram po
+	// pojawieniu sięjednostki
+	coords, ok3 := bState.Board.electSpawnTile(bld)
+	if ok3 {
+		bld.spawnUnit(newUnitType, coords.X, coords.Y, bState)
 		log.Printf("INFO: Budynek ID %d zrobił jednostkę typu %v. Mleka gracza: %d.", bld.ID, newUnitType, owner.Milk)
+
+		// 5. Pobieramy mleko za jednostkę
+		owner.Milk -= uStats.Cost
 	}
 }
 

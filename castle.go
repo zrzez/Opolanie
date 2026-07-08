@@ -84,7 +84,7 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 
 	switch cmd.ActionType {
 	case cmdBProduce:
-		targetBuilding.produceUnit(unitType(cmd.CreateType), bState)
+		bState.produceUnit(unitType(cmd.CreateType), targetBuilding)
 	default:
 		log.Printf("handleBuildingCommand: Niezaimplementowany ActionType %d dla budynku %d.",
 			cmd.ActionType, targetBuilding.ID)

@@ -309,8 +309,8 @@ func (board *boardData) hasFreeTileInList(electedTiles []point) bool {
 			board.Tiles[electedTile.X][electedTile.Y].IsWalkable {
 			return true
 		}
-	}*/
-
+	}
+	*/
 	return false
 }
 
@@ -318,4 +318,21 @@ func (board *boardData) hasSpaceAroundBuilding(bld *building) bool {
 	coords := board.neighborCoords(bld)
 
 	return board.hasFreeTileInList(coords)
+}
+
+func (board *boardData) getFreeTileInList(electedCoords []point) (point, bool) {
+	for _, checkTile := range electedCoords {
+		if board.Tiles[checkTile.X][checkTile.Y].Unit == nil && board.Tiles[checkTile.X][checkTile.Y].IsWalkable {
+			return point{X: checkTile.X, Y: checkTile.Y}, true
+		}
+	}
+
+	// @todo: nie można przekazywać 0,0 jako „poprawnego”
+	return point{}, false
+}
+
+func (board *boardData) electSpawnTile(bld *building) (point, bool) {
+	coords := board.neighborCoords(bld)
+
+	return board.getFreeTileInList(coords)
 }
