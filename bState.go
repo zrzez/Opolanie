@@ -323,3 +323,42 @@ func (bState *battleState) generateFormationPositions(centerX, centerY, count ui
 
 	return positions
 }
+
+func (bState *battleState) canProduceUnit(unitType unitType, bld *building) (bool, uint8) {
+	// 1. Czy jest wolne miejsce w budynku?
+	if !bld.hasRoom() {
+		return false, produceErrNoRoom
+	}
+
+	// Ustalamy kto chce wykonać działanie
+	ownerState := bState.getPlayerState(bld.Owner)
+
+	if ownerState == nil {
+		return false, produceErrInvalidOwner
+	}
+
+	// 2. Czy nie przekraczamy odgórnego ograniczenia?
+	if ownerState.CurrentPopulation > maxUnitsPerPlayer {
+		return false, produceErrPopulationLimit
+	}
+
+	// Pobieramy dane o jednostce do stworzenia
+	uStats, ok := unitDefs[unitType]
+
+	if !ok {
+		return false, produceErrInvalidType
+	}
+
+	// 3. Czy stać gracza?
+	if ownerState.Milk < uStats.Cost {
+		return false, produceErrMilk
+	}
+
+	// 4. Czy jednostka może wyjść z budynku?
+	if !bState.Board.hasSpaceAroundBuilding(bld) {
+		return false, produceErrNoSpace
+	}
+
+	// Udało się, można tworzyć
+	return true, produceErrNone
+}

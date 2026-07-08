@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"math"
 )
@@ -237,63 +236,6 @@ func (bld *building) takeDamage(damage uint16) {
 
 	bld.AccumulatedDamage += damage
 	log.Printf("building %d received %d damage (accumulated: %d)", bld.ID, damage, bld.AccumulatedDamage)
-}
-
-// @reminder: jeśli to jest sprawdzenie poprawności rozkazu to powinno mieć miejsce w castle.go
-// przed samym przekazaniem go do wykonania.
-// Dodatkowo jeśli ta metoda rzeczywiści odpowiada za sprawdzenie możności, to nie powinna
-// być metodą budynku i znajdować się w constructions. ponieważ potrzeba informacji o stanie
-// danego gracza oraz planszy.
-func canProduceUnit(unitType unitType, bld *building, bState *battleState) (bool, uint8) {
-	// 1. Czy jest wolne miejsce w budynku?
-	// spoko 08.07.2026
-	if !bld.hasRoom() {
-		return false, produceErrNoRoom
-	}
-
-	// Ustalamy kto chce wykonać działanie
-	// spoko 08.07.2026
-	ownerState := bState.getPlayerState(bld.Owner)
-
-	if ownerState == nil {
-		return false, produceErrInvalidOwner
-	}
-
-	// 2. Czy nie przekraczamy odgórnego ograniczenia?
-	// spoko 08.07.2026
-	if ownerState.CurrentPopulation > maxUnitsPerPlayer {
-		return false, produceErrPopulationLimit
-	}
-
-	// Pobieramy dane o jednostce do stworzenia
-	// spoko 08.07.2026
-	uStats, ok := unitDefs[unitType]
-
-	if !ok {
-		return false, produceErrInvalidType
-	}
-
-	// 3. Czy stać gracza?
-	// spoko 08.07.2026
-	if ownerState.Milk < uStats.Cost {
-		return false, produceErrMilk
-	}
-
-	// 4. Czy jednostka może wyjść z budynku?
-	// nie spoko 08.07.2026
-	// zamieniam bld.getClosestWalkableTile, które jest pomieszaniem z poplątaniem
-	// na metodę boardData, która zajmuje się jedynie sprawdzeniem sąsiadów budynku
-	// oraz lewego dolnego rogu - to jest specjalny warunek, który przeoczyłem wcześniej.
-	// Tworzenie budynków też tego nie wspiera, ale naprostuję
-	if !bState.Board.hasSpaceAroundBuilding(bld) {
-		fmt.Println("hasSpaceAroundBuilding FALSE")
-
-		return false, produceErrNoSpace
-	}
-
-	// Udało się, można tworzyć
-	fmt.Println("canProduceUnit DAJE TRUE")
-	return true, produceErrNone
 }
 
 // To nie powinna być metoda budynku tylko bState lub board ponieważ w tej chwili
