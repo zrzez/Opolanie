@@ -134,7 +134,7 @@ func (playerS *playerState) handleProductionCommand(cmd *command, bState *battle
 	// 2. Wykonanie
 	// Jest to natychmiastowe wykonanie więc raczej nie powinno być potrzeby dalszego
 	// sprawdzania.
-	bState.produceUnit(unitType(cmd.CreateType), execBld)
+	bState.tryProduceUnit(unitType(cmd.CreateType), execBld)
 }
 
 func (playerS *playerState) handleConstructionCommand(cmd *command, bState *battleState) {
@@ -325,7 +325,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	}
 }
 
-// handleMoveCommand obsługuje logikę rozkazu ruchu dla jednostki.
+// handleMoveCommandde obsługuje logikę rozkazu ruchu dla jednostki.
 // Sprawdza dostępność celu i wyznacza ścieżkę.
 func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *battleState) {
 	log.Printf("DEBUG: handleMoveCommand: Rozkaz ruchu dla jednostki ID %d do (%d,%d).",

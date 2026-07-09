@@ -5,6 +5,8 @@ import (
 	"log"
 	"math"
 	"math/rand"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 func (bState *battleState) createBuilding(bldType buildingType, topLeftX, topLeftY uint8, owner PlayerID) *building {
@@ -361,4 +363,104 @@ func (bState *battleState) canProduceUnit(unitType unitType, bld *building) (boo
 
 	// Udało się, można tworzyć
 	return true, produceErrNone
+}
+
+func (bState *battleState) cleanupDestroyedBuildings() {
+	if bState.GlobalFrameCounter%6000 != 0 {
+		return
+	}
+
+	log.Println("INFO: Rozpoczynam czyszczenie pamięci z budynków...")
+
+	newBuildingsList := make([]*building, 0, len(bState.Buildings))
+	for _, bld := range bState.Buildings {
+		if bld.Exists {
+			newBuildingsList = append(newBuildingsList, bld)
+		}
+	}
+
+	removedCount := len(bState.Buildings) - len(newBuildingsList)
+	bState.Buildings = newBuildingsList
+
+	log.Printf("INFO: Wyczyszczono %d zniszczonych budynków.", removedCount)
+}
+
+// tryProduceUnit odpowiada za próbę wytworzenia jednostki.
+func (bState *battleState) tryProduceUnit(newUnitType unitType, bld *building) {
+	// JUŻ PO WALIDACJI!
+	// Bierzemy dane jednostki, nie sprawdzamy, bo już to zrobiliśmy
+	// @reminder: jeśli się przebuduje sygnaturę canProduceUnit to handleProductionComman
+	// mogłoby dać już staty i oszczędzić, ale też zaciemnić obraz
+	uStats := unitDefs[newUnitType]
+
+	// 3. Ustalamy właściciela
+	// mamy bld, a on owner więc bez sensu!
+	ownerState := bState.getPlayerState(bld.Owner)
+	if ownerState == nil {
+		// Wypadałoby coś tutaj zrobić, bo to krytyczny błąd
+		return
+	}
+
+	// 4. Tworzymy jednostkę
+	coords, _ := bState.Board.electSpawnTile(bld)
+
+	bState.createUnit(newUnitType, coords, bld)
+
+	// 5. Pobieramy mleko za jednostkę
+	ownerState.Milk -= uStats.Cost
+}
+
+// To nie powinna być metoda budynku tylko bState lub board ponieważ w tej chwili
+// budynek zna szczegóły tworzenia jednostek, a nie powinien.
+func (bState *battleState) createUnit(unitType unitType, coords point, bld *building) {
+	newUnit := bState.initUnit(unitType, coords.X, coords.Y, UnitID(bState.NextUniqueObjectID))
+	bState.NextUniqueObjectID++ // @reminder: będę musiał w końcu zacząć używać bState.NextUnitID
+
+	newUnit.Owner = bld.Owner
+	newUnit.BelongsTo = bld
+
+	bState.Board.Tiles[newUnit.X][newUnit.Y].Unit = newUnit
+	bState.Units = append(bState.Units, newUnit)
+
+	bld.registerUnit(newUnit.ID)
+}
+
+// @reminder: to nie powinno przyjmować x,y uint8 a strukturę point
+func (bState *battleState) initUnit(unitType unitType, x, y uint8, newUnitID UnitID) *unit {
+	newUnit := &unit{}
+
+	newUnit.ID = newUnitID
+	newUnit.Exists = true
+	newUnit.Type = unitType
+	newUnit.X = x
+	newUnit.Y = y
+	newUnit.AnimationType = "walk"
+	newUnit.Direction = rl.NewVector2(0, 1)
+	newUnit.Wounds = make([]wound, 0, maxWoundsCount)
+
+	if newUnit.Type != unitCow {
+		newUnit.Command = cmdUIdle
+	} else {
+		newUnit.Command = cmdUGraze
+	}
+
+	stats, ok := unitDefs[unitType]
+	if ok {
+		newUnit.SightRange = stats.SightRange
+		newUnit.AttackRange = stats.AttackRange
+		newUnit.Damage = stats.BaseDamage
+		newUnit.Armor = stats.BaseArmor
+		newUnit.MaxHP = stats.MaxHP
+		newUnit.MaxDelay = stats.MoveDelay
+		newUnit.HP = stats.MaxHP
+		newUnit.MaxMana = stats.MaxMana
+		newUnit.Mana = stats.MaxMana / 2
+		newUnit.ManaRegen = stats.BaseManaRegen
+	} else {
+		log.Printf("OSTRZEŻENIE: Nieznany rodzaj jednostki w init: %d.", unitType)
+	}
+
+	newUnit.Delay = newUnit.MaxDelay
+
+	return newUnit
 }

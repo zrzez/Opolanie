@@ -19,50 +19,6 @@ const (
 	maxMovementHistory    = 6
 )
 
-func (u *unit) initUnit(unitType unitType, x, y uint8, command commandType, bState *battleState) {
-	u.ID = UnitID(bState.NextUniqueObjectID)
-	bState.NextUniqueObjectID++
-	u.Exists = true
-	u.Type = unitType
-	u.X = x
-	u.Y = y
-	u.Command = command
-	u.AnimationType = "walk"
-	u.AnimationFrame = 0
-	u.AnimationCounter = 0
-	u.Direction = rl.NewVector2(0, 1)
-	u.IsSelected = false
-	u.Experience = 0
-	u.Delay = u.MaxDelay
-	u.AttackCooldown = 0
-	u.Wounds = make([]wound, 0, maxWoundsCount)
-
-	stats, ok := unitDefs[unitType]
-	if ok {
-		u.SightRange = stats.SightRange
-		u.AttackRange = stats.AttackRange
-		u.Damage = stats.BaseDamage
-		u.Armor = stats.BaseArmor
-		u.MaxHP = stats.MaxHP
-		u.MaxDelay = stats.MoveDelay
-		u.HP = stats.MaxHP
-		u.MaxMana = stats.MaxMana
-		u.Mana = stats.MaxMana / 2
-		u.ManaRegen = stats.BaseManaRegen
-	} else {
-		log.Printf("OSTRZEŻENIE: Nieznany rodzaj jednostki w init: %d.", unitType)
-
-		u.SightRange = 1
-		u.AttackRange = 1
-		u.Damage = 1
-		u.Armor = 0
-		u.MaxHP = 10
-		u.MaxDelay = 20
-		u.HP = u.MaxHP
-		u.Mana = 0
-	}
-}
-
 // isCaster zwraca true jeżeli dana jednostka czaruje.
 func (ut unitType) isCaster() bool {
 	return ut == unitMage || ut == unitPriest || ut == unitPriestess
@@ -132,15 +88,6 @@ func (u *unit) decreaseHPUnit(amount uint16) {
 	if u.HP <= 0 {
 		u.HP = 0
 		u.Exists = false
-	}
-}
-
-// show umieszcza jednostkę na mapie w Tiles.
-func (u *unit) show(board *boardData) {
-	if u.X < boardMaxX && u.Y < boardMaxY {
-		board.Tiles[u.X][u.Y].Unit = u
-	} else {
-		log.Printf("OSTRZEŻENIE: Próba umieszczenia jednostki poza mapą: (%d,%d)", u.X, u.Y)
 	}
 }
 

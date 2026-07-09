@@ -241,59 +241,6 @@ func (bld *building) takeDamage(damage uint16) {
 	log.Printf("building %d received %d damage (accumulated: %d)", bld.ID, damage, bld.AccumulatedDamage)
 }
 
-// To nie powinna być metoda budynku tylko bState lub board ponieważ w tej chwili
-// budynek zna szczegóły tworzenia jednostek, a nie powinien.
-func (bld *building) spawnUnit(unitType unitType, spawnX, spawnY uint8, bState *battleState) {
-	newUnit := &unit{}
-	newUnit.initUnit(unitType, spawnX, spawnY, cmdUIdle, bState)
-	newUnit.Owner = bld.Owner
-	newUnit.BelongsTo = bld
-
-	newUnit.show(bState.Board)
-
-	bState.Units = append(bState.Units, newUnit)
-	bld.registerUnit(newUnit.ID)
-
-	if bld.Owner == bState.HumanPlayerState.PlayerID {
-		bState.HumanPlayerState.CurrentPopulation++
-	} else {
-		bState.AIEnemyState.CurrentPopulation++
-	}
-
-	// W sumie, to może należałoby odwrócić logikę, bo != jest dużo częsciej?
-	if newUnit.Type == unitCow {
-		// Bez tego nowa krowa stoi bezczynnie
-		newUnit.Command = cmdUGraze
-	}
-
-	log.Printf("DEBUG: Stworzono jednostkę. Populacja Gracza: %d, AI: %d",
-		bState.HumanPlayerState.CurrentPopulation, bState.AIEnemyState.CurrentPopulation)
-}
-
-// produceUnit odpowiada za próbę wytworzenia jednostki.
-func (bState *battleState) produceUnit(newUnitType unitType, bld *building) {
-	// Bierzemy dane jednostki, nie sprawdzamy, bo już to zrobiliśmy
-	// @reminder: jeśli się przebuduje sygnaturę canProduceUnit to handleProductionComman
-	// mogłoby dać już staty i oszczędzić, ale też zaciemnić obraz
-	uStats := unitDefs[newUnitType]
-
-	// 3. Ustalamy właściciela
-	// mamy bld, a on owner więc bez sensu!
-	ownerState := bState.getPlayerState(bld.Owner)
-	if ownerState == nil {
-		// Wypadałoby coś tutaj zrobić, bo to krytyczny błąd
-		return
-	}
-
-	// 4. Tworzymy jednostkę
-	coords, _ := bState.Board.electSpawnTile(bld)
-
-	bld.spawnUnit(newUnitType, coords.X, coords.Y, bState)
-
-	// 5. Pobieramy mleko za jednostkę
-	ownerState.Milk -= uStats.Cost
-}
-
 // getButtonCommand zastępuje przestarzałe GetProductionCommand.
 // Tłumaczy kliknięcie przycisku (actionIndex) na pełny rozkaz (command).
 // @todo: sprawdź, czy te actionIndex muszą być zaczarodziejskie. 01.07.2026
@@ -396,26 +343,6 @@ func (bld *building) isRepairable(playerID PlayerID) bool {
 	}
 
 	return bld.Type == buildingPalisade || bld.Type == buildingBridge || bld.Owner == playerID
-}
-
-func (bState *battleState) cleanupDestroyedBuildings() {
-	if bState.GlobalFrameCounter%6000 != 0 {
-		return
-	}
-
-	log.Println("INFO: Rozpoczynam czyszczenie pamięci z budynków...")
-
-	newBuildingsList := make([]*building, 0, len(bState.Buildings))
-	for _, bld := range bState.Buildings {
-		if bld.Exists {
-			newBuildingsList = append(newBuildingsList, bld)
-		}
-	}
-
-	removedCount := len(bState.Buildings) - len(newBuildingsList)
-	bState.Buildings = newBuildingsList
-
-	log.Printf("INFO: Wyczyszczono %d zniszczonych budynków.", removedCount)
 }
 
 func (bld *building) unassignUnitsfromBuilding(resolver unitResolver) {

@@ -353,13 +353,14 @@ func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) 
 			continue
 		}
 
-		newUnit := &unit{}
 		// Tworzymy nową jednostkę
-		newUnit.initUnit(uType, unitData.Position.X, unitData.Position.Y, cmdUIdle, bState)
+		newUnit := bState.initUnit(uType, unitData.Position.X, unitData.Position.Y, UnitID(bState.NextUniqueObjectID))
+
+		bState.NextUniqueObjectID++ // @reminder: będę musiał w końcu zacząć używać bState.NextUnitID
 		newUnit.Owner = unitOwnerID
 
 		// Wstawiamy na planszę
-		newUnit.show(bState.Board)
+		bState.Board.Tiles[newUnit.X][newUnit.Y].Unit = newUnit
 
 		// Dodajemy do listy jednostek
 		bState.Units = append(bState.Units, newUnit)
