@@ -201,6 +201,15 @@ type buildingStats struct {
 
 type constructionProgress uint8
 
+/*
+	Zwykłe budynki zajmują 9 kafelków.
+	[0][3][6]
+	[1][4][7]
+	[2][5][8]
+
+	Mosty i palisady jeden
+    [0]
+*/
 // building określa pojedynczy budynek podczas bitwy.
 type building struct {
 	ID                BuildingID   // Unikatowy numer budynku

@@ -108,6 +108,7 @@ func (bld *building) getCenter() (uint8, uint8, bool) {
 	}
 }
 
+// @todo: Budynek nie powinien liczyć odległości do jednostki!
 func (bld *building) getDistanceToUnit(unitX, unitY uint8) uint8 {
 	// log.Println("Środek getDistanceToUnit")
 
@@ -157,6 +158,7 @@ func (bld *building) getBounds() (int, int, int, int) {
 }
 
 // Sprawdza, czy na danym polu można postawić jednostkę
+// @todo: Budynek nie powinien oceniać otoczenia, to funkcja nie dla budynku
 func (bld *building) isValidSpawnTile(x, y int, bState *battleState) bool {
 	// 1. Czy mieści się na mapie?
 	if x < 0 || x >= int(boardMaxX) || y < 0 || y >= int(boardMaxY) {
@@ -191,6 +193,7 @@ func (bld *building) isValidSpawnTile(x, y int, bState *battleState) bool {
 	return true
 }
 
+// @todo: Budynek nie powinien oceniać otoczenia, to metoda dla innej struktury!
 func (bld *building) getClosestWalkableTile(bState *battleState) (uint8, uint8, bool) {
 	if len(bld.OccupiedTiles) == 0 {
 		return 0, 0, false
@@ -294,6 +297,7 @@ func (bState *battleState) produceUnit(newUnitType unitType, bld *building) {
 // getButtonCommand zastępuje przestarzałe GetProductionCommand.
 // Tłumaczy kliknięcie przycisku (actionIndex) na pełny rozkaz (command).
 // @todo: sprawdź, czy te actionIndex muszą być zaczarodziejskie. 01.07.2026
+// @todo: Do przebudowy, robi i wie zbyt wiele
 func (bld *building) getButtonCommand(actionIndex int) command {
 	// Domyślny, pusty rozkaz
 	cmd := command{ActionType: cmdUIdle}
@@ -384,22 +388,6 @@ func (bld *building) getButtonCommand(actionIndex int) command {
 	}
 
 	return cmd
-}
-
-func (bld *building) bounds() bounds {
-	minX, minY, maxX, maxY := bld.occupiedTilesBounds()
-
-	widthTiles := maxX - minX + 1
-	heightTiles := maxY - minY + 1
-
-	return bounds{
-		X:        int32(minX) * int32(tileWidth),
-		Y:        int32(minY) * int32(tileHeight),
-		Width:    int32(widthTiles) * int32(tileWidth),
-		Height:   int32(heightTiles) * int32(tileHeight),
-		WidthPx:  float32(widthTiles) * float32(tileWidth),
-		HeightPx: float32(heightTiles) * float32(tileHeight),
-	}
 }
 
 func (bld *building) isRepairable(playerID PlayerID) bool {

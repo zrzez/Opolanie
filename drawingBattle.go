@@ -408,33 +408,7 @@ func drawFrameCorners(x, y, width, height, cLen float32, frameColor rl.Color) {
 	rl.DrawLineEx(rl.NewVector2(x+width, y+height), rl.NewVector2(x+width, y+height-cLen), cornerThickness, frameColor)
 }
 
-func (bld *building) occupiedTilesBounds() (minX, minY, maxX, maxY uint8) {
-	minX, minY = bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y
-	maxX, maxY = minX, minY
-
-	for _, tile := range bld.OccupiedTiles[1:] {
-		tileX, tileY := tile.X, tile.Y
-		if tileX < minX {
-			minX = tileX
-		}
-
-		if tileX > maxX {
-			maxX = tileX
-		}
-
-		if tileY < minY {
-			minY = tileY
-		}
-
-		if tileY > maxY {
-			maxY = tileY
-		}
-	}
-
-	return minX, minY, maxX, maxY
-}
-
-func drawBuildingSelectionFrame(bld *building, bounds bounds, bState *battleState) {
+func drawBuildingSelectionFrame(bld *building, rect rl.Rectangle, bState *battleState) {
 	var cLen float32
 
 	if bld.Type != buildingPalisade {
@@ -443,20 +417,24 @@ func drawBuildingSelectionFrame(bld *building, bounds bounds, bState *battleStat
 		cLen = cornerLenPalisade
 	}
 
+	var frameColor rl.Color
+
 	if bld.Owner == bState.PlayerID {
-		drawFrameCorners(float32(bounds.X), float32(bounds.Y), bounds.WidthPx, bounds.HeightPx, cLen, friendlyFrameColor)
+		frameColor = friendlyFrameColor
 	} else {
-		drawFrameCorners(float32(bounds.X), float32(bounds.Y), bounds.WidthPx, bounds.HeightPx, cLen, enemyFrameColor)
+		frameColor = enemyFrameColor
 	}
+
+	drawFrameCorners(rect.X, rect.Y, rect.Width, rect.Height, cLen, frameColor)
 }
 
-func drawBuildingCapacity(bld *building, bounds bounds) {
+func drawBuildingCapacity(bld *building, rect rl.Rectangle) {
 	if bld.MaxFood == 0 {
 		return
 	}
 
-	baseX := bounds.X + capacityMarginX
-	baseY := bounds.Y + bounds.Height - capacityReactH - capacityMarginY
+	baseX := int32(rect.X) + capacityMarginX
+	baseY := int32(rect.Y) + int32(rect.Height) - capacityReactH - capacityMarginY
 	step := capacityRectW + capacityMarginX
 
 	for i := range bld.MaxFood {
@@ -471,34 +449,63 @@ func drawBuildingCapacity(bld *building, bounds bounds) {
 	}
 }
 
-func drawBuildingHealthBar(bld *building, bounds bounds) {
-	barY := bounds.Y + buildingHealthBarMarginY
-	rl.DrawRectangle(bounds.X, barY, bounds.Width, healthBarHeight, rl.Red)
+func drawBuildingHealthBar(bld *building, rect rl.Rectangle) {
+	barY := int32(rect.Y) + buildingHealthBarMarginY
+	rl.DrawRectangle(int32(rect.X), barY, int32(rect.Width), healthBarHeight, rl.Red)
 
-	fillWidth := int32(float32(bounds.Width) * (float32(bld.HP) / float32(bld.MaxHP)))
-	rl.DrawRectangle(bounds.X, barY, fillWidth, healthBarHeight, rl.Green)
+	fillWidth := int32(float32(int32(rect.Width)) * (float32(bld.HP) / float32(bld.MaxHP)))
+	rl.DrawRectangle(int32(rect.X), barY, fillWidth, healthBarHeight, rl.Green)
 }
 
+// @todo: Stwórz strukturę BuildingUIData zawierającą tylko dane potrzebne do rysowania
+// (prostokąt, HP, Food, isSelected, isOwnedByHuman). Przekazywać ją przez wartość zamiast *building i *bState.
+// Logikę przeliczania kafelków na piksele przenieść do drawBuildingsInterfaces.
 func drawBuildingInterface(bld *building, bState *battleState) {
-	buildingBounds := bld.bounds()
+	minX := bld.OccupiedTiles[0].X
+	minY := bld.OccupiedTiles[0].Y
+
+	var widthTiles, heightTiles uint8
+
+	switch bld.Type {
+	case buildingBridge, buildingPalisade:
+		widthTiles = 1
+		heightTiles = 1
+	default:
+		widthTiles = regularBuildingSize
+		heightTiles = regularBuildingSize
+	}
+
+	buildingRect := rl.Rectangle{
+		X:      float32(minX) * float32(tileWidth),
+		Y:      float32(minY) * float32(tileHeight),
+		Width:  float32(widthTiles) * float32(tileWidth),
+		Height: float32(heightTiles) * float32(tileHeight),
+	}
+
 	isBuildingSelected := bState.CurrentSelection.BuildingID == bld.ID
 
+	// Jeśli zaznaczymy budynek to trzeba narysować ramkę, aby gracz wiedział
+	// który obiekt został wybrany.
 	if isBuildingSelected {
-		drawBuildingSelectionFrame(bld, buildingBounds, bState)
+		drawBuildingSelectionFrame(bld, buildingRect, bState)
 
+		// @todo: tutaj mamy bState.PlayerID, które raczej jest złym podejściem
+		//        powinienem to zmienić na jakieś getPlayerState, czy coś podobnego
+		//        W ten sposób ujednolicę podejście w kodzie.
 		if bld.Owner == bState.PlayerID && !bld.IsUnderConstruction {
-			drawBuildingCapacity(bld, buildingBounds)
+			drawBuildingCapacity(bld, buildingRect)
 		}
 	}
 
 	// Rysowanie paska życia
 	if (bld.HP < bld.MaxHP || isBuildingSelected) && bld.HP != 0 {
-		drawBuildingHealthBar(bld, buildingBounds)
+		drawBuildingHealthBar(bld, buildingRect)
 	}
 }
 
 func drawBuildingsInterfaces(bState *battleState) {
 	for _, currentBuilding := range bState.Buildings {
+		// zabezpieczenie przed budynkiem bez zajętych kafelków jest zbędne↓↓↓
 		if !currentBuilding.Exists || len(currentBuilding.OccupiedTiles) == 0 {
 			continue
 		}

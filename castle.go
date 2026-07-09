@@ -101,7 +101,7 @@ func (playerS *playerState) handleProductionCommand(cmd *command, bState *battle
 		return
 	}
 
-	ok, errCode := canProduceUnit(newUnitType, execBld, bState)
+	ok, errCode := bState.canProduceUnit(newUnitType, execBld)
 	if !ok {
 		switch errCode {
 		case produceErrNoRoom:
