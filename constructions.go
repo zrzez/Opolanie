@@ -149,11 +149,12 @@ func (bld *building) getDistanceToUnit(unitX, unitY uint8) uint8 {
 // bo teraz budynek ma .OccupiedTiles. Nie usuwam jeszcze.
 func (bld *building) getBounds() (int, int, int, int) {
 	switch bld.Type {
-
 	case buildingBridge, buildingPalisade:
-		return int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y), int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y)
+		return int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y),
+			int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y)
 	default:
-		return int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y), int(bld.OccupiedTiles[2].X), int(bld.OccupiedTiles[2].Y)
+		return int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y),
+			int(bld.OccupiedTiles[2].X), int(bld.OccupiedTiles[2].Y)
 	}
 }
 
@@ -194,6 +195,7 @@ func (bld *building) isValidSpawnTile(x, y int, bState *battleState) bool {
 }
 
 // @todo: Budynek nie powinien oceniać otoczenia, to metoda dla innej struktury!
+// @reminder: najprawdopodobniej do zastąpienia przez boardData.getFreeTileInList.
 func (bld *building) getClosestWalkableTile(bState *battleState) (uint8, uint8, bool) {
 	if len(bld.OccupiedTiles) == 0 {
 		return 0, 0, false
@@ -239,102 +241,6 @@ func (bld *building) takeDamage(damage uint16) {
 
 	bld.AccumulatedDamage += damage
 	log.Printf("building %d received %d damage (accumulated: %d)", bld.ID, damage, bld.AccumulatedDamage)
-}
-
-// getButtonCommand zastępuje przestarzałe GetProductionCommand.
-// Tłumaczy kliknięcie przycisku (actionIndex) na pełny rozkaz (command).
-// @todo: sprawdź, czy te actionIndex muszą być zaczarodziejskie. 01.07.2026
-// @todo: Do przebudowy, robi i wie zbyt wiele
-func (bld *building) getButtonCommand(actionIndex int) command {
-	// Domyślny, pusty rozkaz
-	cmd := command{ActionType: cmdUIdle}
-
-	switch bld.Type {
-	case buildingMain:
-		// Indeks 6: Budowa drogi/palisady (w zależności od kontekstu UI)
-		if actionIndex == 6 {
-			cmd.ActionType = cmdBPlaceConstruction
-			cmd.InteractionTargetID = ObjectID(buildingPalisade)
-		}
-
-	case buildingBarn:
-		// Indeks 5: Wytwarzanie Krowy
-		if actionIndex == 5 {
-			cmd.ActionType = cmdBProduce
-			cmd.CreateType = uint8(unitCow)
-		}
-		// Indeks 6: Budowa nowej Obory
-		if actionIndex == 6 {
-			cmd.ActionType = cmdBPlaceConstruction
-			cmd.InteractionTargetID = ObjectID(buildingBarn)
-		}
-
-	case buildingBarracks:
-		// Indeks 4: Wytwarzanie Łucznika
-		if actionIndex == 4 {
-			cmd.ActionType = cmdBProduce
-			cmd.CreateType = uint8(unitArcher)
-		}
-		// Indeks 5: Wytwarzanie Drwala
-		if actionIndex == 5 {
-			cmd.ActionType = cmdBProduce
-			cmd.CreateType = uint8(unitAxeman)
-		}
-		// Indeks 6: Budowa Chaty Mieszkalnej
-		if actionIndex == 6 {
-			cmd.ActionType = cmdBPlaceConstruction
-			cmd.InteractionTargetID = ObjectID(buildingBarracks)
-		}
-
-	case buildingTemple:
-		// Indeks 4: Wytwarzanie Kapłana
-		if actionIndex == 4 {
-			cmd.ActionType = cmdBProduce
-			cmd.CreateType = uint8(unitPriest)
-		}
-		// Indeks 5: Wytwarzanie Kapłanki
-		if actionIndex == 5 {
-			cmd.ActionType = cmdBProduce
-			cmd.CreateType = uint8(unitPriestess)
-		}
-		// Indeks 6: Tutaj był stary CMD_PRODUCE bez typu, zakładam, że to błąd starego kodu
-		// lub puste miejsce. Zostawiamy IDLE.
-
-	case buildingBarracks2:
-		// Indeks 4: Wytwarzanie Włócznika
-		if actionIndex == 4 {
-			cmd.ActionType = cmdBProduce
-			cmd.CreateType = uint8(unitSpearman)
-		}
-		// Indeks 5: Wytwarzanie Miecznika
-		if actionIndex == 5 {
-			cmd.ActionType = cmdBProduce
-			cmd.CreateType = uint8(unitSwordsman)
-		}
-		// Indeks 6: Pusty w starym kodzie (zwracał gołe CMD_PRODUCE)
-		// Indeks 7: Budowa Palisady (stare CMD_BUILD_FENCE)
-		if actionIndex == 7 {
-			cmd.ActionType = cmdBPlaceConstruction
-			cmd.InteractionTargetID = ObjectID(buildingPalisade)
-		}
-
-	case buildingAcademy:
-		// Indeks 4: Wytwarzanie Kusznika
-		if actionIndex == 4 {
-			cmd.ActionType = cmdBProduce
-			cmd.CreateType = uint8(unitCrossbowman)
-		}
-		// Indeks 5: Wytwarzanie Dowódcy
-		if actionIndex == 5 {
-			cmd.ActionType = cmdBProduce
-			cmd.CreateType = uint8(unitCommander)
-		}
-		// Indeks 6: Pusty
-	default:
-		panic("getButtonCommand unhandled default case")
-	}
-
-	return cmd
 }
 
 func (bld *building) isRepairable(playerID PlayerID) bool {

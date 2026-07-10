@@ -291,26 +291,13 @@ func (board *boardData) neighborCoords(bld *building) []point {
 }
 
 func (board *boardData) hasFreeTileInList(electedTiles []point) bool {
-	fmt.Println("=== hasFreeTileInList: sprawdzanie kafelków ===")
-
 	for _, electedTile := range electedTiles {
-		unitNil := board.Tiles[electedTile.X][electedTile.Y].Unit == nil
-		walkable := board.Tiles[electedTile.X][electedTile.Y].IsWalkable
-		fmt.Printf("   (%d, %d): Unit==nil = %v, IsWalkable = %v\n", electedTile.X, electedTile.Y, unitNil, walkable)
-		if unitNil && walkable {
-			return true
-		}
-	}
-
-	fmt.Println("=== hasFreeTileInList: sprawdzanie kafelków ===")
-
-	/*for _, electedTile := range electedTiles {
 		if board.Tiles[electedTile.X][electedTile.Y].Unit == nil &&
 			board.Tiles[electedTile.X][electedTile.Y].IsWalkable {
 			return true
 		}
 	}
-	*/
+
 	return false
 }
 
@@ -327,8 +314,7 @@ func (board *boardData) getFreeTileInList(electedCoords []point) (point, bool) {
 		}
 	}
 
-	// @todo: nie można przekazywać 0,0 jako „poprawnego”
-	return point{}, false
+	return point{X: 0, Y: 0}, false
 }
 
 func (board *boardData) electSpawnTile(bld *building) (point, bool) {
