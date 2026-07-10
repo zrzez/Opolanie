@@ -109,6 +109,8 @@ func (bld *building) getCenter() (uint8, uint8, bool) {
 }
 
 // @todo: Budynek nie powinien liczyć odległości do jednostki!
+//
+//	To bardziej wygląda na coś dla boardData.
 func (bld *building) getDistanceToUnit(unitX, unitY uint8) uint8 {
 	// log.Println("Środek getDistanceToUnit")
 
@@ -144,30 +146,26 @@ func (bld *building) getDistanceToUnit(unitX, unitY uint8) uint8 {
 	return minDist
 }
 
-// Zwraca granice budynku jako int.
-// @reminder: funkcja wydaje się całkowicie zbyteczna
-// bo teraz budynek ma .OccupiedTiles. Nie usuwam jeszcze.
-func (bld *building) getBounds() (int, int, int, int) {
-	switch bld.Type {
-	case buildingBridge, buildingPalisade:
-		return int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y),
-			int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y)
-	default:
-		return int(bld.OccupiedTiles[0].X), int(bld.OccupiedTiles[0].Y),
-			int(bld.OccupiedTiles[2].X), int(bld.OccupiedTiles[2].Y)
-	}
-}
-
 // Sprawdza, czy na danym polu można postawić jednostkę
 // @todo: Budynek nie powinien oceniać otoczenia, to funkcja nie dla budynku
 func (bld *building) isValidSpawnTile(x, y int, bState *battleState) bool {
 	// 1. Czy mieści się na mapie?
+	// Metoda boardData.hasSpaceAroundBuilding spełnia to samo zadnie
+	// ma podmetodę boardData.neighgorCoords zwracającą współrzędne „w planszy”
 	if x < 0 || x >= int(boardMaxX) || y < 0 || y >= int(boardMaxY) {
 		return false
 	}
 
 	currentTile := &bState.Board.Tiles[x][y]
 
+	// Metoda boardData.hasSpaceAroundBuilding spełnia to samo zadnie
+	// ma podmetodę hasFreeTileInList, która sprawdza
+	// - przedoniość
+	// - czy zajęte przez jednostkę
+	// - czy zajęte przez budynek*
+	//   - aktualnie sprawdzanie „budynku” jest zbędne
+	//     ponieważ IsWalkable poprawnie to ogarnia
+	//     łącznie z wyjątkami dla mostów i palisad
 	// 2. Czy teren jest przechodni?
 	if !currentTile.IsWalkable {
 		return false
@@ -192,35 +190,6 @@ func (bld *building) isValidSpawnTile(x, y int, bState *battleState) bool {
 	}
 
 	return true
-}
-
-// @todo: Budynek nie powinien oceniać otoczenia, to metoda dla innej struktury!
-// @reminder: najprawdopodobniej do zastąpienia przez boardData.getFreeTileInList.
-func (bld *building) getClosestWalkableTile(bState *battleState) (uint8, uint8, bool) {
-	if len(bld.OccupiedTiles) == 0 {
-		return 0, 0, false
-	}
-
-	// 1. Pobieramy granice
-	minX, minY, maxX, maxY := bld.getBounds()
-
-	// 2. Iterujemy z marginesem 1 kratki
-	for y := minY - 1; y <= maxY+1; y++ {
-		for x := minX - 1; x <= maxX+1; x++ {
-
-			// Pomijamy wnętrze budynku (interesuje nas tylko obwódka)
-			if x >= minX && x <= maxX && y >= minY && y <= maxY {
-				continue
-			}
-
-			// Sprawdzamy, czy to dobre miejsce
-			if bld.isValidSpawnTile(x, y, bState) {
-				return uint8(x), uint8(y), true
-			}
-		}
-	}
-
-	return 0, 0, false
 }
 
 // @reminder: jak to powinno działać -- budynek gromadzi obrażenia w bld.AccumnulatedDamage

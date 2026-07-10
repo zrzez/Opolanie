@@ -266,9 +266,27 @@ func (u *unit) getGrazingAnchorPoint() (uint8, uint8, bool) {
 func (u *unit) returnToBarnArea(resolver objectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	u.setIdleWithReason("brak trawy w zasięgu")
 	if u.BelongsTo != nil {
-		bx, by, ok := u.BelongsTo.getClosestWalkableTile(bState)
-		if ok {
-			u.addAndMove(resolver, board, pathfindingBudget, cmdUMove, bx, by, 0, bState, "Wracam pod oborę (brak paszy).")
+
+		// bx, by, ok := u.BelongsTo.getClosestWalkableTile(bState)
+		// TUTAJ WPROWADZAM ZMIANĘ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+		coords := bState.Board.neighborCoords(u.BelongsTo)
+		var bestX, bestY uint8
+		minPathLen := math.MaxInt32
+		var found bool
+
+		for _, coord := range coords {
+			if bState.Board.Tiles[coord.X][coord.Y].IsWalkable && bState.Board.Tiles[coord.X][coord.Y].Unit == nil {
+				tempPath := findPath(bState.Board, u, u.X, u.Y, coord.X, coord.Y)
+
+				if tempPath != nil && len(tempPath) < minPathLen {
+					minPathLen = len(tempPath)
+					bestX, bestY = coord.X, coord.Y
+					found = true
+				}
+			}
+		}
+		if found {
+			u.addAndMove(resolver, board, pathfindingBudget, cmdUMove, bestX, bestY, 0, bState, "Wracam pod oborę (brak paszy).")
 		}
 	}
 }

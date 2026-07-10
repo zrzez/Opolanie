@@ -366,9 +366,27 @@ func (u *unit) findApproachTileForTarget(intentionX, intentionY uint8, targetID 
 			}
 		}
 
-		x, y, ok := targetBuilding.getClosestWalkableTile(bState)
-		if ok {
-			return x, y, nil
+		// TUTAJ WPROWADZAM ZMIANĘ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+		coords := bState.Board.neighborCoords(targetBuilding)
+		var bestX, bestY uint8
+		minPathLen := math.MaxInt32
+		var found bool
+
+		for _, coord := range coords {
+			if bState.Board.Tiles[coord.X][coord.Y].IsWalkable && bState.Board.Tiles[coord.X][coord.Y].Unit == nil {
+				tempPath := findPath(bState.Board, u, u.X, u.Y, coord.X, coord.Y)
+
+				if tempPath != nil && len(tempPath) < minPathLen {
+					minPathLen = len(tempPath)
+					bestX, bestY = coord.X, coord.Y
+					found = true
+				}
+			}
+		}
+
+		// x, y, ok := targetBuilding.getClosestWalkableTile(bState)
+		if found {
+			return bestX, bestY, nil
 		}
 
 		return 0, 0, fmt.Errorf("cel (budynek) jest nieosiągalny")
@@ -1823,7 +1841,8 @@ func (u *unit) isImportantPalisade(palisade *building, bState *battleState) bool
 			continue
 		}
 
-		_, _, ok = bld.getClosestWalkableTile(bState)
+		//_, _, ok = bld.getClosestWalkableTile(bState)
+		ok = bState.Board.hasSpaceAroundBuilding(bld)
 
 		if !ok {
 			return true
@@ -1871,7 +1890,8 @@ func (u *unit) handleTargetSearchForAI(resolver objectResolver, board *boardData
 	primaryTargetUnit, primaryTargetBuilding, foundPrimary := findNearestEnemyExtended(u, bState)
 
 	if isPalisadeBreaker && foundPrimary && primaryTargetBuilding != nil && primaryTargetBuilding.Exists {
-		_, _, ok := primaryTargetBuilding.getClosestWalkableTile(bState)
+		//_, _, ok := primaryTargetBuilding.getClosestWalkableTile(bState)
+		ok := bState.Board.hasSpaceAroundBuilding(primaryTargetBuilding)
 
 		if !ok {
 			palisadeTarget := u.findNearestPalisade(bState, u.SightRange)

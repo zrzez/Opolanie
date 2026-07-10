@@ -220,15 +220,6 @@ func (board *boardData) isValidWalkableTile(x, y uint8) bool {
 }
 
 func (board *boardData) neighborCoords(bld *building) []point {
-	// LOGOWANIE
-	fmt.Println("=== neighborCoords: budynek ===")
-
-	for i, p := range bld.OccupiedTiles {
-		fmt.Printf("kafelek %d: (%d, %d)\n", i, p.X, p.Y)
-	}
-
-	fmt.Println("=== neighborCoords: budynek ===")
-
 	// 1. Bierzemy lewy górny róg budynku
 	occupiedTileX := int(bld.OccupiedTiles[0].X)
 	occupiedTileY := int(bld.OccupiedTiles[0].Y)
@@ -277,14 +268,6 @@ func (board *boardData) neighborCoords(bld *building) []point {
 			})
 		}
 	}
-
-	fmt.Println("=== neighborCoords: sąsiedzi w planszy ===")
-
-	for i, p := range electedCoords {
-		fmt.Printf("sąsiad %d: (%d, %d)\n", i, p.X, p.Y)
-	}
-
-	fmt.Println("=== neighborCoords: sąsiedzi w planszy ===")
 
 	// Stworzyliśmy listę wszystkich sąsiadów budynku
 	return electedCoords
