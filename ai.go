@@ -347,11 +347,11 @@ func findNearestEnemyExtended(seeker *unit, bState *battleState) (*unit, *buildi
 
 	// Faza 1: Jednostki wroga
 
-	for _, unit := range bState.Units {
-		if unit == nil || !unit.Exists || unit.Owner == seeker.Owner {
+	for _, u := range bState.Units {
+		if u == nil || !u.Exists || u.Owner == seeker.Owner {
 			continue
 		}
-		distance := float64(seeker.calculateDistanceToTarget(&combatTarget{Unit: unit}))
+		distance := float64(seeker.calculateDistanceToTarget(&combatTarget{Unit: u}, bState.Board))
 
 		if distance > float64(seeker.SightRange) || distance == float64(math.MaxInt32) {
 			continue
@@ -360,7 +360,7 @@ func findNearestEnemyExtended(seeker *unit, bState *battleState) (*unit, *buildi
 		currentScore := float64(PriorityUnit) + distance
 		if currentScore < bestScore {
 			bestScore = currentScore
-			chosenUnit = unit
+			chosenUnit = u
 			chosenBuilding = nil
 		}
 	}
@@ -374,7 +374,7 @@ func findNearestEnemyExtended(seeker *unit, bState *battleState) (*unit, *buildi
 		if bld == nil || !bld.Exists || bld.Owner == seeker.Owner || bld.Type == buildingPalisade {
 			continue
 		}
-		distance := float64(bld.getDistanceToUnit(seeker.X, seeker.Y))
+		distance := float64(getDistanceToUnit(bld.Type, bld.OccupiedTiles[0], seeker.X, seeker.Y))
 
 		if distance > float64(seeker.SightRange) || distance == float64(math.MaxInt32) {
 			continue
@@ -402,7 +402,7 @@ func findNearestEnemyExtended(seeker *unit, bState *battleState) (*unit, *buildi
 			continue
 		}
 
-		distance := float64(bld.getDistanceToUnit(seeker.X, seeker.Y))
+		distance := float64(getDistanceToUnit(bld.Type, bld.OccupiedTiles[0], seeker.X, seeker.Y))
 
 		if distance > float64(seeker.SightRange) || distance == float64(math.MaxInt32) {
 			continue

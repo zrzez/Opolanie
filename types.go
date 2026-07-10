@@ -72,8 +72,9 @@ const (
 
 // unit określa pojedynczą jednostkę podczas bitwy.
 type unit struct {
-	ID           UnitID      // Unikatowy numer jednostki
-	Exists       bool        // Czy jednostka nie została jeszcze zabita
+	ID     UnitID // Unikatowy numer jednostki
+	Exists bool   // Czy jednostka nie została jeszcze zabita
+	// @todo: ↓↓↓↓↓↓↓↓ zamień uint8 na strukturę point
 	X, Y         uint8       // Współrzędne jednostki
 	Owner        PlayerID    // Kto jest właścicielem. colorRed gracz, inne SI
 	Type         unitType    // Rodzaj jednostki (Drwal = unitAxeman itd.)

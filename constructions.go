@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"math"
 )
 
 // constructions.go
@@ -106,44 +105,6 @@ func (bld *building) getCenter() (uint8, uint8, bool) {
 		// Zwyczajne budowle zawsze są 3na3 więc środek jest z góry znany
 		return bld.OccupiedTiles[1].X, bld.OccupiedTiles[1].Y, true
 	}
-}
-
-// @todo: Budynek nie powinien liczyć odległości do jednostki!
-//
-//	To bardziej wygląda na coś dla boardData.
-func (bld *building) getDistanceToUnit(unitX, unitY uint8) uint8 {
-	// log.Println("Środek getDistanceToUnit")
-
-	if len(bld.OccupiedTiles) == 0 {
-		// log.Println("bld.OccupiedTiles == 0")
-		// log.Println(math.MaxUint8)
-
-		return math.MaxUint8
-	}
-
-	// log.Println("Obliczam minDist")
-
-	minDist := uint8(math.MaxUint8)
-
-	// log.Printf("minDist: %d", minDist)
-
-	for _, bldTile := range bld.OccupiedTiles {
-		dx := math.Abs(float64(unitX) - float64(bldTile.X))
-		dy := math.Abs(float64(unitY) - float64(bldTile.Y))
-		currentDist := uint8(math.Max(dx, dy))
-
-		// log.Printf("dx: %f, dy: %f, currentDist: %d", dx, dy, currentDist)
-
-		if currentDist < minDist {
-			minDist = currentDist
-
-			// log.Println("currentDist < minDist")
-		}
-	}
-
-	// log.Printf("Wychodzę z getDistanceToUnit, obliczone minDist %d", minDist)
-
-	return minDist
 }
 
 // @reminder: jak to powinno działać -- budynek gromadzi obrażenia w bld.AccumnulatedDamage

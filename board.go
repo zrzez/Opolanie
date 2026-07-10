@@ -305,3 +305,49 @@ func (board *boardData) electSpawnTile(bld *building) (point, bool) {
 
 	return board.getFreeTileInList(coords)
 }
+
+func getDistanceToUnit(bldType buildingType, bldTopLeft point, unitX, unitY uint8) uint8 {
+	var minX, minY, maxX, maxY uint8
+
+	// Na podstawie rodzaju budynku wybieramy skrajne współrzędne
+	switch bldType {
+	case buildingBridge, buildingPalisade:
+		minX = bldTopLeft.X
+		maxX = minX
+		minY = bldTopLeft.Y
+		maxY = minY
+	default:
+		// Ponieważ zwyczajne budynki mają 9 kafelków wykorzystajmy
+		// fakt, że [0] to zawsze najmniejsze X i Y
+		// a [8] to zawsze największe X i Y
+		minX = bldTopLeft.X
+		maxX = minX + 2
+		minY = bldTopLeft.Y
+		maxY = minY + 2
+	}
+
+	var differenceX, differenceY uint8
+
+	if unitX < minX {
+		differenceX = minX - unitX
+	} else if unitX > maxX {
+		differenceX = unitX - maxX
+	}
+	// Jeśli unitX = minX, to zostawiamy
+	// differenceX jako zero
+
+	if unitY < minY {
+		differenceY = minY - unitY
+	} else if unitY > maxY {
+		differenceY = unitY - maxY
+	}
+	// Jeśli unitY = minY, to zostawiamy
+	// differenceY jako zero
+
+	// Zwracamy największą różnicę
+	if differenceX > differenceY {
+		return differenceX
+	}
+
+	return differenceY
+}

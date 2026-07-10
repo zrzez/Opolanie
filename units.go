@@ -744,7 +744,7 @@ func (u *unit) canAttackTargetFromCurrentPosition(resolver objectResolver, board
 
 	log.Println("Obliczam odległość")
 
-	distance := u.calculateDistanceToTarget(target)
+	distance := u.calculateDistanceToTarget(target, board)
 
 	log.Printf("Odległość obliczona %d", distance)
 	log.Println(distance <= u.AttackRange)
@@ -1182,7 +1182,7 @@ func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleS
 		return
 	}
 
-	if u.canAttackTarget(target) {
+	if u.canAttackTarget(target, board) {
 		log.Printf("units.go attack weszliśmy do canAttackTarget")
 
 		u.performDirectAttack(target, bState)
@@ -1259,8 +1259,8 @@ func (u *unit) validateAttackTarget(resolver objectResolver, board *boardData) (
 	return target, nil
 }
 
-func (u *unit) canAttackTarget(target *combatTarget) bool {
-	distance := u.calculateDistanceToTarget(target)
+func (u *unit) canAttackTarget(target *combatTarget, board *boardData) bool {
+	distance := u.calculateDistanceToTarget(target, board)
 
 	return distance <= u.AttackRange
 }
@@ -1428,7 +1428,7 @@ func (u *unit) repair(bState *battleState) {
 	}
 
 	// Szukamy drogi do celu
-	distance := targetBuilding.getDistanceToUnit(u.X, u.Y)
+	distance := getDistanceToUnit(targetBuilding.Type, targetBuilding.OccupiedTiles[0], u.X, u.Y)
 
 	var amount uint16
 
@@ -1456,7 +1456,7 @@ func (u *unit) build(bState *battleState) {
 	}
 
 	// Szukamy drogi do celu
-	distance := targetBuilding.getDistanceToUnit(u.X, u.Y)
+	distance := getDistanceToUnit(targetBuilding.Type, targetBuilding.OccupiedTiles[0], u.X, u.Y)
 
 	var amount uint16
 
@@ -2050,7 +2050,7 @@ func (u *unit) validateTargetExists(resolver objectResolver, board *boardData) (
 	return &combatTarget{Unit: targetUnit, Building: targetBuilding}, nil
 }
 
-func (u *unit) calculateDistanceToTarget(target *combatTarget) uint8 {
+func (u *unit) calculateDistanceToTarget(target *combatTarget, board *boardData) uint8 {
 	if target.Unit != nil {
 		return uint8(math.Max(
 			math.Abs(float64(int(u.X)-int(target.Unit.X))),
@@ -2059,7 +2059,7 @@ func (u *unit) calculateDistanceToTarget(target *combatTarget) uint8 {
 	}
 
 	if target.Building != nil {
-		return target.Building.getDistanceToUnit(u.X, u.Y)
+		return getDistanceToUnit(target.Building.Type, target.Building.OccupiedTiles[0], u.X, u.Y)
 	}
 
 	// Atak na drzewo
@@ -2096,7 +2096,7 @@ func (u *unit) executeActionBasedOnDistance(resolver objectResolver, board *boar
 		return
 	}
 
-	distance := u.calculateDistanceToTarget(target)
+	distance := u.calculateDistanceToTarget(target, board)
 	u.executeActionByDistance(distance, bState)
 }
 
@@ -2219,7 +2219,7 @@ func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *b
 			continue
 		}
 
-		distanceToBuilding := bld.getDistanceToUnit(x, y)
+		distanceToBuilding := getDistanceToUnit(bld.Type, bld.OccupiedTiles[0], x, y)
 
 		if distanceToBuilding <= attackRange {
 			distanceFromUnit := math.Abs(float64(uCurrentX-x)) + math.Abs(float64(uCurrentY-y))
