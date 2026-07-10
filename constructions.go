@@ -146,52 +146,6 @@ func (bld *building) getDistanceToUnit(unitX, unitY uint8) uint8 {
 	return minDist
 }
 
-// Sprawdza, czy na danym polu można postawić jednostkę
-// @todo: Budynek nie powinien oceniać otoczenia, to funkcja nie dla budynku
-func (bld *building) isValidSpawnTile(x, y int, bState *battleState) bool {
-	// 1. Czy mieści się na mapie?
-	// Metoda boardData.hasSpaceAroundBuilding spełnia to samo zadnie
-	// ma podmetodę boardData.neighgorCoords zwracającą współrzędne „w planszy”
-	if x < 0 || x >= int(boardMaxX) || y < 0 || y >= int(boardMaxY) {
-		return false
-	}
-
-	currentTile := &bState.Board.Tiles[x][y]
-
-	// Metoda boardData.hasSpaceAroundBuilding spełnia to samo zadnie
-	// ma podmetodę hasFreeTileInList, która sprawdza
-	// - przedoniość
-	// - czy zajęte przez jednostkę
-	// - czy zajęte przez budynek*
-	//   - aktualnie sprawdzanie „budynku” jest zbędne
-	//     ponieważ IsWalkable poprawnie to ogarnia
-	//     łącznie z wyjątkami dla mostów i palisad
-	// 2. Czy teren jest przechodni?
-	if !currentTile.IsWalkable {
-		return false
-	}
-
-	// 2. Czy pole jest zajęte przez jednostkę? (zawsze blokuje)
-	if currentTile.Unit != nil {
-		return false
-	}
-
-	// 3. Czy pole jest zajęte przez budynek?
-	if currentTile.Building != nil {
-		if currentTile.Building.Type == buildingBridge && !currentTile.Building.IsUnderConstruction {
-			return true
-		}
-
-		if currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction {
-			return true
-		}
-
-		return false
-	}
-
-	return true
-}
-
 // @reminder: jak to powinno działać -- budynek gromadzi obrażenia w bld.AccumnulatedDamage
 // i jeśli w danym tiku przekroczyły one próg, to są zadawane „zbiorowo”.
 // Jeśli się tego progu nie przekroczyło, to budynek zostaje nienaruszony.
