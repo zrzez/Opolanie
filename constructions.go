@@ -23,7 +23,7 @@ func (bld *building) build(amount uint16) {
 }
 
 // increaseHP dla każdej istniejącej budowli zwiększa PŻ o amount
-// Pilnuje, aby bld.HP <= bld.MaxHP; Służy do naprawy budynków
+// Pilnuje, aby bld.HP <= bld.MaxHP; Służy do naprawy budynków.
 func (bld *building) increaseHP(amount uint16) {
 	if !bld.Exists {
 		return
@@ -56,7 +56,7 @@ func (bldType buildingType) isRegularBuilding() bool {
 // Odpowiada za dodanie stworzonej jednostki do mieszkańców budynku.
 // Sprawdzenie zostało wykonane w canProduceUnit,
 // pojemność za pomocą hasRoom
-// Zwracany bool jest całkowicie ignorowany
+// Zwracany bool jest całkowicie ignorowany.
 func (bld *building) registerUnit(uID UnitID) bool {
 	// Budynek poszerza listę zameldowanych jednostek
 	// To chyba powinny być wskaźniki
@@ -72,7 +72,7 @@ func (bld *building) registerUnit(uID UnitID) bool {
 }
 
 // Wywoływana przez u.unregisterFromBuilding gdy jednostka zmarła
-// Zwracane bool jest ignorowane
+// Zwracane bool jest ignorowane.
 func (bld *building) unregisterUnit(unregisterUnitID UnitID) bool {
 	// Przechodzimy przez listę jednostek zamieszkujących
 	for index, registeredUnitID := range bld.AssignedUnits {
@@ -97,6 +97,7 @@ func (bld *building) hasRoom() bool {
 // @reminer: Zupełnie nie rozumiem po co obecnie miałbym mieć taką metodę.
 // Do czasu aż nie ogarnę units.go zostawię, ale czuję, że jest zbędna.
 func (bld *building) getCenter() (uint8, uint8, bool) {
+	// @reminder: celowo nie daję każdego rodzaju budynku w przłączniku.
 	switch bld.Type {
 	case buildingPalisade, buildingBridge:
 		// Te rodzaje budynków, zawsze mają dokładnie jeden kafelek
@@ -124,7 +125,7 @@ func (bld *building) takeDamage(damage uint16) {
 	}
 
 	bld.AccumulatedDamage += damage
-	log.Printf("building %d received %d damage (accumulated: %d)", bld.ID, damage, bld.AccumulatedDamage)
+	log.Printf("Budynek %d otrzymał %d obrażen (łącznie: %d)", bld.ID, damage, bld.AccumulatedDamage)
 }
 
 func (bld *building) isRepairable(playerID PlayerID) bool {

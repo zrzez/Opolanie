@@ -316,6 +316,9 @@ func getDistanceToUnit(bldType buildingType, bldTopLeft point, unitX, unitY uint
 		maxX = minX
 		minY = bldTopLeft.Y
 		maxY = minY
+	// Zakładamy, że są tylko budynki jedno- i dziewięciokafelkowe
+	// Dlatego w domyślnym przypadku nie wywalam błędu, a obsługuję
+	// resztę rodzajów budynku.
 	default:
 		// Ponieważ zwyczajne budynki mają 9 kafelków wykorzystajmy
 		// fakt, że [0] to zawsze najmniejsze X i Y
