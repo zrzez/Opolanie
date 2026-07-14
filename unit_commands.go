@@ -170,6 +170,7 @@ func findTileForUnit(u *unit, target *unit, board *boardData) (point, error) {
 			return point{X: 0, Y: 0}, fmt.Errorf("brak wolnego kafelka wokół jednostki ID %d", target.ID)
 		}
 	}
+
 	return point{X: bestX, Y: bestY}, nil
 }
 
@@ -178,5 +179,6 @@ func findTileForTree(u *unit, treeTile point, board *boardData) (point, error) {
 	if !ok {
 		return point{X: 0, Y: 0}, fmt.Errorf("nie ma pozycji do ataku tego drzewa")
 	}
+
 	return point{X: bestX, Y: bestY}, nil
 }
