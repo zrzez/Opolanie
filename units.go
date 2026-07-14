@@ -427,7 +427,7 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	log.Printf("INFO: unit.go dodano rozkaz %d.", cmd.ActionType)
 	// ŁATANIE DZIURY W KOMPLETOWANIU ROZKAÓW DLA JEDNOSTEK
 	// @reminder: Łatanie dziury w kompletowaniu rozkazów dla jednostek
-	// @todo: ogarnij to łatanie, bo nie powinno to tuja być! - 02.07.2026
+	// @todo: ogarnij to łatanie, bo nie powinno to tutaj być! - 02.07.2026
 	u.CurrentSpell = cmd.Spell
 	u.AllowFriendlyFire = cmd.FriendlyFire
 
@@ -445,6 +445,7 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 		var err error
 		// Jeśli czar wymaga interakcji, to obliczamy gdzie podejść
 		// Na drzewo nie da się wejść, więc trzeba znaleźć kafelek obok
+		// @reminder: nie korzysta z A* w większyści przypadków, ale to się zmieni.
 		approach, err = u.calculateApproachTile(point{X: cmd.TargetX, Y: cmd.TargetY}, cmd.InteractionTargetID, bState)
 		if err != nil {
 			u.setIdleWithReason("cel nieosiągalny")
@@ -453,6 +454,8 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 		}
 	} else {
 		// Nie wymaga interakcji, np. cmdMove, to cel jest miejscem w które się udajemy
+		// @todo: sprawdź, czemu tutaj nie wpadają zaklęcia spellMagicShield
+		// oraz spellMagicSight.
 		approach.X, approach.Y = cmd.TargetX, cmd.TargetY
 	}
 

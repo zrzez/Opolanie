@@ -17,6 +17,7 @@ import (
 func (u *unit) calculateApproachTile(intention point, targetID ObjectID, bState *battleState) (point, error) {
 	// @reminder: Jeszcze nie wiem czemu miałbym tak rozdzielać odnajdywanie celu, ale niech będzie
 	if u.CurrentSpell != spellNone {
+		// @reminder: nie korzysta z A*
 		approachTile, err := u.findApproachTileForSpell(intention, bState)
 		if err != nil {
 			return point{X: 0, Y: 0}, err
@@ -26,6 +27,7 @@ func (u *unit) calculateApproachTile(intention point, targetID ObjectID, bState 
 	}
 
 	// Budynki, jednostki i drzewa jako cel
+	// @reminder: częściowo korzysta z A*
 	return u.findApproachTileForTarget(intention, targetID, bState)
 }
 
@@ -33,6 +35,7 @@ func (u *unit) findApproachTileForSpell(targetPosition point, bState *battleStat
 	switch u.CurrentSpell {
 	case spellMagicShower:
 		// Tutaj ustalamy, gdzie kapłan/-ka mają stanąć, ażeby rzucić czar.
+		// @reminder: nie korzysta z A*
 		finalPoint, ok := u.findBestPositionAroundTile(targetPosition, bState.Board)
 
 		if !ok {
@@ -41,6 +44,7 @@ func (u *unit) findApproachTileForSpell(targetPosition point, bState *battleStat
 
 		return finalPoint, nil
 
+	// ↓↓↓↓↓ Poniższe przypadki nie muszą korzystać z A*
 	case spellMagicShield, spellMagicSight:
 		// Czary, które przyjmują rzucającego jako swój cel.
 		return point{X: u.X, Y: u.Y}, nil
@@ -58,6 +62,7 @@ func (u *unit) findApproachTileForSpell(targetPosition point, bState *battleStat
 // można napaść na cel. Nie gwarantuje najkrótszej drogi.
 // Używany jedynie do czarodziejskich opadów.
 // Chyba faworyzuje lewy-górny róg.
+// @reminder: nie korzysta z A*.
 func (u *unit) findBestPositionAroundTile(targetTile point, board *boardData) (point, bool) {
 	bestX, bestY := targetTile.X, targetTile.Y
 	minDist := 100
@@ -109,31 +114,34 @@ func (u *unit) findApproachTileForTarget(intention point, targetID ObjectID, bSt
 	targetUnit, targetBuilding := bState.getObjectByID(targetID)
 
 	if targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge) {
+		// @reminder: korzysta z A*
 		return findTileForBuilding(u, targetBuilding, bState.Board)
 	}
 
 	if targetUnit != nil && targetUnit.Exists {
+		// @reminder: nie korzysta z A*
 		return findTileForUnit(u, targetUnit, bState.Board)
 	}
 
 	if bState.Board.Tiles[intention.X][intention.Y].isTree() {
+		// @reminder: nie korzysta z A*
 		return findTileForTree(u, intention, bState.Board)
 	}
 
 	return point{X: 0, Y: 0}, fmt.Errorf("cel ataku ID %d nie istnieje", targetID)
 }
 
-func findTileForBuilding(u *unit, b *building, board *boardData) (point, error) {
+func findTileForBuilding(u *unit, bld *building, board *boardData) (point, error) {
 	// 1. Próba ataku dystansowego
 	if u.AttackRange > 1 {
-		x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, b, board)
+		x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, bld, board)
 		if ok {
 			return point{X: x, Y: y}, nil
 		}
 	}
 
 	// 2. Szukanie najbliższego wolnego sąsiedniego kafelka
-	coords := board.neighborCoords(b)
+	coords := board.neighborCoords(bld)
 
 	var bestX, bestY uint8
 
@@ -161,13 +169,12 @@ func findTileForBuilding(u *unit, b *building, board *boardData) (point, error) 
 	return point{X: 0, Y: 0}, fmt.Errorf("cel (budynek) jest nieosiągalny")
 }
 
-func findTileForUnit(u *unit, target *unit, board *boardData) (point, error) {
-	bestX, bestY := u.findBestPositionAroundUnit(target, board) // zakładam, że zmienisz sygnaturę na przyjmującą *Board
+func findTileForUnit(u *unit, uTarget *unit, board *boardData) (point, error) {
+	bestX, bestY := u.findBestPositionAroundUnit(uTarget, board)
 
-	// Jeśli zwrócono pozycję celu, sprawdź, czy nie jest to fallback (kafelek zajęty przez cel)
-	if bestX == target.X && bestY == target.Y {
-		if board.Tiles[bestX][bestY].Unit == target {
-			return point{X: 0, Y: 0}, fmt.Errorf("brak wolnego kafelka wokół jednostki ID %d", target.ID)
+	if bestX == uTarget.X && bestY == uTarget.Y {
+		if board.Tiles[bestX][bestY].Unit == uTarget {
+			return point{X: 0, Y: 0}, fmt.Errorf("brak wolnego kafelka wokół jednostki ID %d", uTarget.ID)
 		}
 	}
 
