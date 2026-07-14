@@ -461,7 +461,7 @@ func updateCorpses(bState *battleState) {
 	bState.CorpsesList = bState.CorpsesList[:nextFreeIndex]
 }
 
-// processAI zarządza sztuczną inteligencją przeciwnika
+// processAI zarządza sztuczną inteligencją przeciwnika.
 func processAI(bState *battleState) {
 	switch bState.CampaignData.DecisionType {
 	case boardVillage:
@@ -476,7 +476,7 @@ func processAI(bState *battleState) {
 	}
 }
 
-// processCommands przetwarza rozkazy
+// processCommands przetwarza rozkazy.
 func processCommands(bState *battleState) {
 	if bState.CurrentCommands[0].ActionType != cmdUIdle {
 		log.Printf("ProcComm: Gracz wykonuje komendę. ActionType: %d",

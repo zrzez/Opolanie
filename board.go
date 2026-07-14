@@ -256,9 +256,9 @@ func (board *boardData) neighborCoords(bld *building) []point {
 		electedTileX := occupiedTileX + offset[0]
 		electedTileY := occupiedTileY + offset[1]
 
-		// czy mamy legalny X
+		// czy mamy poprawny X
 		if electedTileX >= 0 && electedTileX < int(boardMaxX) &&
-			// czy mamy Y
+			// oraz Y
 			electedTileY >= 0 && electedTileY < int(boardMaxY) {
 			// Obie współrzędne są poprawnymi współrzędnymi kafelków więc
 			// dodajemy do listy prawidłowych współrzędnych

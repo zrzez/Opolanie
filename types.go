@@ -76,6 +76,7 @@ type unit struct {
 	Exists bool   // Czy jednostka nie została jeszcze zabita
 	// @todo: ↓↓↓↓↓↓↓↓ zamień uint8 na strukturę point
 	X, Y         uint8       // Współrzędne jednostki
+	Position     point       // Docelowo ma zastąpić X,Y uint8
 	Owner        PlayerID    // Kto jest właścicielem. colorRed gracz, inne SI
 	Type         unitType    // Rodzaj jednostki (Drwal = unitAxeman itd.)
 	HP           uint16      // Bieżący wskaźnik życia

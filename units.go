@@ -24,15 +24,15 @@ func (ut unitType) isCaster() bool {
 	return ut == unitMage || ut == unitPriest || ut == unitPriestess
 }
 
-// isMagical zwraca true jeżeli dana jednostka może mieć więcej niż 0 Max_Mana
-// robi to sprawdzając, czy isCaster lub == UNKNOWN.
+// isMagical zwraca true jeżeli dana jednostka ma MaxMana > 0.
 func (ut unitType) isMagical() bool {
 	return ut.isCaster() || ut == unitUnknown
 }
 
-// increaseManaUnit dla każdej istniejącej jednostki zwiększa manę o amount
+// increaseManaUnit zwiększa manę jednostki o amount.
 // Pilnuje, aby u.Mana <= u.MaxMana.
 func (u *unit) increaseManaUnit(amount uint16) {
+	// @reminder: sprawdź, czy sprawdzanie !u.Exists ma sens
 	if !u.Exists || amount == 0 {
 		return
 	}
@@ -47,36 +47,36 @@ func (u *unit) increaseManaUnit(amount uint16) {
 	}
 }
 
-// Jeśli to możliwe to dla każdej istniejącej jednostki zmniejsza manę o amount oraz zwraca prawda.
-// Jeśli u.Mana < amount, to zwraca fałsz.
+// tryToDecreaseMana zmniejsza manę o amount oraz zwraca prawda. Jeśli u.Mana < amount, to zwraca fałsz.
 func (u *unit) tryToDecreaseMana(amount uint16) bool {
 	if !u.Exists {
 		return false
 	}
 
-	if u.Mana >= amount {
-		u.Mana -= amount
-
-		return true
+	if u.Mana < amount {
+		return false
 	}
 
-	return false
+	u.Mana -= amount
+
+	return true
 }
 
-// increaseHPUnit dla każdej istniejącej jednostki zwiększa PŻ o amount
-// Pilnuje, aby u.HP <= u.MaxHP
+// increaseHPUnit zwiększa punkty życia o amount. Pilnuje, aby u.HP <= u.MaxHP.
 func (u *unit) increaseHPUnit(amount uint16) {
 	if !u.Exists {
 		return
 	}
 
 	u.HP += amount
+
 	if u.HP > u.MaxHP {
 		u.HP = u.MaxHP
 	}
 }
 
-// decreaseHPUnit dla każdej istniejącej jednostki zmniejsza PŻ o amount
+// @reminder: jeszcze nie usuwam, być może się przyda.
+// decreaseHPUnit dla każdej istniejącej jednostki zmniejsza PŻ o amount.
 // Pilnuje, aby ustawić u.Exists = false.
 func (u *unit) decreaseHPUnit(amount uint16) {
 	if !u.Exists {
@@ -85,23 +85,42 @@ func (u *unit) decreaseHPUnit(amount uint16) {
 
 	u.HP -= amount
 
-	if u.HP <= 0 {
-		u.HP = 0
-		u.Exists = false
+	if u.HP > 0 {
+		return
 	}
+
+	u.HP = 0
+	u.Exists = false
 }
 
 // ============================================================================
 // LOGIKA JEDNOSTEK
 // ============================================================================
 
+// @reminder: jest to metoda odpowiadająca za aktualizowanie wszystkiego w jednostce.
+/*
+Podejrzewam, że:
+1) branie bState *battleState jako argumentu, czyli „całego świata gry” jest efektem poważnego błędu.
+2) są tutaj zbyteczne rzeczy, które już robię w innej części kodu
+3) uda się mocno odchudzić kod bez utraty funkcjonalności
+4) nie przystaje on do aktualnej architektury
+5) utknę na długie tygodnie - 11.07.2026
+
+Chyba będzie najlepiej jeśli zacznę iść od samego spodu. W ten sposób zmiany same wypłyną i będą oczywiste
+po spojrzeniu na sygnatury i zmiany w nazwach.
+
+
+*/
 func (u *unit) updateUnit(bState *battleState) {
 	board := bState.Board
+
 	var resolver objectResolver = bState
+
 	pathfindingBudget := &bState.PathfindingBudget
 
 	// Aktualizowanie ran
 	// @todo przenieś do osobnej funkcji, szkoda zajmować tutaj miejsce
+	// !@todo: sprawdź, czy układ ran nie jest już obecny gdzie indziej, bo takie mam przeczucie
 	nextFreeIndex := 0
 
 	for scanIndex := range u.Wounds {
@@ -128,8 +147,6 @@ func (u *unit) updateUnit(bState *battleState) {
 	if u.handleDelay(bState.GlobalFrameCounter) {
 		return
 	}
-
-	// u.processActiveEffects()
 
 	if u.handleBlockedCounter() {
 		return
@@ -354,74 +371,6 @@ func (ut unitType) canDamagePalisades() bool {
 	return ut == unitAxeman || ut == unitPriest
 }
 
-func (u *unit) findApproachTileForTarget(intentionX, intentionY uint8, targetID ObjectID, bState *battleState) (uint8, uint8, error) {
-	targetUnit, targetBuilding := bState.getObjectByID(targetID)
-
-	// Cel jest budynkiem
-	if targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge) {
-		if u.AttackRange > 1 {
-			x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, targetBuilding, bState.Board)
-			if ok {
-				return x, y, nil
-			}
-		}
-
-		// TUTAJ WPROWADZAM ZMIANĘ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
-		coords := bState.Board.neighborCoords(targetBuilding)
-		var bestX, bestY uint8
-		minPathLen := math.MaxInt32
-		var found bool
-
-		for _, coord := range coords {
-			if bState.Board.Tiles[coord.X][coord.Y].IsWalkable && bState.Board.Tiles[coord.X][coord.Y].Unit == nil {
-				tempPath := findPath(bState.Board, u, u.X, u.Y, coord.X, coord.Y)
-
-				if tempPath != nil && len(tempPath) < minPathLen {
-					minPathLen = len(tempPath)
-					bestX, bestY = coord.X, coord.Y
-					found = true
-				}
-			}
-		}
-
-		// x, y, ok := targetBuilding.getClosestWalkableTile(bState)
-		if found {
-			return bestX, bestY, nil
-		}
-
-		return 0, 0, fmt.Errorf("cel (budynek) jest nieosiągalny")
-	}
-
-	// Cel jest jednostką
-	if targetUnit != nil && targetUnit.Exists {
-		bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState)
-
-		if bestX == targetUnit.X && bestY == targetUnit.Y {
-			// Sprawdź, czy to naprawdę fallback (kafel jest zajęty przez cel)
-			targetTile := &bState.Board.Tiles[bestX][bestY]
-			if targetTile.Unit == targetUnit {
-				return 0, 0, fmt.Errorf("brak wolnego kafelka wokół jednostki ID %d", targetID)
-			}
-		}
-
-		return bestX, bestY, nil
-	}
-
-	// Cel jest drzewem
-	targetTile := &bState.Board.Tiles[intentionX][intentionY]
-
-	if targetTile.isTree() {
-		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(intentionX, intentionY, bState.Board)
-		if !ok {
-			return 0, 0, fmt.Errorf("nie ma pozycji do ataku tego drzewa")
-		}
-
-		return bestX, bestY, nil
-	}
-
-	return 0, 0, fmt.Errorf("cel ataku ID %d nie istnieje", targetID)
-}
-
 func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, board *boardData) (uint8, uint8, bool) {
 	var bestX, bestY uint8
 
@@ -476,12 +425,13 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, board *boardD
 
 func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	log.Printf("INFO: unit.go dodano rozkaz %d.", cmd.ActionType)
-	// ŁATANIE DZIURY W KOMPLETOWANIE ROZKAÓW DLA JEDNOSTEK
+	// ŁATANIE DZIURY W KOMPLETOWANIU ROZKAÓW DLA JEDNOSTEK
 	// @reminder: Łatanie dziury w kompletowaniu rozkazów dla jednostek
 	// @todo: ogarnij to łatanie, bo nie powinno to tuja być! - 02.07.2026
 	u.CurrentSpell = cmd.Spell
 	u.AllowFriendlyFire = cmd.FriendlyFire
 
+	// @todo: czy tego w ogóle potrzebuję?!
 	if u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID) {
 		log.Printf("INFO: unit.go shouldSkipDuplicate %t.",
 			u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID))
@@ -490,11 +440,12 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	}
 
 	var approachX, approachY uint8
+
 	if cmd.ActionType.isInteraction() {
 		var err error
 		// Jeśli czar wymaga interakcji, to obliczamy gdzie podejść
 		// Na drzewo nie da się wejść, więc trzeba znaleźć kafelek obok
-		approachX, approachY, err = u.calculateApproachTile(cmd.TargetX, cmd.TargetY, cmd.ActionType, cmd.InteractionTargetID, bState)
+		approachX, approachY, err = u.calculateApproachTile(cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
 		if err != nil {
 			u.setIdleWithReason("cel nieosiągalny")
 
@@ -505,12 +456,7 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 		approachX, approachY = cmd.TargetX, cmd.TargetY
 	}
 
-	/*if err := u.resolveInteractionTarget(&cmd.TargetX, &cmd.TargetY, cmd.ActionType, cmd.InteractionTargetID, bState); err != nil {
-		u.setIdleWithReason("cel nieosiągalny")
-
-		return
-	}*/
-
+	// @todo: @reminder: sprawdzenia powinny się odbywać w castle.go
 	if !u.validateCommand(cmd.ActionType, cmd.InteractionTargetID, cmd.TargetX, cmd.TargetY, bState) {
 		log.Printf("INFO: unit.go rozkaz nie przeszedł sprawdzenia %t.",
 			u.validateCommand(cmd.ActionType, cmd.InteractionTargetID, cmd.TargetX, cmd.TargetY, bState))
@@ -526,29 +472,6 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 func (u *unit) shouldSkipDuplicate(command commandType, targetX, targetY uint8, targetID ObjectID) bool {
 	return u.Command == command && u.TargetX == targetX &&
 		u.TargetY == targetY && ObjectID(u.TargetID) == targetID
-}
-
-func (u *unit) calculateApproachTile(intentionX, intentionY uint8, command commandType, targetID ObjectID, bState *battleState) (uint8, uint8, error) {
-	// Gromobicie oraz deszcz ognia
-	if u.CurrentSpell == spellMagicShower {
-		// Intencja, to TargetX/Y
-		// tutaj ustalamy, gdzie kapłan/ka mają stanąć
-		finalX, finalY, ok := u.findBestPositionAroundTile(intentionX, intentionY, bState.Board)
-		if !ok {
-			return 0, 0, fmt.Errorf("brak miejsca w zasięgu czaru")
-		}
-
-		return finalX, finalY, nil
-	}
-
-	// Czary, których celem jest rzucający
-	// magiczna tarcza i magiczne widzenie
-	if u.CurrentSpell == spellMagicShield || u.CurrentSpell == spellMagicSight {
-		return u.X, u.Y, nil
-	}
-
-	// Budynki, jednostki i drzewa jako cel
-	return u.findApproachTileForTarget(intentionX, intentionY, targetID, bState)
 }
 
 func (ct commandType) isInteraction() bool {
@@ -1498,6 +1421,7 @@ func (u *unit) magicShower(targetX, targetY uint8, bState *battleState) bool {
 	// 0. Koszt czaru
 	if u.Mana < spellBufferMagicShower || !u.tryToDecreaseMana(spellCostMagicShower) {
 		log.Printf("INFO: Jednostka %d nie ma wystarczająco many na rzucenie czaru", u.ID)
+
 		return false
 	}
 
@@ -1968,51 +1892,6 @@ func (u *unit) findBestPositionAroundUnit(targetUnit *unit, bState *battleState)
 	// log.Println("Funkcja findBestPositionAroundUnit foundFreeSpot, x: %d, y: %d", bestX, bestY)
 
 	return uint8(bestX), uint8(bestY)
-}
-
-func (u *unit) findBestPositionAroundTile(tileX, tileY uint8, board *boardData) (uint8, uint8, bool) {
-	// 1. Najpierw sprawdzamy, czy sam kliknięty kafelek jest przechodni i pusty
-	if isWalkable(board, tileX, tileY) {
-		currentTile := &board.Tiles[tileX][tileY]
-		if currentTile.Unit == nil || currentTile.Unit.ID == u.ID {
-			return tileX, tileY, true
-		}
-	}
-
-	// 2. Jeśli nie, szukamy w promieniu AttackRange
-	bestX, bestY := tileX, tileY
-	minDist := math.MaxFloat64
-	found := false
-
-	for dx := -int(u.AttackRange); dx <= int(u.AttackRange); dx++ {
-		for dy := -int(u.AttackRange); dy <= int(u.AttackRange); dy++ {
-			checkX := int(tileX) + dx
-			checkY := int(tileY) + dy
-
-			if checkX < 0 || checkX >= int(boardMaxX) || checkY < 0 || checkY >= int(boardMaxY) {
-				continue
-			}
-
-			if !isWalkable(board, uint8(checkX), uint8(checkY)) {
-				continue
-			}
-
-			// Pomijamy kafelki zajęte przez inne jednostki
-			currentTile := &board.Tiles[checkX][checkY]
-			if currentTile.Unit != nil && currentTile.Unit.ID != u.ID {
-				continue
-			}
-
-			dist := math.Abs(float64(dx)) + math.Abs(float64(dy))
-			if dist < minDist {
-				minDist = dist
-				bestX, bestY = uint8(checkX), uint8(checkY)
-				found = true
-			}
-		}
-	}
-
-	return bestX, bestY, found
 }
 
 func (u *unit) isValidMoveTarget(x, y uint8, board *boardData) bool {

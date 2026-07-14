@@ -182,7 +182,7 @@ const (
 	// Zasięg ?
 	spellCostRangeMagicSight uint8  = 14
 	spellCostMagicShower     uint16 = 5
-	spellBufferMagicShower   uint16 = 80
+	spellBufferMagicShower   uint16 = 1 // powinno być 80
 )
 
 const (

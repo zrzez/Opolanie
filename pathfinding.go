@@ -124,6 +124,7 @@ func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) [
 	return nil
 }
 
+// @todo: ogarnij czemu w ogóle potrzebujemy tej otuliny.
 func isWalkable(board *boardData, x, y uint8) bool {
 	return isWalkableUnit(board, x, y, nil)
 }
@@ -131,6 +132,8 @@ func isWalkable(board *boardData, x, y uint8) bool {
 // isWalkableUnit - Sprawdza czy dana jednostka może wejść na kafelek.
 // Obsługuje wyjątek: Krowa wchodzi do swojej Obory (punkt dojenia).
 func isWalkableUnit(board *boardData, x, y uint8, mover *unit) bool {
+	// @todo: sprawdź, czy to jest potrzebne, bo inne części kodu gwarantują
+	//        mieszczenie się w planszy.
 	if x >= boardMaxX || y >= boardMaxY {
 		return false
 	}
@@ -140,6 +143,7 @@ func isWalkableUnit(board *boardData, x, y uint8, mover *unit) bool {
 	// 1. Sprawdź czy to budynek
 	if currentTile.Building != nil {
 		// 1. Krowa + obora (milking spot) - TYLKO jeden kafelek
+		// @reminder: w pierwowzorze lewy-dolny kafelek był przechodni w każdym budynku.
 		if mover != nil && mover.Type == unitCow &&
 			currentTile.Building.Type == buildingBarn &&
 			currentTile.Building.Owner == mover.Owner {
@@ -156,6 +160,8 @@ func isWalkableUnit(board *boardData, x, y uint8, mover *unit) bool {
 		}
 
 		// 3. Ukończony most - przechodni na CAŁEJ powierzchni
+		// @todo: o ile kojarzę, to most jest wywalany po ukończeniu więc, to wyrażenie wydaje się być
+		//        zbyteczne.
 		if currentTile.Building.Type == buildingBridge && !currentTile.Building.IsUnderConstruction {
 			return !isWaterOrObstacle(currentTile.TextureID)
 		}

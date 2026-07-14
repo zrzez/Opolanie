@@ -245,13 +245,12 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	switch cmd.ActionType {
 	case cmdUMove:
 		log.Printf("INFO: castle.go wydano cmdMove.")
-		// playerS.handleMoveCommand(cmd, targetUnit, bState) nie działa
 		targetUnit.addUnitCommand(cmd, bState)
 	case cmdUAttack:
 		log.Printf("INFO: castle.go wydano cmdAttack.")
 		targetUnit.addUnitCommand(cmd, bState)
 	case cmdUStop:
-		targetUnit.addUnitCommand(cmd, bState) // czemu targetID = 0? może nil?
+		targetUnit.addUnitCommand(cmd, bState)
 	case cmdUBuild:
 		targetBuilding, ok2 := bState.getBuildingByID(BuildingID(cmd.InteractionTargetID))
 
@@ -277,6 +276,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 				bState.CurrentMessage.Text = "COŚ POSZŁO PIERUŃSKO NIE TAK ZE SPRAWDZANIEM BUDOWY!"
 				bState.CurrentMessage.Duration = 60
 			}
+
 			return
 		}
 
@@ -315,9 +315,6 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
 	case cmdUCastSpell:
-		// @todo: dlaczego zakomentowanie tego psuje rzucanie czarów?
-		// Przecież to powinno tylko przepchnąć rozkaz we właściwe miejsce do sprawdzenia poprawności!
-		// targetUnit.CurrentSpell = cmd.Spell
 		targetUnit.addUnitCommand(cmd, bState)
 	default:
 		log.Printf("handleUnitCommand: Nieznany ActionType %d dla jednostki %d.",
