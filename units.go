@@ -439,13 +439,13 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 		return
 	}
 
-	var approachX, approachY uint8
+	var approach point
 
 	if cmd.ActionType.isInteraction() {
 		var err error
 		// Jeśli czar wymaga interakcji, to obliczamy gdzie podejść
 		// Na drzewo nie da się wejść, więc trzeba znaleźć kafelek obok
-		approachX, approachY, err = u.calculateApproachTile(cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, bState)
+		approach, err = u.calculateApproachTile(point{X: cmd.TargetX, Y: cmd.TargetY}, cmd.InteractionTargetID, bState)
 		if err != nil {
 			u.setIdleWithReason("cel nieosiągalny")
 
@@ -453,7 +453,7 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 		}
 	} else {
 		// Nie wymaga interakcji, np. cmdMove, to cel jest miejscem w które się udajemy
-		approachX, approachY = cmd.TargetX, cmd.TargetY
+		approach.X, approach.Y = cmd.TargetX, cmd.TargetY
 	}
 
 	// @todo: @reminder: sprawdzenia powinny się odbywać w castle.go
@@ -465,13 +465,13 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	}
 
 	// Przekazujemy cel oraz podejście
-	u.prepareForNewCommand(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, approachX, approachY)
+	u.prepareForNewCommand(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, approach.X, approach.Y)
 	u.applyCommandState(cmd.ActionType)
 }
 
 func (u *unit) shouldSkipDuplicate(command commandType, targetX, targetY uint8, targetID ObjectID) bool {
 	return u.Command == command && u.TargetX == targetX &&
-		u.TargetY == targetY && ObjectID(u.TargetID) == targetID
+		u.TargetY == targetY && u.TargetID == targetID
 }
 
 func (ct commandType) isInteraction() bool {
@@ -1853,11 +1853,11 @@ func (u *unit) handleBuildingTarget(targetBuilding *building, bState *battleStat
 }
 
 func (u *unit) setMoveTargetForUnit(targetUnit *unit, bState *battleState) {
-	bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState)
+	bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState.Board)
 	u.TargetX, u.TargetY = bestX, bestY
 }
 
-func (u *unit) findBestPositionAroundUnit(targetUnit *unit, bState *battleState) (uint8, uint8) {
+func (u *unit) findBestPositionAroundUnit(targetUnit *unit, board *boardData) (uint8, uint8) {
 	bestX, bestY := int(targetUnit.X), int(targetUnit.Y)
 	minDist := math.MaxFloat64
 	foundFreeSpot := false
@@ -1871,7 +1871,7 @@ func (u *unit) findBestPositionAroundUnit(targetUnit *unit, bState *battleState)
 			checkX := int(targetUnit.X) + dx
 			checkY := int(targetUnit.Y) + dy
 
-			if u.isValidMoveTarget(uint8(checkX), uint8(checkY), bState.Board) {
+			if u.isValidMoveTarget(uint8(checkX), uint8(checkY), board) {
 				// log.Println("Funkcja findBestPositionAroundUnit isValidMoveTarget = true, szukam freeSpot")
 				dist := math.Abs(float64(int(u.X)-checkX)) + math.Abs(float64(int(u.Y)-checkY))
 				if dist < minDist {

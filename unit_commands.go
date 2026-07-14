@@ -14,19 +14,19 @@ import (
 // rodzajów ataku.
 // @reminder:  pracując nad tą metodą zauważyłem, że psuje się podchodzenie do mostów i palisad.
 //    jednostka „zatyka się” w pewnej odległości (3) nie przechodzi dalej. Naprawa działa, budowa i atak nie.
-func (u *unit) calculateApproachTile(intentionX, intentionY uint8, targetID ObjectID, bState *battleState) (uint8, uint8, error) {
+func (u *unit) calculateApproachTile(intention point, targetID ObjectID, bState *battleState) (point, error) {
 	// @reminder: Jeszcze nie wiem czemu miałbym tak rozdzielać odnajdywanie celu, ale niech będzie
 	if u.CurrentSpell != spellNone {
-		approachTile, err := u.findApproachTileForSpell(point{X: intentionX, Y: intentionY}, bState)
+		approachTile, err := u.findApproachTileForSpell(intention, bState)
 		if err != nil {
-			return 0, 0, err
+			return point{X: 0, Y: 0}, err
 		}
 
-		return approachTile.X, approachTile.Y, nil
+		return approachTile, nil
 	}
 
 	// Budynki, jednostki i drzewa jako cel
-	return u.findApproachTileForTarget(intentionX, intentionY, targetID, bState)
+	return u.findApproachTileForTarget(intention, targetID, bState)
 }
 
 func (u *unit) findApproachTileForSpell(targetPosition point, bState *battleState) (point, error) {
@@ -92,9 +92,7 @@ func (u *unit) findBestPositionAroundTile(targetTile point, board *boardData) (p
 			distY := abs(int(u.Y) - checkY)
 			dist := distX
 
-			if distY > dist {
-				dist = distY
-			}
+			dist = max(dist, distY)
 
 			if dist < minDist {
 				minDist = dist
@@ -107,70 +105,78 @@ func (u *unit) findBestPositionAroundTile(targetTile point, board *boardData) (p
 	return point{X: bestX, Y: bestY}, found
 }
 
-func (u *unit) findApproachTileForTarget(intentionX, intentionY uint8, targetID ObjectID, bState *battleState) (uint8, uint8, error) {
+func (u *unit) findApproachTileForTarget(intention point, targetID ObjectID, bState *battleState) (point, error) {
 	targetUnit, targetBuilding := bState.getObjectByID(targetID)
 
-	// Cel jest budynkiem
 	if targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge) {
-		if u.AttackRange > 1 {
-			x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, targetBuilding, bState.Board)
-			if ok {
-				return x, y, nil
-			}
-		}
-
-		// TUTAJ WPROWADZAM ZMIANĘ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
-		coords := bState.Board.neighborCoords(targetBuilding)
-		var bestX, bestY uint8
-		minPathLen := math.MaxInt32
-		var found bool
-
-		for _, coord := range coords {
-			if bState.Board.Tiles[coord.X][coord.Y].IsWalkable && bState.Board.Tiles[coord.X][coord.Y].Unit == nil {
-				tempPath := findPath(bState.Board, u, u.X, u.Y, coord.X, coord.Y)
-
-				if tempPath != nil && len(tempPath) < minPathLen {
-					minPathLen = len(tempPath)
-					bestX, bestY = coord.X, coord.Y
-					found = true
-				}
-			}
-		}
-
-		// x, y, ok := targetBuilding.getClosestWalkableTile(bState)
-		if found {
-			return bestX, bestY, nil
-		}
-
-		return 0, 0, fmt.Errorf("cel (budynek) jest nieosiągalny")
+		return findTileForBuilding(u, targetBuilding, bState.Board)
 	}
 
-	// Cel jest jednostką
 	if targetUnit != nil && targetUnit.Exists {
-		bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState)
+		return findTileForUnit(u, targetUnit, bState.Board)
+	}
 
-		if bestX == targetUnit.X && bestY == targetUnit.Y {
-			// Sprawdź, czy to naprawdę fallback (kafel jest zajęty przez cel)
-			targetTile := &bState.Board.Tiles[bestX][bestY]
-			if targetTile.Unit == targetUnit {
-				return 0, 0, fmt.Errorf("brak wolnego kafelka wokół jednostki ID %d", targetID)
+	if bState.Board.Tiles[intention.X][intention.Y].isTree() {
+		return findTileForTree(u, intention, bState.Board)
+	}
+
+	return point{X: 0, Y: 0}, fmt.Errorf("cel ataku ID %d nie istnieje", targetID)
+}
+
+func findTileForBuilding(u *unit, b *building, board *boardData) (point, error) {
+	// 1. Próba ataku dystansowego
+	if u.AttackRange > 1 {
+		x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, b, board)
+		if ok {
+			return point{X: x, Y: y}, nil
+		}
+	}
+
+	// 2. Szukanie najbliższego wolnego sąsiedniego kafelka
+	coords := board.neighborCoords(b)
+
+	var bestX, bestY uint8
+
+	minPathLen := math.MaxInt32
+	found := false
+
+	for _, coord := range coords {
+		electedTile := &board.Tiles[coord.X][coord.Y]
+
+		if electedTile.IsWalkable && electedTile.Unit == nil {
+			path := findPath(board, u, u.X, u.Y, coord.X, coord.Y)
+
+			if path != nil && len(path) < minPathLen {
+				minPathLen = len(path)
+				bestX, bestY = coord.X, coord.Y
+				found = true
 			}
 		}
-
-		return bestX, bestY, nil
 	}
 
-	// Cel jest drzewem
-	targetTile := &bState.Board.Tiles[intentionX][intentionY]
+	if found {
+		return point{X: bestX, Y: bestY}, nil
+	}
 
-	if targetTile.isTree() {
-		bestX, bestY, ok := u.findOptimalAttackTileAroundTree(intentionX, intentionY, bState.Board)
-		if !ok {
-			return 0, 0, fmt.Errorf("nie ma pozycji do ataku tego drzewa")
+	return point{X: 0, Y: 0}, fmt.Errorf("cel (budynek) jest nieosiągalny")
+}
+
+func findTileForUnit(u *unit, target *unit, board *boardData) (point, error) {
+	bestX, bestY := u.findBestPositionAroundUnit(target, board) // zakładam, że zmienisz sygnaturę na przyjmującą *Board
+
+	// Jeśli zwrócono pozycję celu, sprawdź, czy nie jest to fallback (kafelek zajęty przez cel)
+	if bestX == target.X && bestY == target.Y {
+		if board.Tiles[bestX][bestY].Unit == target {
+			return point{X: 0, Y: 0}, fmt.Errorf("brak wolnego kafelka wokół jednostki ID %d", target.ID)
 		}
-
-		return bestX, bestY, nil
 	}
+	return point{X: bestX, Y: bestY}, nil
+}
 
-	return 0, 0, fmt.Errorf("cel ataku ID %d nie istnieje", targetID)
+func findTileForTree(u *unit, treeTile point, board *boardData) (point, error) {
+	bestX, bestY, ok := u.findOptimalAttackTileAroundTree(treeTile.X, treeTile.Y, board)
+	if !ok {
+		return point{X: 0, Y: 0}, fmt.Errorf("nie ma pozycji do ataku tego drzewa")
+	}
+	return point{X: bestX, Y: bestY}, nil
 }
