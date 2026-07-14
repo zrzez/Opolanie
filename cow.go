@@ -269,7 +269,7 @@ func (u *unit) returnToBarnArea(resolver objectResolver, board *boardData, pathf
 
 		// bx, by, ok := u.BelongsTo.getClosestWalkableTile(bState)
 		// TUTAJ WPROWADZAM ZMIANĘ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
-		coords := bState.Board.neighborCoords(u.BelongsTo)
+		coords := bState.Board.bldNeighborCoords(u.BelongsTo)
 		var bestX, bestY uint8
 		minPathLen := math.MaxInt32
 		var found bool

@@ -219,7 +219,7 @@ func (board *boardData) isValidWalkableTile(x, y uint8) bool {
 	return currentTile.IsWalkable && currentTile.Unit == nil && currentTile.Building == nil
 }
 
-func (board *boardData) neighborCoords(bld *building) []point {
+func (board *boardData) bldNeighborCoords(bld *building) []point {
 	// 1. Bierzemy lewy górny róg budynku
 	occupiedTileX := int(bld.OccupiedTiles[0].X)
 	occupiedTileY := int(bld.OccupiedTiles[0].Y)
@@ -285,7 +285,7 @@ func (board *boardData) hasFreeTileInList(electedTiles []point) bool {
 }
 
 func (board *boardData) hasSpaceAroundBuilding(bld *building) bool {
-	coords := board.neighborCoords(bld)
+	coords := board.bldNeighborCoords(bld)
 
 	return board.hasFreeTileInList(coords)
 }
@@ -301,7 +301,7 @@ func (board *boardData) getFreeTileInList(electedCoords []point) (point, bool) {
 }
 
 func (board *boardData) electSpawnTile(bld *building) (point, bool) {
-	coords := board.neighborCoords(bld)
+	coords := board.bldNeighborCoords(bld)
 
 	return board.getFreeTileInList(coords)
 }

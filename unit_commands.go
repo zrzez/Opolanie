@@ -63,6 +63,10 @@ func (u *unit) findApproachTileForSpell(targetPosition point, bState *battleStat
 // Używany jedynie do czarodziejskich opadów.
 // Chyba faworyzuje lewy-górny róg.
 // @reminder: nie korzysta z A*.
+// @todo: sprawdź, czy rzeczywiście rzucając czar wybieram jeden konkretny kafelek.
+//   jeśli tak, to mogę albo połączyć logikę z szukaniem kafelka o najkrótszej
+//   drodze ze strzelaniem albo wykorzystać znajomość zasięgu unitPriest i unitPriestess.
+//   wtedy mogę brać przykład z boardData.bldNeighborCoords
 func (u *unit) findBestPositionAroundTile(targetTile point, board *boardData) (point, bool) {
 	bestX, bestY := targetTile.X, targetTile.Y
 	minDist := 100
@@ -120,11 +124,16 @@ func (u *unit) findApproachTileForTarget(intention point, targetID ObjectID, bSt
 
 	if targetUnit != nil && targetUnit.Exists {
 		// @reminder: nie korzysta z A*
+		// @reminder: powinno współdzielić logikę z szukaniem
+		//    kafelków przy drzewie.
 		return findTileForUnit(u, targetUnit, bState.Board)
 	}
 
 	if bState.Board.Tiles[intention.X][intention.Y].isTree() {
 		// @reminder: nie korzysta z A*
+		// @reminder: powinno wspołdzielić logikę z szukaniem
+		//    kafelka przy jednostce, ale ogranicać
+		//    ten na lewo od drzewa, bo jednostka umrze.
 		return findTileForTree(u, intention, bState.Board)
 	}
 
@@ -134,6 +143,7 @@ func (u *unit) findApproachTileForTarget(intention point, targetID ObjectID, bSt
 func findTileForBuilding(u *unit, bld *building, board *boardData) (point, error) {
 	// 1. Próba ataku dystansowego
 	if u.AttackRange > 1 {
+		//   ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓ jeszcze nie ruszona
 		x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, bld, board)
 		if ok {
 			return point{X: x, Y: y}, nil
@@ -141,7 +151,7 @@ func findTileForBuilding(u *unit, bld *building, board *boardData) (point, error
 	}
 
 	// 2. Szukanie najbliższego wolnego sąsiedniego kafelka
-	coords := board.neighborCoords(bld)
+	coords := board.bldNeighborCoords(bld)
 
 	var bestX, bestY uint8
 
@@ -188,4 +198,150 @@ func findTileForTree(u *unit, treeTile point, board *boardData) (point, error) {
 	}
 
 	return point{X: bestX, Y: bestY}, nil
+}
+
+func (u *unit) findBestPositionAroundUnit(targetUnit *unit, board *boardData) (uint8, uint8) {
+	bestX, bestY := int(targetUnit.X), int(targetUnit.Y)
+	minDist := math.MaxFloat64
+	foundFreeSpot := false
+
+	for dx := -1; dx <= 1; dx++ {
+		for dy := -1; dy <= 1; dy++ {
+			if dx == 0 && dy == 0 {
+				continue
+			}
+
+			checkX := int(targetUnit.X) + dx
+			checkY := int(targetUnit.Y) + dy
+
+			// @reminder: do wywalenia, bo sprawdza, czy w planszy oraz .Unit i .Building = nil
+			//    oraz, czy walkable, które jest obecnie jak tile.IsWalkable.
+			if u.isValidMoveTarget(uint8(checkX), uint8(checkY), board) {
+				// log.Println("Funkcja findBestPositionAroundUnit isValidMoveTarget = true, szukam freeSpot")
+				dist := math.Abs(float64(int(u.X)-checkX)) + math.Abs(float64(int(u.Y)-checkY))
+				if dist < minDist {
+					minDist = dist
+					bestX, bestY = checkX, checkY
+					foundFreeSpot = true
+				}
+			}
+		}
+	}
+
+	if !foundFreeSpot {
+		// log.Println("Funkcja findBestPositionAroundUnit !foundFreeSpot")
+
+		return targetUnit.X, targetUnit.Y // Fallback
+	}
+
+	return uint8(bestX), uint8(bestY)
+}
+
+func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, board *boardData) (uint8, uint8, bool) {
+	var bestX, bestY uint8
+
+	minDistance := math.MaxFloat64
+
+	for column := int(treeX) - int(u.AttackRange); column <= int(treeX)+int(u.AttackRange); column++ {
+		if column < 0 || column >= int(boardMaxX) {
+			continue // kolumny poza planszą
+		}
+
+		for row := int(treeY) - int(u.AttackRange); row <= int(treeY)+int(u.AttackRange); row++ {
+			if row < 0 || row >= int(boardMaxY) {
+				continue // wiersz poza planszą
+			}
+
+			if !isWalkable(board, uint8(column), uint8(row)) {
+				continue // kafelek nieprzechodni
+			}
+
+			if column+1 == int(treeX) && row == int(treeY) {
+				continue // pomijamy miejsce na które spadnie drzewo
+			}
+
+			if column == int(treeX) && row == int(treeY) {
+				continue // pomijamy samo drzewo
+			}
+
+			electedTile := &board.Tiles[uint8(column)][uint8(row)]
+
+			if electedTile.Unit != nil && electedTile.Unit.ID != u.ID {
+				continue // ktoś już tam stoi
+			}
+
+			dx := int(u.X) - column
+			dy := int(u.Y) - row
+
+			distance := math.Abs(float64(dx) + math.Abs(float64(dy)))
+
+			if distance < minDistance {
+				minDistance = distance
+				bestX, bestY = uint8(column), uint8(row)
+			}
+		}
+	}
+
+	if minDistance == math.MaxFloat64 {
+		return 0, 0, false
+	}
+
+	return bestX, bestY, true
+}
+
+func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *building, board *boardData) (uint8, uint8, bool) {
+	if len(bld.OccupiedTiles) == 0 {
+		return 0, 0, false
+	}
+
+	centerX, centerY, ok := bld.getCenter()
+	if !ok {
+		return 0, 0, false
+	}
+
+	candidates := []point{
+		{X: centerX + attackRange, Y: centerY},
+		{X: centerX - attackRange, Y: centerY},
+		{X: centerX, Y: centerY + attackRange},
+		{X: centerX, Y: centerY - attackRange},
+		{X: centerX + attackRange, Y: centerY + attackRange},
+		{X: centerX - attackRange, Y: centerY - attackRange},
+		{X: centerX + attackRange, Y: centerY - attackRange},
+		{X: centerX - attackRange, Y: centerY + attackRange},
+	}
+
+	halfRange := attackRange / 2
+	if halfRange > 0 {
+		candidates = append(candidates,
+			point{X: centerX + halfRange, Y: centerY},
+			point{X: centerX - halfRange, Y: centerY},
+			point{X: centerX, Y: centerY + halfRange},
+			point{X: centerX, Y: centerY - halfRange},
+		)
+	}
+
+	closestX, closestY := uint8(0), uint8(0)
+	minDistance := math.MaxFloat64
+
+	for _, candidate := range candidates {
+		x, y := candidate.X, candidate.Y
+
+		if !board.isValidWalkableTile(x, y) {
+			continue
+		}
+
+		distanceToBuilding := getDistanceToUnit(bld.Type, bld.OccupiedTiles[0], x, y)
+
+		if distanceToBuilding <= attackRange {
+			distanceFromUnit := math.Abs(float64(uCurrentX-x)) + math.Abs(float64(uCurrentY-y))
+
+			if distanceFromUnit < minDistance {
+				minDistance = distanceFromUnit
+				closestX = x
+				closestY = y
+			}
+		}
+	}
+
+	return closestX, closestY, true
 }

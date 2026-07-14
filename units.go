@@ -371,58 +371,6 @@ func (ut unitType) canDamagePalisades() bool {
 	return ut == unitAxeman || ut == unitPriest
 }
 
-func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, board *boardData) (uint8, uint8, bool) {
-	var bestX, bestY uint8
-
-	minDistance := math.MaxFloat64
-
-	for column := int(treeX) - int(u.AttackRange); column <= int(treeX)+int(u.AttackRange); column++ {
-		if column < 0 || column >= int(boardMaxX) {
-			continue // kolumny poza planszą
-		}
-
-		for row := int(treeY) - int(u.AttackRange); row <= int(treeY)+int(u.AttackRange); row++ {
-			if row < 0 || row >= int(boardMaxY) {
-				continue // wiersz poza planszą
-			}
-
-			if !isWalkable(board, uint8(column), uint8(row)) {
-				continue // kafelek nieprzechodni
-			}
-
-			if column+1 == int(treeX) && row == int(treeY) {
-				continue // pomijamy miejsce na które spadnie drzewo
-			}
-
-			if column == int(treeX) && row == int(treeY) {
-				continue // pomijamy samo drzewo
-			}
-
-			electedTile := &board.Tiles[uint8(column)][uint8(row)]
-
-			if electedTile.Unit != nil && electedTile.Unit.ID != u.ID {
-				continue // ktoś już tam stoi
-			}
-
-			dx := int(u.X) - column
-			dy := int(u.Y) - row
-
-			distance := math.Abs(float64(dx) + math.Abs(float64(dy)))
-
-			if distance < minDistance {
-				minDistance = distance
-				bestX, bestY = uint8(column), uint8(row)
-			}
-		}
-	}
-
-	if minDistance == math.MaxFloat64 {
-		return 0, 0, false
-	}
-
-	return bestX, bestY, true
-}
-
 func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	log.Printf("INFO: unit.go dodano rozkaz %d.", cmd.ActionType)
 	// ŁATANIE DZIURY W KOMPLETOWANIU ROZKAÓW DLA JEDNOSTEK
@@ -1860,43 +1808,6 @@ func (u *unit) setMoveTargetForUnit(targetUnit *unit, bState *battleState) {
 	u.TargetX, u.TargetY = bestX, bestY
 }
 
-func (u *unit) findBestPositionAroundUnit(targetUnit *unit, board *boardData) (uint8, uint8) {
-	bestX, bestY := int(targetUnit.X), int(targetUnit.Y)
-	minDist := math.MaxFloat64
-	foundFreeSpot := false
-
-	for dx := -1; dx <= 1; dx++ {
-		for dy := -1; dy <= 1; dy++ {
-			if dx == 0 && dy == 0 {
-				continue
-			}
-
-			checkX := int(targetUnit.X) + dx
-			checkY := int(targetUnit.Y) + dy
-
-			if u.isValidMoveTarget(uint8(checkX), uint8(checkY), board) {
-				// log.Println("Funkcja findBestPositionAroundUnit isValidMoveTarget = true, szukam freeSpot")
-				dist := math.Abs(float64(int(u.X)-checkX)) + math.Abs(float64(int(u.Y)-checkY))
-				if dist < minDist {
-					minDist = dist
-					bestX, bestY = checkX, checkY
-					foundFreeSpot = true
-				}
-			}
-		}
-	}
-
-	if !foundFreeSpot {
-		// log.Println("Funkcja findBestPositionAroundUnit !foundFreeSpot")
-
-		return targetUnit.X, targetUnit.Y // Fallback
-	}
-
-	// log.Println("Funkcja findBestPositionAroundUnit foundFreeSpot, x: %d, y: %d", bestX, bestY)
-
-	return uint8(bestX), uint8(bestY)
-}
-
 func (u *unit) isValidMoveTarget(x, y uint8, board *boardData) bool {
 	return x < boardMaxX && y < boardMaxY &&
 		board.Tiles[x][y].Unit == nil &&
@@ -2058,61 +1969,4 @@ func (u *unit) startMoveToAttack(bState *battleState) {
 
 func (ut unitType) getLegacyUnitIndex() int {
 	return int(ut)
-}
-
-func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *building, board *boardData) (uint8, uint8, bool) {
-	if len(bld.OccupiedTiles) == 0 {
-		return 0, 0, false
-	}
-
-	centerX, centerY, ok := bld.getCenter()
-	if !ok {
-		return 0, 0, false
-	}
-
-	candidates := []point{
-		{X: centerX + attackRange, Y: centerY},
-		{X: centerX - attackRange, Y: centerY},
-		{X: centerX, Y: centerY + attackRange},
-		{X: centerX, Y: centerY - attackRange},
-		{X: centerX + attackRange, Y: centerY + attackRange},
-		{X: centerX - attackRange, Y: centerY - attackRange},
-		{X: centerX + attackRange, Y: centerY - attackRange},
-		{X: centerX - attackRange, Y: centerY + attackRange},
-	}
-
-	halfRange := attackRange / 2
-	if halfRange > 0 {
-		candidates = append(candidates,
-			point{X: centerX + halfRange, Y: centerY},
-			point{X: centerX - halfRange, Y: centerY},
-			point{X: centerX, Y: centerY + halfRange},
-			point{X: centerX, Y: centerY - halfRange},
-		)
-	}
-
-	closestX, closestY := uint8(0), uint8(0)
-	minDistance := math.MaxFloat64
-
-	for _, candidate := range candidates {
-		x, y := candidate.X, candidate.Y
-
-		if !board.isValidWalkableTile(x, y) {
-			continue
-		}
-
-		distanceToBuilding := getDistanceToUnit(bld.Type, bld.OccupiedTiles[0], x, y)
-
-		if distanceToBuilding <= attackRange {
-			distanceFromUnit := math.Abs(float64(uCurrentX-x)) + math.Abs(float64(uCurrentY-y))
-
-			if distanceFromUnit < minDistance {
-				minDistance = distanceFromUnit
-				closestX = x
-				closestY = y
-			}
-		}
-	}
-
-	return closestX, closestY, true
 }
