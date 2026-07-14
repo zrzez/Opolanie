@@ -101,10 +101,10 @@ func (bld *building) getCenter() (uint8, uint8, bool) {
 	switch bld.Type {
 	case buildingPalisade, buildingBridge:
 		// Te rodzaje budynków, zawsze mają dokładnie jeden kafelek
-		return bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].X, true
+		return bld.OccupiedTiles[0].X, bld.OccupiedTiles[0].Y, true
 	default:
 		// Zwyczajne budowle zawsze są 3na3 więc środek jest z góry znany
-		return bld.OccupiedTiles[1].X, bld.OccupiedTiles[1].Y, true
+		return bld.OccupiedTiles[4].X, bld.OccupiedTiles[4].Y, true
 	}
 }
 

@@ -140,29 +140,44 @@ func (u *unit) findApproachTileForTarget(intention point, targetID ObjectID, bSt
 	return point{X: 0, Y: 0}, fmt.Errorf("cel ataku ID %d nie istnieje", targetID)
 }
 
-func findTileForBuilding(u *unit, bld *building, board *boardData) (point, error) {
-	// 1. Próba ataku dystansowego
-	if u.AttackRange > 1 {
-		//   ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓ jeszcze nie ruszona
-		x, y, ok := findOptimalRangedAttackTile(u.X, u.Y, u.AttackRange, bld, board)
-		if ok {
-			return point{X: x, Y: y}, nil
+func findTileForBuilding(attacker *unit, bld *building, board *boardData) (point, error) {
+	// 0. Powinienem przygotować wykaz wszystkich możliwych współrzędnych oddalonych od budynku.
+	var potentialCoords []point // wykaz prawidłowych kafelków, które można odwiedzić
+	// 0a. Bierzemy poprawkę na rodzaj budynku
+	var rangeAdjustment uint8
+
+	if bld.Type != buildingPalisade && bld.Type != buildingBridge {
+		rangeAdjustment = 1
+	}
+
+	realAttackRange := attacker.AttackRange + rangeAdjustment
+
+	bldCenterX, bldCenterY, ok := bld.getCenter()
+	if !ok {
+		return point{X: 0, Y: 0}, fmt.Errorf("nie ma takiego budynku (pobierałem środek) ")
+	}
+	// wszelakie możliwe X
+	for potentialX := int8(bldCenterX - realAttackRange); potentialX <= int8(bldCenterX+realAttackRange); potentialX++ {
+		// wszelakie możliwe Y
+		for potentialY := int8(bldCenterY - realAttackRange); potentialY <= int8(bldCenterY+realAttackRange); potentialY++ {
+			// tutaj sprawdzamy, czy to prawidłowe współrzędne kafelka.
+			if board.isValidWalkableTile(potentialX, potentialY) {
+				potentialCoords = append(potentialCoords, point{X: uint8(potentialX), Y: uint8(potentialY)})
+			}
 		}
 	}
 
-	// 2. Szukanie najbliższego wolnego sąsiedniego kafelka
-	coords := board.bldNeighborCoords(bld)
-
+	// Przeglądamy zestawienie możliwych kafelków
 	var bestX, bestY uint8
 
 	minPathLen := math.MaxInt32
 	found := false
 
-	for _, coord := range coords {
+	for _, coord := range potentialCoords {
 		electedTile := &board.Tiles[coord.X][coord.Y]
 
 		if electedTile.IsWalkable && electedTile.Unit == nil {
-			path := findPath(board, u, u.X, u.Y, coord.X, coord.Y)
+			path := findPath(board, attacker, attacker.X, attacker.Y, coord.X, coord.Y)
 
 			if path != nil && len(path) < minPathLen {
 				minPathLen = len(path)
@@ -176,7 +191,12 @@ func findTileForBuilding(u *unit, bld *building, board *boardData) (point, error
 		return point{X: bestX, Y: bestY}, nil
 	}
 
-	return point{X: 0, Y: 0}, fmt.Errorf("cel (budynek) jest nieosiągalny")
+	return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu")
+	// 0a. palisada/most to środek+zasięg - jest
+	// 0b. inne to środek+zasięg+1 - dodam jako poprawka dla „zakresu poszukiwań”
+	// 1. Odsiać te, które nie mieszczą się w planszy oraz te na których nie może stanąć napastnik. - jest
+	// 2. Policzyć długość drogi do odsianych kafelków - jest
+	// 3. Zwrócić ten dający najkrótszą drogę - jest
 }
 
 func findTileForUnit(u *unit, uTarget *unit, board *boardData) (point, error) {
@@ -287,61 +307,4 @@ func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, board *boardD
 	}
 
 	return bestX, bestY, true
-}
-
-func findOptimalRangedAttackTile(uCurrentX, uCurrentY, attackRange uint8, bld *building, board *boardData) (uint8, uint8, bool) {
-	if len(bld.OccupiedTiles) == 0 {
-		return 0, 0, false
-	}
-
-	centerX, centerY, ok := bld.getCenter()
-	if !ok {
-		return 0, 0, false
-	}
-
-	candidates := []point{
-		{X: centerX + attackRange, Y: centerY},
-		{X: centerX - attackRange, Y: centerY},
-		{X: centerX, Y: centerY + attackRange},
-		{X: centerX, Y: centerY - attackRange},
-		{X: centerX + attackRange, Y: centerY + attackRange},
-		{X: centerX - attackRange, Y: centerY - attackRange},
-		{X: centerX + attackRange, Y: centerY - attackRange},
-		{X: centerX - attackRange, Y: centerY + attackRange},
-	}
-
-	halfRange := attackRange / 2
-	if halfRange > 0 {
-		candidates = append(candidates,
-			point{X: centerX + halfRange, Y: centerY},
-			point{X: centerX - halfRange, Y: centerY},
-			point{X: centerX, Y: centerY + halfRange},
-			point{X: centerX, Y: centerY - halfRange},
-		)
-	}
-
-	closestX, closestY := uint8(0), uint8(0)
-	minDistance := math.MaxFloat64
-
-	for _, candidate := range candidates {
-		x, y := candidate.X, candidate.Y
-
-		if !board.isValidWalkableTile(x, y) {
-			continue
-		}
-
-		distanceToBuilding := getDistanceToUnit(bld.Type, bld.OccupiedTiles[0], x, y)
-
-		if distanceToBuilding <= attackRange {
-			distanceFromUnit := math.Abs(float64(uCurrentX-x)) + math.Abs(float64(uCurrentY-y))
-
-			if distanceFromUnit < minDistance {
-				minDistance = distanceFromUnit
-				closestX = x
-				closestY = y
-			}
-		}
-	}
-
-	return closestX, closestY, true
 }

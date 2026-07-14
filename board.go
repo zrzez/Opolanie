@@ -205,11 +205,10 @@ func (board *boardData) placeRuins(bld *building) {
 	}
 }
 
-// @todo zweryfikuj, czy to technicznie możliwe aby dostać x,y >= boardMaxX.
-func (board *boardData) isValidWalkableTile(x, y uint8) bool {
+func (board *boardData) isValidWalkableTile(x, y int8) bool {
 	// Ponieważ chodzi o znalezienie wolnego kafelka
 	// nie wykluczam jeszcze, że możemy dostać coś >= boardMax
-	if x >= boardMaxX || y >= boardMaxY {
+	if x < 0 || x >= int8(boardMaxX) || y < 0 || y >= int8(boardMaxY) {
 		return false
 	}
 
