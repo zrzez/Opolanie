@@ -14,13 +14,13 @@ import (
 // rodzajów ataku.
 // @reminder:  pracując nad tą metodą zauważyłem, że psuje się podchodzenie do mostów i palisad.
 //    jednostka „zatyka się” w pewnej odległości (3) nie przechodzi dalej. Naprawa działa, budowa i atak nie.
-func (u *unit) calculateApproachTile(intention point, targetID ObjectID, bState *battleState) (point, error) {
+func (u *unit) calculateApproachTile(intention *point, targetID ObjectID, bState *battleState) (*point, error) {
 	// @reminder: Jeszcze nie wiem czemu miałbym tak rozdzielać odnajdywanie celu, ale niech będzie
 	if u.CurrentSpell != spellNone {
 		// @reminder: nie korzysta z A*
 		approachTile, err := u.findApproachTileForSpell(intention, bState)
 		if err != nil {
-			return point{X: 0, Y: 0}, err
+			return &point{X: 0, Y: 0}, err
 		}
 
 		return approachTile, nil
@@ -31,7 +31,7 @@ func (u *unit) calculateApproachTile(intention point, targetID ObjectID, bState 
 	return u.findApproachTileForTarget(intention, targetID, bState)
 }
 
-func (u *unit) findApproachTileForSpell(targetPosition point, bState *battleState) (point, error) {
+func (u *unit) findApproachTileForSpell(targetPosition *point, bState *battleState) (*point, error) {
 	switch u.CurrentSpell {
 	case spellMagicShower:
 		// Tutaj ustalamy, gdzie kapłan/-ka mają stanąć, ażeby rzucić czar.
@@ -39,7 +39,7 @@ func (u *unit) findApproachTileForSpell(targetPosition point, bState *battleStat
 		finalPoint, ok := u.findBestPositionAroundTile(targetPosition, bState.Board)
 
 		if !ok {
-			return point{}, fmt.Errorf("brak miejsca do rzucenia czaru")
+			return &point{}, fmt.Errorf("brak miejsca do rzucenia czaru")
 		}
 
 		return finalPoint, nil
@@ -47,14 +47,14 @@ func (u *unit) findApproachTileForSpell(targetPosition point, bState *battleStat
 	// ↓↓↓↓↓ Poniższe przypadki nie muszą korzystać z A*
 	case spellMagicShield, spellMagicSight:
 		// Czary, które przyjmują rzucającego jako swój cel.
-		return point{X: u.X, Y: u.Y}, nil
+		return &point{X: u.X, Y: u.Y}, nil
 	case spellNone:
 		// To nigdy nie powinno mieć miejsca, bo warunkiem wywołania
 		// jest u.CurrentSpell != spellNone.
-		return point{X: u.X, Y: u.Y}, fmt.Errorf("próba rzucenia spellNone")
+		return &point{X: u.X, Y: u.Y}, fmt.Errorf("próba rzucenia spellNone")
 	default:
 		// To nigdy nie powinno mieć miejsca, bo wszystkie czary są obsłużone
-		return point{X: u.X, Y: u.Y}, fmt.Errorf("nieznany rodzaj czaru")
+		return &point{X: u.X, Y: u.Y}, fmt.Errorf("nieznany rodzaj czaru")
 	}
 }
 
@@ -67,7 +67,7 @@ func (u *unit) findApproachTileForSpell(targetPosition point, bState *battleStat
 //   jeśli tak, to mogę albo połączyć logikę z szukaniem kafelka o najkrótszej
 //   drodze ze strzelaniem albo wykorzystać znajomość zasięgu unitPriest i unitPriestess.
 //   wtedy mogę brać przykład z boardData.bldNeighborCoords
-func (u *unit) findBestPositionAroundTile(targetTile point, board *boardData) (point, bool) {
+func (u *unit) findBestPositionAroundTile(targetTile *point, board *boardData) (*point, bool) {
 	bestX, bestY := targetTile.X, targetTile.Y
 	minDist := 100
 	found := false
@@ -111,39 +111,31 @@ func (u *unit) findBestPositionAroundTile(targetTile point, board *boardData) (p
 		}
 	}
 
-	return point{X: bestX, Y: bestY}, found
+	return &point{X: bestX, Y: bestY}, found
 }
 
-func (u *unit) findApproachTileForTarget(intention point, targetID ObjectID, bState *battleState) (point, error) {
+// @reminder: nazwa dla kafelka z drzewem „intention” jest bardzo kiepska, ale nie mam teraz do tego głowy.
+func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, bState *battleState) (*point, error) {
 	targetUnit, targetBuilding := bState.getObjectByID(targetID)
+
+	var targetU *unit
+
+	var targetBld *building
+
+	var targetTree *point
 
 	if targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge) {
 		// @reminder: korzysta z A*
-		return findTileForBuilding(u, targetBuilding, bState.Board)
+		targetBld = targetBuilding
+	} else if targetUnit != nil && targetUnit.Exists {
+		targetU = targetUnit
+	} else if bState.Board.Tiles[intention.X][intention.Y].isTree() {
+		targetTree = intention
 	}
 
-	if targetUnit != nil && targetUnit.Exists {
-		// @reminder: korzysta z A*
-		return findTileForUnit(u, targetUnit, bState.Board)
-	}
-
-	if bState.Board.Tiles[intention.X][intention.Y].isTree() {
-		// @reminder: nie korzysta z A*
-		// @reminder: powinno wspołdzielić logikę z szukaniem
-		//    kafelka przy jednostce, ale ogranicać
-		//    ten na lewo od drzewa, bo jednostka umrze.
-		return findTileForTree(u, intention, bState.Board)
-	}
-
-	return point{X: 0, Y: 0}, fmt.Errorf("cel ataku ID %d nie istnieje", targetID)
-}
-
-func findTileForBuilding(attacker *unit, targetBld *building, board *boardData) (point, error) {
-	// 0. Tworzymy listę współrzędnych z których można zaatakować budynek.
-	// 1. Odsiewamy te, które nie mieszczą się w planszy oraz te na których nie może stanąć napastnik.
-	validCoords, ok := findTileForAttacking(attacker, nil, targetBld, board)
+	validCoords, ok := findTileForAttacking(u, targetU, targetBld, targetTree, bState.Board)
 	if !ok {
-		return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", ok)
+		return &point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", ok)
 	}
 
 	// 2. Przeliczamy długość drogi do odsianych kafelków.
@@ -153,7 +145,7 @@ func findTileForBuilding(attacker *unit, targetBld *building, board *boardData) 
 	found := false
 
 	for _, coord := range validCoords {
-		path := findPath(board, attacker, attacker.X, attacker.Y, coord.X, coord.Y)
+		path := findPath(bState.Board, u, u.X, u.Y, coord.X, coord.Y)
 
 		if path != nil && len(path) < minPathLen {
 			minPathLen = len(path)
@@ -164,49 +156,10 @@ func findTileForBuilding(attacker *unit, targetBld *building, board *boardData) 
 
 	// 3. Zwracamy kafelek dający najkrótszą drogę.
 	if found {
-		return point{X: bestX, Y: bestY}, nil
+		return &point{X: bestX, Y: bestY}, nil
 	}
 
-	return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", found)
-}
-
-// @reminder: psuje „podchodzenie do celu” gdy ten zbiegł, ale to nic.
-func findTileForUnit(attacker *unit, targetU *unit, board *boardData) (point, error) {
-	validCoords, ok := findTileForAttacking(attacker, targetU, nil, board)
-	if !ok {
-		return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", ok)
-	}
-
-	// ! Wybierz ten o najkrótszej drodze.
-	var bestX, bestY uint8
-
-	minPathLen := math.MaxInt32
-	found := false
-
-	for _, coord := range validCoords {
-		path := findPath(board, attacker, attacker.X, attacker.Y, coord.X, coord.Y)
-
-		if path != nil && len(path) < minPathLen {
-			minPathLen = len(path)
-			bestX, bestY = coord.X, coord.Y
-			found = true
-		}
-	}
-
-	if found {
-		return point{X: bestX, Y: bestY}, nil
-	}
-
-	return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", found)
-}
-
-func findTileForTree(u *unit, treeTile point, board *boardData) (point, error) {
-	bestX, bestY, ok := u.findOptimalAttackTileAroundTree(treeTile.X, treeTile.Y, board)
-	if !ok {
-		return point{X: 0, Y: 0}, fmt.Errorf("nie ma pozycji do ataku tego drzewa")
-	}
-
-	return point{X: bestX, Y: bestY}, nil
+	return &point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", found)
 }
 
 // @reminder: do wywalenia, bo nie korzysta z A* tylko na sztywno bierze pobliski kafelek.
@@ -246,56 +199,4 @@ func (u *unit) findBestPositionAroundUnit(targetUnit *unit, board *boardData) (u
 	}
 
 	return uint8(bestX), uint8(bestY)
-}
-
-func (u *unit) findOptimalAttackTileAroundTree(treeX, treeY uint8, board *boardData) (uint8, uint8, bool) {
-	var bestX, bestY uint8
-
-	minDistance := math.MaxFloat64
-
-	for column := int(treeX) - int(u.AttackRange); column <= int(treeX)+int(u.AttackRange); column++ {
-		if column < 0 || column >= int(boardMaxX) {
-			continue // kolumny poza planszą
-		}
-
-		for row := int(treeY) - int(u.AttackRange); row <= int(treeY)+int(u.AttackRange); row++ {
-			if row < 0 || row >= int(boardMaxY) {
-				continue // wiersz poza planszą
-			}
-
-			if !isWalkable(board, uint8(column), uint8(row)) {
-				continue // kafelek nieprzechodni
-			}
-
-			if column+1 == int(treeX) && row == int(treeY) {
-				continue // pomijamy miejsce na które spadnie drzewo
-			}
-
-			if column == int(treeX) && row == int(treeY) {
-				continue // pomijamy samo drzewo
-			}
-
-			electedTile := &board.Tiles[uint8(column)][uint8(row)]
-
-			if electedTile.Unit != nil && electedTile.Unit.ID != u.ID {
-				continue // ktoś już tam stoi
-			}
-
-			dx := int(u.X) - column
-			dy := int(u.Y) - row
-
-			distance := math.Abs(float64(dx) + math.Abs(float64(dy)))
-
-			if distance < minDistance {
-				minDistance = distance
-				bestX, bestY = uint8(column), uint8(row)
-			}
-		}
-	}
-
-	if minDistance == math.MaxFloat64 {
-		return 0, 0, false
-	}
-
-	return bestX, bestY, true
 }

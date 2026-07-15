@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"slices"
 )
 
 // registerBuilding zapisuje na planszy, które kafelki są zajmowane przez budynek.
@@ -345,14 +346,13 @@ func getDistanceToUnit(bldType buildingType, bldTopLeft point, unitX, unitY uint
 	return differenceY
 }
 
-func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, board *boardData) ([]point, bool) {
+func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, targetTree *point, board *boardData) ([]point, bool) {
 	var validCoords []point // wykaz prawidłowych kafelków, które można odwiedzić.
 
 	var rangeAdjustment uint8
 
 	var targetX, targetY uint8
 
-	// ! To mógłbym otulić sprawdzeniem, czy targetBld != nil
 	if targetBld != nil && targetBld.Type != buildingPalisade && targetBld.Type != buildingBridge {
 		rangeAdjustment = 1
 
@@ -368,6 +368,10 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, bo
 		targetX, targetY = targetU.X, targetU.Y
 	}
 
+	if targetTree != nil {
+		targetX, targetY = targetTree.X, targetTree.Y
+	}
+
 	attackRange := attacker.AttackRange + rangeAdjustment
 
 	// Wszelkie możliwe X. Nigdy nie przekroczymy +-120 więc zmiana na int8 jest bezpieczna.
@@ -380,6 +384,16 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, bo
 				// bezpieczna.                             ↓↓↓↓↓             ↓↓↓↓↓
 				validCoords = append(validCoords, point{X: uint8(coordX), Y: uint8(coordY)}) //nolint:gosec
 			}
+		}
+	}
+
+	// ! Jeśli targetTree != nil to musimy wywalić kafelek na lewo od drzewa, inaczej jednostka zginie
+	if targetTree != nil && targetTree.X > 0 {
+		toRemove := point{X: targetTree.X - 1, Y: targetTree.Y}
+
+		indexToRemove := slices.Index(validCoords, toRemove)
+		if indexToRemove != -1 {
+			validCoords = slices.Delete(validCoords, indexToRemove, indexToRemove+1)
 		}
 	}
 

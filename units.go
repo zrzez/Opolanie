@@ -387,14 +387,14 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 		return
 	}
 
-	var approach point
+	var approach *point
 
 	if cmd.ActionType.isInteraction() {
 		var err error
 		// Jeśli czar wymaga interakcji, to obliczamy gdzie podejść
 		// Na drzewo nie da się wejść, więc trzeba znaleźć kafelek obok
 		// @reminder: nie korzysta z A* w większyści przypadków, ale to się zmieni.
-		approach, err = u.calculateApproachTile(point{X: cmd.TargetX, Y: cmd.TargetY}, cmd.InteractionTargetID, bState)
+		approach, err = u.calculateApproachTile(&point{X: cmd.TargetX, Y: cmd.TargetY}, cmd.InteractionTargetID, bState)
 		if err != nil {
 			u.setIdleWithReason("cel nieosiągalny")
 
@@ -404,7 +404,7 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 		// Nie wymaga interakcji, np. cmdMove, to cel jest miejscem w które się udajemy
 		// @todo: sprawdź, czemu tutaj nie wpadają zaklęcia spellMagicShield
 		// oraz spellMagicSight.
-		approach.X, approach.Y = cmd.TargetX, cmd.TargetY
+		approach = &point{X: cmd.TargetX, Y: cmd.TargetY}
 	}
 
 	// @todo: @reminder: sprawdzenia powinny się odbywać w castle.go
