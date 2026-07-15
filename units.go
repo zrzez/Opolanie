@@ -379,14 +379,6 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	u.CurrentSpell = cmd.Spell
 	u.AllowFriendlyFire = cmd.FriendlyFire
 
-	// @todo: czy tego w ogóle potrzebuję?!
-	if u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID) {
-		log.Printf("INFO: unit.go shouldSkipDuplicate %t.",
-			u.shouldSkipDuplicate(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID))
-
-		return
-	}
-
 	var approach *point
 
 	if cmd.ActionType.isInteraction() {
@@ -418,11 +410,6 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	// Przekazujemy cel oraz podejście
 	u.prepareForNewCommand(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, approach.X, approach.Y)
 	u.applyCommandState(cmd.ActionType)
-}
-
-func (u *unit) shouldSkipDuplicate(command commandType, targetX, targetY uint8, targetID ObjectID) bool {
-	return u.Command == command && u.TargetX == targetX &&
-		u.TargetY == targetY && u.TargetID == targetID
 }
 
 func (ct commandType) isInteraction() bool {

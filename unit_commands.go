@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math"
 )
 
@@ -193,7 +194,7 @@ func (u *unit) findBestPositionAroundUnit(targetUnit *unit, board *boardData) (u
 	}
 
 	if !foundFreeSpot {
-		// log.Println("Funkcja findBestPositionAroundUnit !foundFreeSpot")
+		log.Println("Funkcja findBestPositionAroundUnit !foundFreeSpot")
 
 		return targetUnit.X, targetUnit.Y // Fallback
 	}
