@@ -109,7 +109,7 @@ func (bState *battleState) tryBuildStructure(bldType buildingType, tileX, tileY 
 	return nil
 }
 
-// Zakładamy, że każda palisada tworzona z mapy jest prawidłowo umiejscowiona
+// Zakładamy, że każda palisada tworzona z mapy jest prawidłowo umiejscowiona.
 func (bState *battleState) createFinishedPalisade(tileX, tileY uint8) *building {
 	// 1. Tworzymy obiekt
 	newBld := bState.createBuilding(buildingPalisade, tileX, tileY, colorNone)

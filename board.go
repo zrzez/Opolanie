@@ -5,6 +5,8 @@ import (
 	"log"
 )
 
+// registerBuilding zapisuje na planszy, które kafelki są zajmowane przez budynek.
+// startX, startY to lewy górny róg budynku.
 func (board *boardData) registerBuilding(bld *building, startX, startY uint8) error {
 	stats, ok := buildingDefs[bld.Type]
 	if !ok {
@@ -13,22 +15,11 @@ func (board *boardData) registerBuilding(bld *building, startX, startY uint8) er
 
 	bld.OccupiedTiles = make([]point, 0, stats.Width*stats.Height)
 
-	for ox := range stats.Width {
-		for oy := range stats.Height {
-			px, py := startX+ox, startY+oy
-
-			// Bezpiecznik przed wyjściem poza planszę
-			// @todo: sprawdź, czy jest potrzebny
-			// @todo: czemu przepuszczamy a nie wypierdzielamy?
-			// przecież wyjście poza planszę, to błąd krytyczny!
-			if px >= boardMaxX || py >= boardMaxY {
-				continue
-			}
-
-			currentTile := &board.Tiles[px][py]
-			// @reminder: sprawdź, czy poszła walidacja wcześniej!
-			// jeśli nie to może się napatoczyć budynek i zablokować
-			bld.OccupiedTiles = append(bld.OccupiedTiles, point{X: px, Y: py})
+	for offsetX := range stats.Width {
+		for offsetY := range stats.Height {
+			finalX, finalY := startX+offsetX, startY+offsetY
+			currentTile := &board.Tiles[finalX][finalY]
+			bld.OccupiedTiles = append(bld.OccupiedTiles, point{X: finalX, Y: finalY})
 
 			currentTile.Building = bld
 			currentTile.IsWalkable = false
