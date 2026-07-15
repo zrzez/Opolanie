@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math"
 )
 
@@ -130,7 +129,7 @@ func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, bS
 		targetBld = targetBuilding
 	case targetUnit != nil && targetUnit.Exists:
 		targetU = targetUnit
-	case bState.Board.Tiles[intention.X][intention.Y].isTree():
+	case intention != nil && bState.Board.Tiles[intention.X][intention.Y].isTree():
 		targetTree = intention
 	}
 
@@ -161,43 +160,4 @@ func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, bS
 	}
 
 	return &point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", found)
-}
-
-// @reminder: do wywalenia, bo nie korzysta z A* tylko na sztywno bierze pobliski kafelek.
-//    Do zastąpienia przez findTileForAttacking.
-func (u *unit) findBestPositionAroundUnit(targetUnit *unit, board *boardData) (uint8, uint8) {
-	bestX, bestY := int(targetUnit.X), int(targetUnit.Y)
-	minDist := math.MaxFloat64
-	foundFreeSpot := false
-
-	for dx := -1; dx <= 1; dx++ {
-		for dy := -1; dy <= 1; dy++ {
-			if dx == 0 && dy == 0 {
-				continue
-			}
-
-			checkX := int(targetUnit.X) + dx
-			checkY := int(targetUnit.Y) + dy
-
-			// @reminder: do wywalenia, bo sprawdza, czy w planszy oraz .Unit i .Building = nil
-			//    oraz, czy walkable, które jest obecnie jak tile.IsWalkable.
-			if u.isValidMoveTarget(uint8(checkX), uint8(checkY), board) {
-				// log.Println("Funkcja findBestPositionAroundUnit isValidMoveTarget = true, szukam freeSpot")
-				dist := math.Abs(float64(int(u.X)-checkX)) + math.Abs(float64(int(u.Y)-checkY))
-				if dist < minDist {
-					minDist = dist
-					bestX, bestY = checkX, checkY
-					foundFreeSpot = true
-				}
-			}
-		}
-	}
-
-	if !foundFreeSpot {
-		log.Println("Funkcja findBestPositionAroundUnit !foundFreeSpot")
-
-		return targetUnit.X, targetUnit.Y // Fallback
-	}
-
-	return uint8(bestX), uint8(bestY)
 }

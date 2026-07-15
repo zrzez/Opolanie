@@ -1791,8 +1791,13 @@ func (u *unit) handleBuildingTarget(targetBuilding *building, bState *battleStat
 }
 
 func (u *unit) setMoveTargetForUnit(targetUnit *unit, bState *battleState) {
-	bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState.Board)
-	u.TargetX, u.TargetY = bestX, bestY
+	// bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState.Board)
+	coords, err := u.findApproachTileForTarget(nil, targetUnit.TargetID, bState)
+	if err != nil {
+		fmt.Print("Jakiś błąd %w", err)
+	}
+
+	u.TargetX, u.TargetY = coords.X, coords.Y
 }
 
 func (u *unit) isValidMoveTarget(x, y uint8, board *boardData) bool {
