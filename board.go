@@ -346,6 +346,8 @@ func getDistanceToUnit(bldType buildingType, bldTopLeft point, unitX, unitY uint
 	return differenceY
 }
 
+// @reminder: funkcja przyjmuje aż 5 argumentów, więc można by przekazać strukturę z celami zamiast każdy osobno.
+//    Nie wiem, czy tak byłoby lepiej dlatego tak nie robię. Może w przyszłości się zdecyduję na zmianę.
 func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, targetTree *point, board *boardData) ([]point, bool) {
 	var validCoords []point // wykaz prawidłowych kafelków, które można odwiedzić.
 
@@ -353,23 +355,27 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 
 	var targetX, targetY uint8
 
-	if targetBld != nil && targetBld.Type != buildingPalisade && targetBld.Type != buildingBridge {
-		rangeAdjustment = 1
+	// W zależności od tego co jest celem musimy się inaczej przygotować.
+	switch {
+	case targetBld != nil:
+		if targetBld.Type != buildingPalisade && targetBld.Type != buildingBridge {
+			rangeAdjustment = 1
 
-		var ok bool
+			var ok bool
 
-		targetX, targetY, ok = targetBld.getCenter()
-		if !ok {
-			return nil, ok
+			targetX, targetY, ok = targetBld.getCenter()
+			if !ok {
+				return nil, ok
+			}
 		}
-	}
-
-	if targetU != nil {
+	case targetU != nil:
 		targetX, targetY = targetU.X, targetU.Y
-	}
-
-	if targetTree != nil {
+	case targetTree != nil:
 		targetX, targetY = targetTree.X, targetTree.Y
+
+	default:
+		// To nigdy nie powinno mieć miejsca!
+		return nil, false
 	}
 
 	attackRange := attacker.AttackRange + rangeAdjustment
@@ -387,7 +393,7 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 		}
 	}
 
-	// ! Jeśli targetTree != nil to musimy wywalić kafelek na lewo od drzewa, inaczej jednostka zginie
+	// Jeśli targetTree != nil to musimy wywalić kafelek na lewo od drzewa, inaczej jednostka zginie.
 	if targetTree != nil && targetTree.X > 0 {
 		toRemove := point{X: targetTree.X - 1, Y: targetTree.Y}
 

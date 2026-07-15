@@ -124,12 +124,12 @@ func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, bS
 
 	var targetTree *point
 
-	if targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge) {
-		// @reminder: korzysta z A*
+	switch {
+	case targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge):
 		targetBld = targetBuilding
-	} else if targetUnit != nil && targetUnit.Exists {
+	case targetUnit != nil && targetUnit.Exists:
 		targetU = targetUnit
-	} else if bState.Board.Tiles[intention.X][intention.Y].isTree() {
+	case bState.Board.Tiles[intention.X][intention.Y].isTree():
 		targetTree = intention
 	}
 
@@ -138,7 +138,7 @@ func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, bS
 		return &point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", ok)
 	}
 
-	// 2. Przeliczamy długość drogi do odsianych kafelków.
+	// Przeliczamy długość drogi do odsianych kafelków.
 	var bestX, bestY uint8
 
 	minPathLen := math.MaxInt32
@@ -154,7 +154,7 @@ func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, bS
 		}
 	}
 
-	// 3. Zwracamy kafelek dający najkrótszą drogę.
+	// Zwracamy kafelek dający najkrótszą drogę.
 	if found {
 		return &point{X: bestX, Y: bestY}, nil
 	}
