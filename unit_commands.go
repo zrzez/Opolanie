@@ -141,62 +141,35 @@ func (u *unit) findApproachTileForTarget(intention point, targetID ObjectID, bSt
 }
 
 func findTileForBuilding(attacker *unit, bld *building, board *boardData) (point, error) {
-	// 0. Powinienem przygotować wykaz wszystkich możliwych współrzędnych oddalonych od budynku.
-	var potentialCoords []point // wykaz prawidłowych kafelków, które można odwiedzić
-	// 0a. Bierzemy poprawkę na rodzaj budynku
-	var rangeAdjustment uint8
-
-	if bld.Type != buildingPalisade && bld.Type != buildingBridge {
-		rangeAdjustment = 1
+	// 0. Tworzymy listę współrzędnych z których można zaatakować budynek.
+	// 1. Odsiewamy te, które nie mieszczą się w planszy oraz te na których nie może stanąć napastnik.
+	validCoords, err := findTileForAttackingBuilding(attacker, bld, board)
+	if err != nil {
+		return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %w", err)
 	}
 
-	realAttackRange := attacker.AttackRange + rangeAdjustment
-
-	bldCenterX, bldCenterY, ok := bld.getCenter()
-	if !ok {
-		return point{X: 0, Y: 0}, fmt.Errorf("nie ma takiego budynku (pobierałem środek) ")
-	}
-	// wszelakie możliwe X
-	for potentialX := int8(bldCenterX - realAttackRange); potentialX <= int8(bldCenterX+realAttackRange); potentialX++ {
-		// wszelakie możliwe Y
-		for potentialY := int8(bldCenterY - realAttackRange); potentialY <= int8(bldCenterY+realAttackRange); potentialY++ {
-			// tutaj sprawdzamy, czy to prawidłowe współrzędne kafelka.
-			if board.isValidWalkableTile(potentialX, potentialY) {
-				potentialCoords = append(potentialCoords, point{X: uint8(potentialX), Y: uint8(potentialY)})
-			}
-		}
-	}
-
-	// Przeglądamy zestawienie możliwych kafelków
+	// 2. Przeliczamy długość drogi do odsianych kafelków.
 	var bestX, bestY uint8
 
 	minPathLen := math.MaxInt32
 	found := false
 
-	for _, coord := range potentialCoords {
-		electedTile := &board.Tiles[coord.X][coord.Y]
+	for _, coord := range validCoords {
+		path := findPath(board, attacker, attacker.X, attacker.Y, coord.X, coord.Y)
 
-		if electedTile.IsWalkable && electedTile.Unit == nil {
-			path := findPath(board, attacker, attacker.X, attacker.Y, coord.X, coord.Y)
-
-			if path != nil && len(path) < minPathLen {
-				minPathLen = len(path)
-				bestX, bestY = coord.X, coord.Y
-				found = true
-			}
+		if path != nil && len(path) < minPathLen {
+			minPathLen = len(path)
+			bestX, bestY = coord.X, coord.Y
+			found = true
 		}
 	}
 
+	// 3. Zwracamy kafelek dający najkrótszą drogę.
 	if found {
 		return point{X: bestX, Y: bestY}, nil
 	}
 
-	return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu")
-	// 0a. palisada/most to środek+zasięg - jest
-	// 0b. inne to środek+zasięg+1 - dodam jako poprawka dla „zakresu poszukiwań”
-	// 1. Odsiać te, które nie mieszczą się w planszy oraz te na których nie może stanąć napastnik. - jest
-	// 2. Policzyć długość drogi do odsianych kafelków - jest
-	// 3. Zwrócić ten dający najkrótszą drogę - jest
+	return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %w", err)
 }
 
 func findTileForUnit(u *unit, uTarget *unit, board *boardData) (point, error) {

@@ -344,3 +344,28 @@ func getDistanceToUnit(bldType buildingType, bldTopLeft point, unitX, unitY uint
 
 	return differenceY
 }
+
+func findTileForAttackingBuilding(attacker *unit, targetBld *building, board *boardData) ([]point, error) {
+	var validCoords []point // wykaz prawidłowych kafelków, które można odwiedzić.
+
+	attackRange := attacker.AttackRange
+
+	targetX, targetY, ok := targetBld.getCenter()
+	if !ok {
+		return nil, fmt.Errorf("nie ma takiego budynku (pobierałem środek): %t", ok)
+	}
+	// Wszelkie możliwe X. Nigdy nie przekroczymy +-120 więc zmiana na int8 jest bezpieczna.
+	for coordX := int8(targetX - attackRange); coordX <= int8(targetX+attackRange); coordX++ { //nolint:gosec
+		// Wszelkie możliwe Y
+		for coordY := int8(targetY - attackRange); coordY <= int8(targetY+attackRange); coordY++ { //nolint:gosec
+			// Tutaj sprawdzamy, czy to prawidłowe współrzędne kafelka.
+			if board.isValidWalkableTile(coordX, coordY) {
+				// board.isValidWalkableTile gwarantuje, że 0 <= attackX/Y <= 65. Dlatego zmiana na uint8 jest
+				// bezpieczna.                             ↓↓↓↓↓             ↓↓↓↓↓
+				validCoords = append(validCoords, point{X: uint8(coordX), Y: uint8(coordY)}) //nolint:gosec
+			}
+		}
+	}
+
+	return validCoords, nil
+}
