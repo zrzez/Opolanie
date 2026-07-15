@@ -220,7 +220,7 @@ func checkEndConditions(bState *battleState) {
 
 		for _, bld := range bState.Buildings {
 			// Nie zniszczone budynki gracza, nieukończone budowle się nie wliczają!
-			if bld.Exists && bld.Owner == bState.PlayerID && !bld.IsUnderConstruction {
+			if bld.Exists && bld.Owner == bState.PlayerID && !bld.IsUnderConstruction && bld.Type != buildingPalisade {
 				buildingCount++
 			}
 		}

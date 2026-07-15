@@ -345,15 +345,31 @@ func getDistanceToUnit(bldType buildingType, bldTopLeft point, unitX, unitY uint
 	return differenceY
 }
 
-func findTileForAttackingBuilding(attacker *unit, targetBld *building, board *boardData) ([]point, error) {
+func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, board *boardData) ([]point, bool) {
 	var validCoords []point // wykaz prawidłowych kafelków, które można odwiedzić.
 
-	attackRange := attacker.AttackRange
+	var rangeAdjustment uint8
 
-	targetX, targetY, ok := targetBld.getCenter()
-	if !ok {
-		return nil, fmt.Errorf("nie ma takiego budynku (pobierałem środek): %t", ok)
+	var targetX, targetY uint8
+
+	// ! To mógłbym otulić sprawdzeniem, czy targetBld != nil
+	if targetBld != nil && targetBld.Type != buildingPalisade && targetBld.Type != buildingBridge {
+		rangeAdjustment = 1
+
+		var ok bool
+
+		targetX, targetY, ok = targetBld.getCenter()
+		if !ok {
+			return nil, ok
+		}
 	}
+
+	if targetU != nil {
+		targetX, targetY = targetU.X, targetU.Y
+	}
+
+	attackRange := attacker.AttackRange + rangeAdjustment
+
 	// Wszelkie możliwe X. Nigdy nie przekroczymy +-120 więc zmiana na int8 jest bezpieczna.
 	for coordX := int8(targetX - attackRange); coordX <= int8(targetX+attackRange); coordX++ { //nolint:gosec
 		// Wszelkie możliwe Y
@@ -367,5 +383,5 @@ func findTileForAttackingBuilding(attacker *unit, targetBld *building, board *bo
 		}
 	}
 
-	return validCoords, nil
+	return validCoords, true
 }

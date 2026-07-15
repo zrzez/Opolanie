@@ -123,9 +123,7 @@ func (u *unit) findApproachTileForTarget(intention point, targetID ObjectID, bSt
 	}
 
 	if targetUnit != nil && targetUnit.Exists {
-		// @reminder: nie korzysta z A*
-		// @reminder: powinno współdzielić logikę z szukaniem
-		//    kafelków przy drzewie.
+		// @reminder: korzysta z A*
 		return findTileForUnit(u, targetUnit, bState.Board)
 	}
 
@@ -140,12 +138,12 @@ func (u *unit) findApproachTileForTarget(intention point, targetID ObjectID, bSt
 	return point{X: 0, Y: 0}, fmt.Errorf("cel ataku ID %d nie istnieje", targetID)
 }
 
-func findTileForBuilding(attacker *unit, bld *building, board *boardData) (point, error) {
+func findTileForBuilding(attacker *unit, targetBld *building, board *boardData) (point, error) {
 	// 0. Tworzymy listę współrzędnych z których można zaatakować budynek.
 	// 1. Odsiewamy te, które nie mieszczą się w planszy oraz te na których nie może stanąć napastnik.
-	validCoords, err := findTileForAttackingBuilding(attacker, bld, board)
-	if err != nil {
-		return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %w", err)
+	validCoords, ok := findTileForAttacking(attacker, nil, targetBld, board)
+	if !ok {
+		return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", ok)
 	}
 
 	// 2. Przeliczamy długość drogi do odsianych kafelków.
@@ -169,19 +167,37 @@ func findTileForBuilding(attacker *unit, bld *building, board *boardData) (point
 		return point{X: bestX, Y: bestY}, nil
 	}
 
-	return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %w", err)
+	return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", found)
 }
 
-func findTileForUnit(u *unit, uTarget *unit, board *boardData) (point, error) {
-	bestX, bestY := u.findBestPositionAroundUnit(uTarget, board)
+// @reminder: psuje „podchodzenie do celu” gdy ten zbiegł, ale to nic.
+func findTileForUnit(attacker *unit, targetU *unit, board *boardData) (point, error) {
+	validCoords, ok := findTileForAttacking(attacker, targetU, nil, board)
+	if !ok {
+		return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", ok)
+	}
 
-	if bestX == uTarget.X && bestY == uTarget.Y {
-		if board.Tiles[bestX][bestY].Unit == uTarget {
-			return point{X: 0, Y: 0}, fmt.Errorf("brak wolnego kafelka wokół jednostki ID %d", uTarget.ID)
+	// ! Wybierz ten o najkrótszej drodze.
+	var bestX, bestY uint8
+
+	minPathLen := math.MaxInt32
+	found := false
+
+	for _, coord := range validCoords {
+		path := findPath(board, attacker, attacker.X, attacker.Y, coord.X, coord.Y)
+
+		if path != nil && len(path) < minPathLen {
+			minPathLen = len(path)
+			bestX, bestY = coord.X, coord.Y
+			found = true
 		}
 	}
 
-	return point{X: bestX, Y: bestY}, nil
+	if found {
+		return point{X: bestX, Y: bestY}, nil
+	}
+
+	return point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", found)
 }
 
 func findTileForTree(u *unit, treeTile point, board *boardData) (point, error) {
@@ -193,6 +209,8 @@ func findTileForTree(u *unit, treeTile point, board *boardData) (point, error) {
 	return point{X: bestX, Y: bestY}, nil
 }
 
+// @reminder: do wywalenia, bo nie korzysta z A* tylko na sztywno bierze pobliski kafelek.
+//    Do zastąpienia przez findTileForAttacking.
 func (u *unit) findBestPositionAroundUnit(targetUnit *unit, board *boardData) (uint8, uint8) {
 	bestX, bestY := int(targetUnit.X), int(targetUnit.Y)
 	minDist := math.MaxFloat64
