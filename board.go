@@ -360,14 +360,15 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 	case targetBld != nil:
 		if targetBld.Type != buildingPalisade && targetBld.Type != buildingBridge {
 			rangeAdjustment = 1
-
-			var ok bool
-
-			targetX, targetY, ok = targetBld.getCenter()
-			if !ok {
-				return nil, ok
-			}
 		}
+
+		var ok bool
+
+		targetX, targetY, ok = targetBld.getCenter()
+		if !ok {
+			return nil, ok
+		}
+
 	case targetU != nil:
 		targetX, targetY = targetU.X, targetU.Y
 	case targetTile != nil:
