@@ -59,6 +59,7 @@ func (h *pathNodeHeap) update(node, parent *pathNode, goCost, heuristicCost floa
 const maxPathfindingIterations = 10000
 
 // odnajduje ścieżkę do celu używając algo A*.
+// @todo: powinno przyjmować point zamiast uint8
 func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) []*pathNode {
 	startNode := &pathNode{parent: nil, X: startX, Y: startY}
 	openHeap := &pathNodeHeap{}

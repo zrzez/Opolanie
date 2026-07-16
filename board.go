@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"slices"
 )
 
@@ -405,4 +406,28 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 	}
 
 	return validCoords, true
+}
+
+// Odpowiada za wybranie kafelka o najkrótszej drodze.
+func findBestReachableTile(u *unit, validCoords []point, board *boardData) (*point, error) {
+	var bestX, bestY uint8
+
+	minPathLen := math.MaxInt32
+	found := false
+
+	for _, coord := range validCoords {
+		path := findPath(board, u, u.X, u.Y, coord.X, coord.Y)
+
+		if path != nil && len(path) < minPathLen {
+			minPathLen = len(path)
+			bestX, bestY = coord.X, coord.Y
+			found = true
+		}
+	}
+
+	if found {
+		return &point{X: bestX, Y: bestY}, nil
+	}
+
+	return nil, fmt.Errorf("nie ma prawidłowego kafelka")
 }
