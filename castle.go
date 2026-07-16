@@ -26,7 +26,7 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 		return
 	}
 
-	// @reminder: staram się tutaj przechwycić rozkazy dla wszystkich zaznaczonych jednsotek
+	// @reminder: staram się tutaj przechwycić rozkazy dla wszystkich zaznaczonych jednostek
 	if cmd.ActionType < cmdDelimiter && cmd.ExecutorID == 0 {
 		selectedUnits := bState.getSelectedUnits()
 		for _, u := range selectedUnits {

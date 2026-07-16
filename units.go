@@ -385,7 +385,6 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 		var err error
 		// Jeśli czar wymaga interakcji, to obliczamy gdzie podejść
 		// Na drzewo nie da się wejść, więc trzeba znaleźć kafelek obok
-		// @reminder: nie korzysta z A* w większyści przypadków, ale to się zmieni.
 		approach, err = u.calculateApproachTile(&point{X: cmd.TargetX, Y: cmd.TargetY}, cmd.InteractionTargetID, bState)
 		if err != nil {
 			u.setIdleWithReason("cel nieosiągalny")

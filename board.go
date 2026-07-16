@@ -348,7 +348,7 @@ func getDistanceToUnit(bldType buildingType, bldTopLeft point, unitX, unitY uint
 
 // @reminder: funkcja przyjmuje aż 5 argumentów, więc można by przekazać strukturę z celami zamiast każdy osobno.
 //    Nie wiem, czy tak byłoby lepiej dlatego tak nie robię. Może w przyszłości się zdecyduję na zmianę.
-func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, targetTree *point, board *boardData) ([]point, bool) {
+func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, targetTile *point, board *boardData) ([]point, bool) {
 	var validCoords []point // wykaz prawidłowych kafelków, które można odwiedzić.
 
 	var rangeAdjustment uint8
@@ -370,8 +370,8 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 		}
 	case targetU != nil:
 		targetX, targetY = targetU.X, targetU.Y
-	case targetTree != nil:
-		targetX, targetY = targetTree.X, targetTree.Y
+	case targetTile != nil:
+		targetX, targetY = targetTile.X, targetTile.Y
 
 	default:
 		// To nigdy nie powinno mieć miejsca!
@@ -394,8 +394,8 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 	}
 
 	// Jeśli targetTree != nil to musimy wywalić kafelek na lewo od drzewa, inaczej jednostka zginie.
-	if targetTree != nil && targetTree.X > 0 {
-		toRemove := point{X: targetTree.X - 1, Y: targetTree.Y}
+	if targetTile != nil && isTree(board.Tiles[targetTile.X][targetTile.Y].TextureID) && targetTile.X > 0 {
+		toRemove := point{X: targetTile.X - 1, Y: targetTile.Y}
 
 		indexToRemove := slices.Index(validCoords, toRemove)
 		if indexToRemove != -1 {

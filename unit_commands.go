@@ -34,15 +34,32 @@ func (u *unit) calculateApproachTile(intention *point, targetID ObjectID, bState
 func (u *unit) findApproachTileForSpell(targetPosition *point, bState *battleState) (*point, error) {
 	switch u.CurrentSpell {
 	case spellMagicShower:
-		// Tutaj ustalamy, gdzie kapłan/-ka mają stanąć, ażeby rzucić czar.
-		// @reminder: nie korzysta z A*
-		finalPoint, ok := u.findBestPositionAroundTile(targetPosition, bState.Board)
 
+		validCoords, ok := findTileForAttacking(u, nil, nil, targetPosition, bState.Board)
 		if !ok {
-			return &point{}, fmt.Errorf("brak miejsca do rzucenia czaru")
+			return &point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu")
 		}
 
-		return finalPoint, nil
+		var finalX, finalY uint8
+
+		minPathLen := math.MaxInt32
+		found := false
+
+		for _, coord := range validCoords {
+			path := findPath(bState.Board, u, u.X, u.Y, coord.X, coord.Y)
+
+			if path != nil && len(path) < minPathLen {
+				minPathLen = len(path)
+				finalX, finalY = coord.X, coord.Y
+				found = true
+			}
+		}
+
+		if found {
+			return &point{X: finalX, Y: finalY}, nil
+		}
+
+		return &point{X: 0, Y: 0}, fmt.Errorf("nie ma podejścia do celu: %t", found)
 
 	// ↓↓↓↓↓ Poniższe przypadki nie muszą korzystać z A*
 	case spellMagicShield, spellMagicSight:

@@ -331,7 +331,7 @@ func handleGameUIClicks(iState inputState, bState *battleState, pState *programS
 			rect := bState.UI.ActionButtons[btnIndex]
 			if rl.CheckCollisionPointRec(virtualMouse, rect) {
 				log.Printf("UI: Wybrano akcję przycisku %d: %s (Typ: %d)", btnIndex, action.Label, action.Cmd.ActionType)
-				cmdCopy := action.Cmd // @reminder: rzekomo potrzebne aby utracić wskaźnika… no nie wiem 28.06.2026
+				cmdCopy := action.Cmd // @reminder: rzekomo potrzebne aby nie utracić wskaźnika… no nie wiem 28.06.2026
 
 				if action.State == mouseStateNormal {
 					// rozkazy natychmiastowe wysyłamy
@@ -342,17 +342,18 @@ func handleGameUIClicks(iState inputState, bState *battleState, pState *programS
 					bState.PendingCommand = &cmdCopy
 					bState.MouseState = action.State
 
+					// @reminder: Czyścimy bieżący rozkaz, aby nie przeszkadzał w dokończeniu
+					//   wykonywania obecnego rozkazu.
+					// @reminder: Dałem po przełączniku, żeby domyślny przypadek w przełączniku
+					//   miał szansę zadziałać.
+					action.Cmd = command{}
+
 					// Na podstawie stanu kursora ustalamy, jak rozumieć kliknięcie
 					switch action.State {
 					case mouseStatePlaceConstruction:
-						// Zapisujemy rodzaj budynku do "plecaka" w battleState
-						// bState.PendingBuildingType = buildingType(action.Cmd.InteractionTargetID) - @reminder: o ile dobrze
-						// ↑↑↑ rozumiem to nie potrzebuję, bo już przechowuję to w bState.PendingCommand
 						bState.CurrentMessage.Text = "Wskaż miejsce"
 						bState.CurrentMessage.Duration = 60
 
-						// Opcjonalnie: czyścimy zaznaczenie jednostek, by nie przeszkadzały
-						clearSelection(bState)
 					case mouseStateWorking:
 						bState.CurrentMessage.Text = "Wskaż budynek do naprawy"
 						bState.CurrentMessage.Duration = 60
@@ -363,7 +364,7 @@ func handleGameUIClicks(iState inputState, bState *battleState, pState *programS
 						bState.CurrentMessage.Duration = 60
 
 					default:
-						// Rozkazy natychmiastowe (CMD_PRODUCE, CMD_MILK, itp.)
+						// Nigdy nie powinno się wydarzyć, bo czyścimy actionCmd.
 						// Wysyłamy je bezpośrednio do kolejki rozkazów.
 						bState.CurrentCommands[0] = action.Cmd
 
@@ -371,6 +372,7 @@ func handleGameUIClicks(iState inputState, bState *battleState, pState *programS
 						bState.MouseState = mouseStateNormal
 					}
 				}
+
 				return true
 			}
 		}
@@ -390,6 +392,7 @@ func handleGameShortcuts(bState *battleState) bool {
 		if bState.GameSpeed < 5 {
 			bState.GameSpeed--
 			log.Printf("SKRÓT: Prędkość gry zmniejszona do %d", bState.GameSpeed)
+
 			return true
 		}
 	}
@@ -398,6 +401,7 @@ func handleGameShortcuts(bState *battleState) bool {
 		if bState.GameSpeed > 0 {
 			bState.GameSpeed++
 			log.Printf("SKRÓT: Prędkość gry zwiększona do %d", bState.GameSpeed)
+
 			return true
 		}
 	}
@@ -456,6 +460,7 @@ func handleGameShortcuts(bState *battleState) bool {
 				clearSelection(bState)
 			}
 			bState.MouseState = mouseStateNormal
+
 			return true
 		}
 	}
@@ -906,6 +911,7 @@ func handleBoardInteraction(iState inputState, bState *battleState, pState *prog
 		default:
 			log.Printf("BŁĄD KRYTYCZNY: Nieobsługiwany stan myszy: %d", bState.MouseState)
 		}
+
 		return
 	}
 }
