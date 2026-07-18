@@ -168,26 +168,7 @@ func (u *unit) executeStandardUnitCommand(resolver objectResolver, board *boardD
 			u.move(resolver, board, pathfindingBudget, bState)
 		}
 	case cmdUCastSpell:
-		if u.CurrentSpell == spellMagicShield {
-			u.castMagicShield()
-		}
-
-		if u.CurrentSpell == spellMagicShower {
-			if u.canCastSpellFromCurrentPosition() {
-				u.State = stateCastingSpell
-				u.AnimationType = "fight"
-				u.clearPath()
-				u.castSpell(bState.Board, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID, &bState.Projectiles)
-			} else {
-				u.State = stateMoving
-				u.AnimationType = "walk"
-				u.move(resolver, board, pathfindingBudget, bState)
-			}
-		}
-
-		if u.CurrentSpell == spellMagicSight {
-			u.castMagicSight(bState.Board)
-		}
+		u.castSpell(resolver, board, pathfindingBudget, bState)
 
 	case cmdUIdle, cmdUStop:
 		u.actOnIdle(resolver, board, bState)

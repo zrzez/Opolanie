@@ -173,10 +173,47 @@ func (u *unit) castMagicShield() {
 		// @todo: sprawdź ile rzeczywiście trwała
 		u.MagicShieldCooldown = spellDurationMagicShield
 	}
+}
 
-	u.State = stateIdle
-	u.AnimationType = "idle"
-	u.Command = cmdUIdle
+// @reminder: najprawdopodobniej objectResolver nie jest prawidłowo użyty i będzie wyrzucony.
+// @reminder: wydaje mi się, że każde „idle” ustawiane wewnątrz tej metody jest zbyteczne.
+func (u *unit) castSpell(resolver objectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
+	if u.AttackCooldown > 0 {
+		u.State = stateIdle
+		u.AnimationType = "idle"
+		u.Delay = 1
+
+		return
+	}
+
+	switch u.CurrentSpell {
+	case spellMagicShield:
+		u.castMagicShield()
+
+	case spellMagicSight:
+		u.castMagicSight(board)
+
+	case spellMagicShower:
+		if u.canCastSpellFromCurrentPosition() {
+			u.State = stateCastingSpell
+			u.AnimationType = "fight"
+			u.clearPath()
+			u.castMagicShower(bState.Board, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID, &bState.Projectiles)
+		} else {
+			u.State = stateMoving
+			u.AnimationType = "walk"
+			u.move(resolver, board, pathfindingBudget, bState)
+
+			return
+		}
+
+	case spellNone:
+	// Nigdy nie powinno się przytrafić
+
+	default:
+		// Nigdy nie powinno się przytafić
+
+	}
 }
 
 // Metoda odpowiedzialna za gromobicie i deszcz ognia.
@@ -246,7 +283,9 @@ func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID Play
 	return true
 }
 
-func (u *unit) castSpell(board *boardData, humanPID, aiPID PlayerID, projs *[]*projectile) {
+// ! Całość wydaje się obsługiwać jedynie magicShower! Dzwine, bo wydawało mi się, że każdy czar
+//  Tutaj idzie. Może nawet lepiej, bo rozwiązuje to wtedy sprawę z zerowymi interactionTarget.
+func (u *unit) castMagicShower(board *boardData, humanPID, aiPID PlayerID, projs *[]*projectile) {
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
 		u.AnimationType = "idle"
@@ -255,15 +294,7 @@ func (u *unit) castSpell(board *boardData, humanPID, aiPID PlayerID, projs *[]*p
 		return
 	}
 
-	targetX, targetY := u.interactionTargetX, u.interactionTargetY
-
-	// @todo: sprawdź, czy rzeczywiście tak jest, bo wydaje mi się, że
-	//  zmieniłem to ostatnio. 18.07.2026
-	if targetX == 0 && targetY == 0 {
-		targetX, targetY = u.TargetX, u.TargetY
-	}
-
-	target := &point{X: targetX, Y: targetY}
+	target := &point{X: u.TargetX, Y: u.TargetY}
 
 	if u.magicShower(target, board, humanPID, aiPID, projs) {
 		u.setRangedTimings()
@@ -295,8 +326,4 @@ func (u *unit) castMagicSight(board *boardData) {
 	}
 
 	log.Printf("unit %d: Rzucono Czar Widoczności. Cała mapa odkryta.", u.ID)
-
-	u.State = stateIdle
-	u.AnimationType = "idle"
-	u.Command = cmdUIdle
 }
