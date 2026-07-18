@@ -71,9 +71,9 @@ func (bld *building) registerUnit(uID UnitID) bool {
 	return true
 }
 
-// Wywoływana przez u.unregisterFromBuilding gdy jednostka zmarła
-// Zwracane bool jest ignorowane.
-func (bld *building) unregisterUnit(unregisterUnitID UnitID) bool {
+// Wywoływana przez u.unregisterFromBuilding gdy jednostka zmarła.
+// @todo: co się dzieje z jednostkami, które sotajemy na początku bitwy?
+func (bld *building) unregisterUnit(unregisterUnitID UnitID) {
 	// Przechodzimy przez listę jednostek zamieszkujących
 	for index, registeredUnitID := range bld.AssignedUnits {
 		if registeredUnitID == unregisterUnitID {
@@ -82,12 +82,8 @@ func (bld *building) unregisterUnit(unregisterUnitID UnitID) bool {
 			bld.AssignedUnits = append(bld.AssignedUnits[:index], bld.AssignedUnits[index+1:]...)
 
 			bld.Food--
-
-			return true
 		}
 	}
-	// @reminder: co z jednostkami, które dostaliśmy z początek wyprawy?
-	return false
 }
 
 func (bld *building) hasRoom() bool {

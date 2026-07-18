@@ -323,7 +323,7 @@ func updateGame(bState *battleState) {
 	processCommands(bState)
 
 	// 7. Odświeżenie jednostek
-	updateUnits(bState)
+	bState.updateUnits()
 
 	// 8. Odświeżenie pocisków
 	updateProjectiles(bState)
@@ -494,7 +494,7 @@ func processCommands(bState *battleState) {
 }
 
 // odświeża jednostki, sprawdza, która została zabita itd.
-func updateUnits(bState *battleState) {
+func (bState *battleState) updateUnits() {
 	bState.PathfindingBudget = 0
 
 	for _, currentUnit := range bState.Units {
@@ -536,6 +536,63 @@ func (bState *battleState) updateBuildings() {
 	}
 
 	bState.cleanupDestroyedBuildings()
+}
+
+// ================
+// Odświeżane jednostek
+// ================
+
+func (u *unit) updateUnit(bState *battleState) {
+	board := bState.Board
+
+	var resolver objectResolver = bState
+
+	pathfindingBudget := &bState.PathfindingBudget
+
+	// Aktualizowanie ran
+	// @todo przenieś do osobnej funkcji, szkoda zajmować tutaj miejsce
+	// !@todo: sprawdź, czy układ ran nie jest już obecny gdzie indziej, bo takie mam przeczucie
+	nextFreeIndex := 0
+
+	for scanIndex := range u.Wounds {
+		currentWound := &u.Wounds[scanIndex]
+		currentWound.Timer--
+
+		if currentWound.Timer > 1 {
+			if scanIndex != nextFreeIndex {
+				u.Wounds[nextFreeIndex] = *currentWound
+			}
+
+			nextFreeIndex++
+		}
+	}
+
+	u.Wounds = u.Wounds[:nextFreeIndex]
+
+	u.handleAttackCooldown(bState.GlobalFrameCounter)
+
+	if u.handleNoMovementDetection() {
+		return
+	}
+
+	if u.handleDelay(bState.GlobalFrameCounter) {
+		return
+	}
+
+	if u.handleBlockedCounter() {
+		return
+	}
+
+	u.handleWaitingToActiveTransition()
+	u.handleMovementTargetReached(resolver, board, bState)
+
+	// @reminder: sprawdzam, czy to ruszy krowy
+	if u.Type == unitCow && u.Command == cmdUGraze {
+		u.grazeCowPhase(resolver, board, pathfindingBudget, bState)
+	}
+
+	u.executeCommandAction(resolver, board, pathfindingBudget, bState)
+	u.resetDelayIfActive()
 }
 
 // Ustawia tekstury w zależności od stopnia zaawansowania budowy.
