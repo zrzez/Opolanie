@@ -57,29 +57,18 @@ func (u *unit) levelUp() {
 }
 
 func (u *unit) levelUpBonusDamage(level uint8) {
-	// Jeśli się zmarło, to dziękujemy
-	if !u.Exists {
-		return
-	}
-
 	// Uwzględniamy dodatek za podniesienie poziomu
 	u.Damage += levelUpBonusDamage[level]
 }
 
 func (u *unit) levelUpBonusArmor(level uint8) {
-	// Jeśli się zmarło, to dziękujemy
-	if !u.Exists {
-		return
-	}
-
 	// Uwzględniamy dodatek za podniesienie poziomu
 	u.Armor += levelUpBonusArmor[level]
 }
 
 // Jest to najprostszy przypadek ponieważ tylko podmieniamy u.MaxMana na nową wartość.
 func (u *unit) levelUpBonusMana(level uint8) {
-	// Jeśli się zmarło lub nie ma many
-	if !u.Exists || !u.Type.isMagical() {
+	if !u.Type.isMagical() {
 		return
 	}
 
@@ -90,35 +79,40 @@ func (u *unit) levelUpBonusMana(level uint8) {
 // @reminder: 19.05.2026. Na podstawie pierwowzoru wydaje mi się, że rzeczywistą górną granicą doświadczenia jest
 // 224. Dlatego dodałem stałą experienceCap, która służy za bezpiecznik.
 // Doświadczenie jest zdobywane w chwili wyprowadzenia ataku.
-func (u *unit) gainExperience(targetUnit *unit, bState *battleState) {
-	// 0. Sprawdzamy, czy osiągnęliśmy górną granicę.
-	// TAK: nie obsługujemy zdobywania doświadczenia
-	if u.Experience >= experienceCap {
-		return
-	}
-	// NIE: jednostka zdobywa doświadczenie w sposób
-	// 		odpowiedni dla atakującego i atakowanego.
-
+func handleGainExperience(attacker, target *unit, PlayerID, AIPlayerID PlayerID) {
 	// 1. Ustalamy, czy atakowana jest wroga jednostka lub wrogi budynek
-	isEnemyUnit := targetUnit != nil && targetUnit.Owner != u.Owner
-	// isEnemyBuilding := targetBuilding != nil && targetBuilding.Owner != u.Owner
-	// ↑↑↑ to wydaje się zbędne po uproszczeniu sprawdzeń, bo jeśli atakujemy budynek, to
-	// wystarczy sprawdzić właściciela atakującego
-
+	isEnemyUnit := target != nil && target.Owner != attacker.Owner
 	// 1a. Ustalamy, czy jednostka może dostać doświadczenie
-	//                       ↓SI zawsze                       ↓gracz tylko przy ataku wrogich jednostek
-	canGainExp := u.Owner == bState.AIPlayerID || (u.Owner == bState.PlayerID && isEnemyUnit)
+	//     ↓SI zawsze        ↓gracz tylko przy ataku wrogich jednostek
+	canGainExp := attacker.Owner == AIPlayerID || (attacker.Owner == PlayerID && isEnemyUnit)
 	// 1b. Jeśli nie to wracamy
 	if !canGainExp {
 		return
 	}
 
 	// 2a. Podstawowy przyrost doświadczenia. Dzięki sprawdzeniu w 0. zawsze możliwy.
-	u.Experience++
-
+	var expAmount uint8 = 1
 	// 2b. Dodatek dla jednostek czarujących.
-	if u.Type.isCaster() {
-		u.Experience += experienceCasterBonus
+	if attacker.Type.isCaster() {
+		expAmount += experienceCasterBonus
+	}
+
+	attacker.addExperience(expAmount)
+}
+
+func (u *unit) addExperience(amount uint8) {
+	// 0. Sprawdzamy, czy osiągnęliśmy górną granicę.
+	// TAK: nie obsługujemy zdobywania doświadczenia
+	if u.Experience >= experienceCap {
+		return
+	}
+	// NIE: jednostka zdobywa doświadczenie
+	u.Experience += amount
+
+	// 1. Bezpiecznik, nie można mieć więcej niż
+	// górna granica doświadczenia.
+	if u.Experience > experienceCap {
+		u.Experience = experienceCap
 	}
 
 	u.checkLevelUp()

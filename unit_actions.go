@@ -82,7 +82,7 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bState *
 	// Za stworzenie jakiegokolwiek pocisku jest przyznawane doświadczenie.
 	// Muszę dodać logikę rozdziało pomięcy celem jednostką a celem budynkiem.
 	// u.gainExperience tutaj!
-	u.gainExperience(target.Unit, bState)
+	handleGainExperience(u, target.Unit, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
 
 	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, targetX, targetY, damage)
 }
@@ -92,10 +92,10 @@ func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, bState *b
 	switch {
 	case target.Unit != nil && target.Unit.Exists:
 		target.Unit.takeDamage(damage, bState)
-		u.gainExperience(target.Unit, bState)
+		handleGainExperience(u, target.Unit, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
 	case target.Building != nil && target.Building.Exists:
 		target.Building.takeDamage(damage)
-		u.gainExperience(nil, bState)
+		handleGainExperience(u, nil, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
 	case target.Tile != nil:
 		target.Tile.accumulateTreeCuts(bState)
 	default:
@@ -291,9 +291,9 @@ func (u *unit) spawnMagicShowerProjectiles(targetX, targetY uint8, missileKind u
 
 		switch {
 		case currentTile.Unit != nil && currentTile.Unit.Exists:
-			u.gainExperience(currentTile.Unit, bState)
+			handleGainExperience(u, currentTile.Unit, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
 		case currentTile.Building != nil && currentTile.Building.Exists:
-			u.gainExperience(nil, bState)
+			handleGainExperience(u, nil, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
 		default:
 			// Nie przyznajemy nic doświadczenia za napaść na otoczenie
 		}
@@ -305,6 +305,7 @@ func (u *unit) createMagicShower(targetX, targetY uint8, bState *battleState) {
 	damage, missileKind, ok := u.resolveMagicShowerStats()
 	if !ok {
 		log.Printf("UWAGA: magicShower wywołany dla jednostki o nieobsługiwanym rodzaju %d!", u.Type)
+
 		return
 	}
 
