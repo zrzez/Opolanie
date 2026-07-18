@@ -79,12 +79,12 @@ func (u *unit) levelUpBonusMana(level uint8) {
 // @reminder: 19.05.2026. Na podstawie pierwowzoru wydaje mi się, że rzeczywistą górną granicą doświadczenia jest
 // 224. Dlatego dodałem stałą experienceCap, która służy za bezpiecznik.
 // Doświadczenie jest zdobywane w chwili wyprowadzenia ataku.
-func handleGainExperience(attacker, target *unit, PlayerID, AIPlayerID PlayerID) {
+func handleGainExperience(attacker, target *unit, humanPlayerID, aiPlayerID PlayerID) {
 	// 1. Ustalamy, czy atakowana jest wroga jednostka lub wrogi budynek
 	isEnemyUnit := target != nil && target.Owner != attacker.Owner
 	// 1a. Ustalamy, czy jednostka może dostać doświadczenie
 	//     ↓SI zawsze        ↓gracz tylko przy ataku wrogich jednostek
-	canGainExp := attacker.Owner == AIPlayerID || (attacker.Owner == PlayerID && isEnemyUnit)
+	canGainExp := attacker.Owner == aiPlayerID || (attacker.Owner == humanPlayerID && isEnemyUnit)
 	// 1b. Jeśli nie to wracamy
 	if !canGainExp {
 		return

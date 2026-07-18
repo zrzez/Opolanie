@@ -180,7 +180,7 @@ func (u *unit) castMagicShield() {
 }
 
 // Metoda odpowiedzialna za gromobicie i deszcz ognia.
-func (u *unit) magicShower(targetX, targetY uint8, bState *battleState) bool {
+func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID PlayerID, projs *[]*projectile) bool {
 	// 0. Koszt czaru
 	if u.Mana < spellBufferMagicShower || !u.tryToDecreaseMana(spellCostMagicShower) {
 		log.Printf("INFO: Jednostka %d nie ma wystarczająco many na rzucenie czaru", u.ID)
@@ -189,19 +189,64 @@ func (u *unit) magicShower(targetX, targetY uint8, bState *battleState) bool {
 	}
 
 	// 1. Tworzymy czarodziejski deszcz
-	u.createMagicShower(targetX, targetY, bState)
+	damage, missileKind, ok := u.resolveMagicShowerStats()
+	if !ok {
+		log.Printf("UWAGA: magicShower wywołany dla jednostki o nieobsługiwanym rodzaju %d!", u.Type)
 
-	// 2. Skończyliśmy czarowanie, stoimy bezczynnie
-	u.State = stateIdle
-	u.AnimationType = "idle"
-	u.Command = cmdUIdle
+		return false
+	}
 
-	log.Printf("INFO: Jednostka %d rzuciła czar na (%d, %d)", u.ID, targetX, targetY)
+	// 2. Bezpiecznik pozycji początkowej tworzonych pocisków
+	spawnY := target.Y
+
+	if spawnY >= 4 {
+		spawnY -= 4
+	} else {
+		spawnY = 0
+	}
+
+	// 3. Tworzenie opadów
+	for offset := -1; offset <= 1; offset++ {
+		spawnX := int(target.X) + offset
+
+		if spawnX < 0 || spawnX >= int(boardMaxX) {
+			continue
+		}
+
+		projParameters := magicShowerParameters{
+			owner:       u.Owner,
+			spawnX:      uint16(spawnX),
+			spawnY:      uint16(spawnY),
+			targetY:     uint16(target.Y),
+			missileKind: missileKind,
+			damage:      damage,
+		}
+
+		proj := spawnMagicShowerProjectile(projParameters)
+
+		if proj != nil {
+			*projs = append(*projs, proj)
+		}
+
+		// 4. Przyzanie doświadczenia za zaatakowanie
+		targetTile := &board.Tiles[spawnX][target.Y]
+
+		switch {
+		case targetTile.Unit != nil && targetTile.Unit.Exists:
+			handleGainExperience(u, targetTile.Unit, humanPID, aiPID)
+		case targetTile.Building != nil && targetTile.Building.Exists:
+			handleGainExperience(u, nil, humanPID, aiPID)
+		default:
+			// Nie przyznajemy nic doświadczenia za napaść na otoczenie
+		}
+	}
+
+	log.Printf("INFO: Jednostka %d rzuciła czar na (%d, %d)", u.ID, target.X, target.Y)
 
 	return true
 }
 
-func (u *unit) castSpell(bState *battleState) {
+func (u *unit) castSpell(board *boardData, humanPID, aiPID PlayerID, projs *[]*projectile) {
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
 		u.AnimationType = "idle"
@@ -218,7 +263,9 @@ func (u *unit) castSpell(bState *battleState) {
 		targetX, targetY = u.TargetX, u.TargetY
 	}
 
-	if u.magicShower(targetX, targetY, bState) {
+	target := &point{X: targetX, Y: targetY}
+
+	if u.magicShower(target, board, humanPID, aiPID, projs) {
 		u.setRangedTimings()
 		u.setIdleWithReason("czar rzucony")
 	} else {
@@ -252,62 +299,4 @@ func (u *unit) castMagicSight(board *boardData) {
 	u.State = stateIdle
 	u.AnimationType = "idle"
 	u.Command = cmdUIdle
-}
-
-// To już chyba nie powinna być metoda jednostki. Nic jej do szczegółów pocisków.
-func (u *unit) spawnMagicShowerProjectiles(targetX, targetY uint8, missileKind uint8, damage uint16, bState *battleState) {
-	// 0. Bezpiecznik pozycji początkowej tworzonych pocisków
-	spawnY := targetY
-
-	if spawnY >= 4 {
-		spawnY -= 4
-	} else {
-		spawnY = 0
-	}
-
-	// 1. Tworzenie opadów
-	for offset := -1; offset <= 1; offset++ {
-		spawnX := int(targetX) + offset
-
-		if spawnX < 0 || spawnX >= int(boardMaxX) {
-			continue
-		}
-
-		proj := &projectile{}
-		proj.initProjectile(
-			missileKind,
-			u.Owner,
-			uint16(spawnX), uint16(spawnY),
-			uint16(spawnX), uint16(targetY),
-			damage,
-		)
-
-		if proj.Exists {
-			bState.Projectiles = append(bState.Projectiles, proj)
-		}
-
-		// 2. Przyzanie doświadczenia za zaatakowanie
-		currentTile := &bState.Board.Tiles[spawnX][targetY]
-
-		switch {
-		case currentTile.Unit != nil && currentTile.Unit.Exists:
-			handleGainExperience(u, currentTile.Unit, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
-		case currentTile.Building != nil && currentTile.Building.Exists:
-			handleGainExperience(u, nil, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
-		default:
-			// Nie przyznajemy nic doświadczenia za napaść na otoczenie
-		}
-	}
-}
-
-// To już chyba nie powinna być metoda jednostki. Nic jej do szczegółów pocisków.
-func (u *unit) createMagicShower(targetX, targetY uint8, bState *battleState) {
-	damage, missileKind, ok := u.resolveMagicShowerStats()
-	if !ok {
-		log.Printf("UWAGA: magicShower wywołany dla jednostki o nieobsługiwanym rodzaju %d!", u.Type)
-
-		return
-	}
-
-	u.spawnMagicShowerProjectiles(targetX, targetY, missileKind, damage, bState)
 }

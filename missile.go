@@ -345,3 +345,31 @@ func (p *projectile) mageGhost(targetTile *tile, damage uint16, bState *battleSt
 	totalDamage := damage + ownerBonus
 	targetTile.ghost(totalDamage, bState)
 }
+
+type magicShowerParameters struct {
+	owner       PlayerID
+	spawnX      uint16
+	spawnY      uint16
+	targetY     uint16
+	missileKind uint8
+	damage      uint16
+}
+
+func spawnMagicShowerProjectile(projectileParameters magicShowerParameters) *projectile {
+	proj := &projectile{
+		AllowFriendlyFire: true, // Gromobicie i deszcz ognia nie pyta kim jesteś!!!1
+	}
+	proj.initProjectile(
+		projectileParameters.missileKind,
+		projectileParameters.owner,
+		projectileParameters.spawnX, projectileParameters.spawnY,
+		projectileParameters.spawnX, projectileParameters.targetY,
+		projectileParameters.damage,
+	)
+
+	if proj.Exists {
+		return proj
+	}
+
+	return nil
+}

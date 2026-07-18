@@ -177,7 +177,7 @@ func (u *unit) executeStandardUnitCommand(resolver objectResolver, board *boardD
 				u.State = stateCastingSpell
 				u.AnimationType = "fight"
 				u.clearPath()
-				u.castSpell(bState)
+				u.castSpell(bState.Board, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID, &bState.Projectiles)
 			} else {
 				u.State = stateMoving
 				u.AnimationType = "walk"
