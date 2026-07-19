@@ -265,7 +265,8 @@ func (u *unit) faceTarget(target *combatTarget) {
 		tx, ty = target.Unit.X, target.Unit.Y
 	} else if target.Building != nil {
 		// Dla budynków celujemy w ich środek lub najbliższy punkt
-		tx, ty, _ = target.Building.getClosestOccupiedTile(u.X, u.Y)
+		targetCoords, _ := getClosestOccupiedTile(&point{X: u.X, Y: u.Y}, &target.Building.OccupiedTiles)
+		tx, ty = targetCoords.X, targetCoords.Y
 	} else if target.Tile != nil {
 		tx, ty = target.Tile.X, target.Tile.Y
 	} else {

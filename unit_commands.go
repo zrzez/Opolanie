@@ -409,19 +409,19 @@ func (u *unit) canAttackTarget(target *combatTarget) bool {
 	return distance <= u.AttackRange
 }
 
-func (u *unit) getRangedTargetCoords(target *combatTarget) (uint8, uint8, bool) {
-	if target.Unit != nil {
-		return target.Unit.X, target.Unit.Y, true
-	} else if target.Building != nil {
-		return target.Building.getClosestOccupiedTile(u.X, u.Y)
+// !
+func (u *unit) getRangedTargetCoords(target *combatTarget) (*point, bool) {
+	switch {
+	case target.Unit != nil:
+		return &point{X: target.Unit.X, Y: target.Unit.Y}, true
+	case target.Building != nil:
+		return getClosestOccupiedTile(&point{X: u.X, Y: u.Y}, &target.Building.OccupiedTiles)
+	case target.Tile != nil: // drzewa dla unitPriest
+		return &point{X: target.Tile.X, Y: target.Tile.Y}, true
+
 	}
 
-	// Drzewa
-	if target.Tile != nil {
-		return target.Tile.X, target.Tile.Y, true
-	}
-
-	return 0, 0, false
+	return nil, false
 }
 
 func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
@@ -683,10 +683,10 @@ func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bState *battl
 			realTargetX = targetUnit.X
 			realTargetY = targetUnit.Y
 		} else if targetBld != nil && targetBld.Exists {
-			bx, by, ok := targetBld.getClosestOccupiedTile(u.X, u.Y)
+			targetCoord, ok := getClosestOccupiedTile(&point{X: u.X, Y: u.Y}, &targetBld.OccupiedTiles)
 			if ok {
-				realTargetX = bx
-				realTargetY = by
+				realTargetX = targetCoord.X
+				realTargetY = targetCoord.Y
 			}
 		}
 	}

@@ -311,11 +311,11 @@ func (t *tile) applyFallingTreeDamage() {
 	}
 }
 
-func (t *tile) accumulateTreeCuts(fallingTreesList *[]*tile) {
+func (t *tile) accumulateTreeCuts(fallingTrees *[]*tile) {
 	t.treeCuts++
 
 	if t.treeCuts >= strikesToCutTree {
-		t.treeFall(fallingTreesList)
+		t.treeFall(fallingTrees)
 	}
 }
 

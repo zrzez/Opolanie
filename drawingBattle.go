@@ -563,7 +563,11 @@ func getRenderDirection(u *unit, bState *battleState) (int, int) {
 			} else if targetBld != nil && targetBld.Exists {
 				// Tutaj funkcja zwraca bool, więc używamy go
 				var ok bool
-				targetX, targetY, ok = targetBld.getClosestOccupiedTile(u.X, u.Y)
+				target, ok := getClosestOccupiedTile(&point{X: u.X, Y: u.Y}, &targetBld.OccupiedTiles)
+				if ok {
+					targetX, targetY = target.X, target.Y
+				}
+
 				foundTarget = ok
 			}
 		}

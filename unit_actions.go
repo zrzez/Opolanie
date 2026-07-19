@@ -45,18 +45,17 @@ func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleS
 
 func (u *unit) performDirectAttack(target *combatTarget, bState *battleState) {
 	if u.AttackRange > 1 {
-		u.performRangedAttack(target, u.Damage, bState)
+		u.performRangedAttack(target, u.Damage, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID, &bState.Projectiles)
 	} else {
-		u.performMeleeAttack(target, u.Damage, bState)
+		u.performMeleeAttack(target, u.Damage, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID, &bState.FallingTreesList)
 	}
 
 	u.setAttackTimings()
 	u.handleTargetPostAttack(target.Unit, target.Building)
 }
 
-// @todo: do zmiany, jednostka nie może znać szczegółów wdrożenia pocisków.
-func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bState *battleState) {
-	targetX, targetY, ok := u.getRangedTargetCoords(target)
+func (u *unit) performRangedAttack(target *combatTarget, damage uint16, humanPID, aiPID PlayerID, projs *[]*projectile) {
+	targetCoords, ok := u.getRangedTargetCoords(target)
 	if !ok {
 		log.Printf("UWAGA: jednostka %d: nie udało się określić koordynatów celu dla pocisku", u.ID)
 	}
@@ -66,39 +65,40 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bState *
 		return
 	}
 
-	proj := &projectile{}
-	proj.initProjectile(
-		unitTypeToMissileType(u.Type),
-		u.Owner,
-		uint16(u.X), uint16(u.Y),
-		uint16(targetX), uint16(targetY),
-		damage,
-	)
+	projParams := projectileParameters{
+		owner:        u.Owner,
+		spawnX:       uint16(u.X),
+		spawnY:       uint16(u.Y),
+		targetX:      uint16(targetCoords.X),
+		targetY:      uint16(targetCoords.Y),
+		missileKind:  unitTypeToMissileType(u.Type),
+		damage:       damage,
+		friendlyfire: u.AllowFriendlyFire,
+	}
 
-	proj.AllowFriendlyFire = u.AllowFriendlyFire
+	proj := spawnProjectile(projParams)
 
-	bState.Projectiles = append(bState.Projectiles, proj)
+	*projs = append(*projs, proj)
 
 	// Za stworzenie jakiegokolwiek pocisku jest przyznawane doświadczenie.
 	// Muszę dodać logikę rozdziało pomięcy celem jednostką a celem budynkiem.
 	// u.gainExperience tutaj!
-	handleGainExperience(u, target.Unit, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
+	handleGainExperience(u, target.Unit, humanPID, aiPID)
 
-	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, targetX, targetY, damage)
+	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, u.TargetX, u.TargetY, damage)
 }
 
 // @reminder: zdobywanie doświadczenia jest niezależne od wyniku ataku. Wykonał atak→gainExperience().
-func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, bState *battleState) {
+func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, hPID, aiPID PlayerID, fallingTrees *[]*tile) {
 	switch {
 	case target.Unit != nil && target.Unit.Exists:
-		// @reminder: ↓↓↓↓↓↓↓ Bez ogarnięcia tej metody nie pozbędę się bState z sygnatury!
 		target.Unit.takeDamage(damage)
-		handleGainExperience(u, target.Unit, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
+		handleGainExperience(u, target.Unit, hPID, aiPID)
 	case target.Building != nil && target.Building.Exists:
 		target.Building.takeDamage(damage)
-		handleGainExperience(u, nil, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
+		handleGainExperience(u, nil, hPID, aiPID)
 	case target.Tile.isTree():
-		target.Tile.accumulateTreeCuts(&bState.FallingTreesList)
+		target.Tile.accumulateTreeCuts(fallingTrees)
 	default:
 		log.Printf("UWAGA: jednostka %d: cel ataku wręcz już nie istnieje", u.ID)
 	}
@@ -208,7 +208,7 @@ func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID Play
 			continue
 		}
 
-		projParameters := magicShowerParameters{
+		projParameters := projectileParameters{
 			owner:       u.Owner,
 			spawnX:      uint16(spawnX),
 			spawnY:      uint16(spawnY),

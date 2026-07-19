@@ -436,26 +436,28 @@ func findBestReachableTile(u *unit, validCoords []point, board *boardData) (*poi
 	return nil, fmt.Errorf("nie ma prawidłowego kafelka")
 }
 
-// @todo: ani to units, ani nie przystaje do obecnej architektury.
-func (bld *building) getClosestOccupiedTile(fromX, fromY uint8) (uint8, uint8, bool) {
-	if len(bld.OccupiedTiles) == 0 {
-		return 0, 0, false
+func getClosestOccupiedTile(attackerTile *point, occupiedTiles *[]point) (*point, bool) {
+	// @reminder: nie wiem, czy możliwe
+	if len(*occupiedTiles) == 0 {
+		return nil, false
 	}
 
 	closestX, closestY := uint8(0), uint8(0)
-	minDistSq := math.MaxFloat64
+	minDist := math.MaxInt
 
-	for _, occupiedTile := range bld.OccupiedTiles {
-		dx := float64(occupiedTile.X - fromX)
-		dy := float64(occupiedTile.Y - fromY)
-		distSq := dx*dx + dy*dy
+	for _, occupiedTile := range *occupiedTiles {
+		dx := int(occupiedTile.X) - int(attackerTile.X)
+		dy := int(occupiedTile.Y) - int(attackerTile.Y)
 
-		if distSq < minDistSq {
-			minDistSq = distSq
+		d := dx*dx + dy*dy
+
+		if d < minDist {
+			minDist = d
+
 			closestX = occupiedTile.X
 			closestY = occupiedTile.Y
 		}
 	}
 
-	return closestX, closestY, true
+	return &point{X: closestX, Y: closestY}, true
 }

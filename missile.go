@@ -346,26 +346,43 @@ func (p *projectile) mageGhost(targetTile *tile, damage uint16, bState *battleSt
 	targetTile.ghost(totalDamage, bState)
 }
 
-type magicShowerParameters struct {
-	owner       PlayerID
-	spawnX      uint16
-	spawnY      uint16
-	targetY     uint16
-	missileKind uint8
-	damage      uint16
+type projectileParameters struct {
+	owner        PlayerID
+	spawnX       uint16
+	spawnY       uint16
+	targetX      uint16
+	targetY      uint16
+	missileKind  uint8
+	damage       uint16
+	friendlyfire bool
 }
 
-func spawnMagicShowerProjectile(projectileParameters magicShowerParameters) *projectile {
+func spawnMagicShowerProjectile(magicProjParams projectileParameters) *projectile {
 	proj := &projectile{
 		AllowFriendlyFire: true, // Gromobicie i deszcz ognia nie pyta kim jesteś!!!1
 	}
 	proj.initProjectile(
-		projectileParameters.missileKind,
-		projectileParameters.owner,
-		projectileParameters.spawnX, projectileParameters.spawnY,
-		projectileParameters.spawnX, projectileParameters.targetY,
-		projectileParameters.damage,
+		magicProjParams.missileKind,
+		magicProjParams.owner,
+		magicProjParams.spawnX, magicProjParams.spawnY,
+		magicProjParams.spawnX, magicProjParams.targetY,
+		magicProjParams.damage,
 	)
+
+	if proj.Exists {
+		return proj
+	}
+
+	return nil
+}
+
+func spawnProjectile(projParam projectileParameters) *projectile {
+	proj := &projectile{}
+	proj.initProjectile(
+		projParam.missileKind, projParam.owner,
+		projParam.spawnX, projParam.spawnY,
+		projParam.targetX, projParam.targetY,
+		projParam.damage)
 
 	if proj.Exists {
 		return proj
