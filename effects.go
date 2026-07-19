@@ -1,5 +1,7 @@
 package main
 
+import "math/rand"
+
 // effects.go
 
 // Funkcja do łączenia dróg/palisad
@@ -207,7 +209,7 @@ func fallingTreeEffect(bState *battleState) {
 
 					// Obalamy sąsiednie suche drzewo
 					if adjacentTile.TextureID == spriteDryTreeStump00 {
-						adjacentTile.treeFall(bState)
+						adjacentTile.treeFall(&bState.FallingTreesList)
 					} else {
 						// Lub zadajemy obrażenia
 						adjacentTile.applyFallingTreeDamage(bState)
@@ -230,4 +232,38 @@ func fallingTreeEffect(bState *battleState) {
 			}
 		}
 	}
+}
+
+func createWound(damage uint16, u *unit) {
+	if len(u.Wounds) >= maxWoundsCount {
+		return
+	}
+
+	offX := float32(rand.Intn(11) - 4)
+	offY := float32(rand.Intn(9) - 3)
+
+	isSevere := false
+	// @todo zastąp to prostym sprawdzeniem Armor dla ranionej jednostki
+	// lub % MaxHP, żeby to było wizualnie czytelniejsze w trakcie bitwy.
+	// Za maxhp przemawia, że w damage już jest ukryta poprawka na u.Armor
+
+	var baseScale float32 = 1.0
+
+	if damage > severeDamage && u.isLightType() {
+		isSevere = true
+		baseScale = 1.1
+	}
+	// @todo: skala powinna zależeć od ilości obrażeń i tylko dla isSevere
+
+	rotation := rand.Float32() * 120.0
+	newWound := wound{
+		Timer:    20,
+		OffsetX:  offX,
+		OffsetY:  offY,
+		IsSevere: isSevere,
+		Scale:    baseScale,
+		Rotation: rotation,
+	}
+
+	u.Wounds = append(u.Wounds, newWound)
 }

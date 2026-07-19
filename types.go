@@ -113,8 +113,9 @@ type unit struct {
 	ManaRegen   uint16 // Miara odnowy many
 	// Effects     []activeEffect // Wykaz działających efektów
 	// przechowywanie mleka przez jednostki
-	Udder  uint8   // Dosłownie wymiona
-	Wounds []wound // Wykaz świeżo zadanych ran
+	Udder       uint8   // Dosłownie wymiona
+	Wounds      []wound // Wykaz świeżo zadanych ran
+	wasAttacked bool    // Wskazuje, czy jednostka została zaatakowana w danym tyknięciu
 
 	// Magiczna tarcza, tylko dla unitPriestess
 	hasMagicShield      bool // Wskazuje, czy jednostka jest chroniona magiczną tarczą
@@ -439,11 +440,11 @@ type battleState struct {
 	CampaignData     campaignData // Zawiera rzeczy związane wyprawą i obecną bitwą
 
 	// === PRZEDMIOTY I JEDNOSTKI NA MAPIE ===
-	Units              []*unit                // Żyjące jednostki
-	Buildings          []*building            // Działające budynki
-	NextUnitID         UnitID                 // Licznik do tworzenia nowych identyfikatorów dla jednostek
-	NextBuildingID     BuildingID             // Licznik do tworzenia nowych identyfikatorów dla budynków
-	NextUniqueObjectID ObjectID               // Ogólny licznik identyfikatorów dla wszystkich.
+	Units          []*unit     // Żyjące jednostki
+	Buildings      []*building // Działające budynki
+	NextUnitID     UnitID      // Licznik do tworzenia nowych identyfikatorów dla jednostek
+	NextBuildingID BuildingID  // Licznik do tworzenia nowych identyfikatorów dla budynków
+	// NextUniqueObjectID ObjectID               // Ogólny licznik identyfikatorów dla wszystkich.
 	Board              *boardData             // Wszystko co związane z przechowywaniem współrzędnych na planszy
 	Projectiles        []*projectile          // Pociski
 	HealingShrines     []point                // Wykaz współrzędnych miejsc leczenia

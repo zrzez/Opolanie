@@ -82,6 +82,9 @@ func (bld *building) unregisterUnit(unregisterUnitID UnitID) {
 			bld.AssignedUnits = append(bld.AssignedUnits[:index], bld.AssignedUnits[index+1:]...)
 
 			bld.Food--
+
+			// @reminder: próba sprawdzenia, czy to powoduje błąd
+			return
 		}
 	}
 }

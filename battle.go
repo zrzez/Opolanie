@@ -493,17 +493,6 @@ func processCommands(bState *battleState) {
 	}
 }
 
-// odświeża jednostki, sprawdza, która została zabita itd.
-func (bState *battleState) updateUnits() {
-	bState.PathfindingBudget = 0
-
-	for _, currentUnit := range bState.Units {
-		if currentUnit.Exists {
-			currentUnit.updateUnit(bState)
-		}
-	}
-}
-
 // updateProjectiles odświeża pociski, sprawdza, czy dodać nowe.
 func updateProjectiles(bState *battleState) {
 	activeProjectiles := bState.Projectiles[:0]
@@ -518,6 +507,37 @@ func updateProjectiles(bState *battleState) {
 	}
 
 	bState.Projectiles = activeProjectiles
+}
+
+// odświeża jednostki, sprawdza, która została zabita itd.
+func (bState *battleState) updateUnits() {
+	bState.PathfindingBudget = 0
+
+	for _, currentUnit := range bState.Units {
+		if !currentUnit.Exists {
+			continue
+		}
+
+		currentUnit.updateUnit(bState)
+
+		if currentUnit.HP == 0 {
+			currentUnit.Exists = false
+
+			// @todo: to nie powinno w ogóle być w jednostce, a tam obok aktualizowania
+			//  budynków. Bo mamy dostęp do potrzebnych rzeczy.
+			// Zabita jednostka nie powinna zliczać się do górnej granicy ludności
+			bState.decreasePopulation(currentUnit.Owner)
+
+			occupiedTile := &bState.Board.Tiles[currentUnit.X][currentUnit.Y]
+			if occupiedTile.Unit == currentUnit {
+				occupiedTile.Unit = nil
+			}
+
+			bState.createCorpses(currentUnit)
+			currentUnit.unregisterFromBuilding()
+			log.Printf("Jednostka %d została zabita!", currentUnit.ID)
+		}
+	}
 }
 
 func (bState *battleState) updateBuildings() {
@@ -543,6 +563,11 @@ func (bState *battleState) updateBuildings() {
 // ================
 
 func (u *unit) updateUnit(bState *battleState) {
+	if u.wasAttacked {
+		u.handleCowFlee(bState)
+		u.wasAttacked = false
+	}
+
 	board := bState.Board
 
 	var resolver objectResolver = bState
@@ -681,7 +706,7 @@ func (bState *battleState) handleBuildingDestruction(bld *building) {
 
 	// Wywalamy budynek
 	bld.Exists = false
-	log.Printf("building %d destroyed!", bld.ID)
+	log.Printf("budynek %d zniszczony!", bld.ID)
 
 	// Budynek przestał działać, gracz powinien odzyskać miejsce
 	player := bState.getPlayerState(bld.Owner)

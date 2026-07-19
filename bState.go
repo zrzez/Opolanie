@@ -18,7 +18,7 @@ func (bState *battleState) createBuilding(bldType buildingType, topLeftX, topLef
 	}
 
 	newBld := &building{
-		ID:            BuildingID(bState.NextUniqueObjectID),
+		ID:            bState.NextBuildingID,
 		Type:          bldType,
 		Owner:         owner,
 		Exists:        true,
@@ -28,7 +28,7 @@ func (bState *battleState) createBuilding(bldType buildingType, topLeftX, topLef
 		AssignedUnits: make([]UnitID, 0, stats.MaxFood),
 	}
 
-	bState.NextUniqueObjectID++
+	bState.NextBuildingID++
 
 	bState.Board.registerBuilding(newBld, topLeftX, topLeftY)
 	bState.Buildings = append(bState.Buildings, newBld)
@@ -196,9 +196,13 @@ func (bState *battleState) getSelectedUnits() []*unit {
 func (bState *battleState) decreasePopulation(owner PlayerID) {
 	switch owner {
 	case bState.HumanPlayerState.PlayerID:
-		bState.HumanPlayerState.CurrentPopulation--
+		if bState.HumanPlayerState.CurrentPopulation > 0 {
+			bState.HumanPlayerState.CurrentPopulation--
+		}
 	case bState.AIEnemyState.PlayerID:
-		bState.AIEnemyState.CurrentPopulation--
+		if bState.AIEnemyState.CurrentPopulation > 0 {
+			bState.AIEnemyState.CurrentPopulation--
+		}
 	}
 }
 
@@ -398,12 +402,14 @@ func (bState *battleState) tryProduceUnit(newUnitType unitType, bld *building) {
 	ownerState := bState.getPlayerState(bld.Owner)
 	if ownerState == nil {
 		// Wypadałoby coś tutaj zrobić, bo to krytyczny błąd
+		fmt.Print("ownerState == nil")
+
 		return
 	}
 
 	// 4. Tworzymy jednostkę
 	coords, _ := bState.Board.electSpawnTile(bld)
-
+	fmt.Println("wchodzę w createUnit")
 	bState.createUnit(newUnitType, coords, bld)
 
 	// 5. Pobieramy mleko za jednostkę
@@ -413,8 +419,10 @@ func (bState *battleState) tryProduceUnit(newUnitType unitType, bld *building) {
 // To nie powinna być metoda budynku tylko bState lub board ponieważ w tej chwili
 // budynek zna szczegóły tworzenia jednostek, a nie powinien.
 func (bState *battleState) createUnit(unitType unitType, coords point, bld *building) {
-	newUnit := bState.initUnit(unitType, coords.X, coords.Y, UnitID(bState.NextUniqueObjectID))
-	bState.NextUniqueObjectID++ // @reminder: będę musiał w końcu zacząć używać bState.NextUnitID
+	fmt.Print("jestem w createUnit\n")
+	fmt.Printf("Chcę stworzyć jednostkę od ID %d\n", bState.NextUnitID)
+	newUnit := bState.initUnit(unitType, coords.X, coords.Y, bState.NextUnitID)
+	bState.NextUnitID++
 
 	newUnit.Owner = bld.Owner
 	newUnit.BelongsTo = bld
@@ -422,7 +430,14 @@ func (bState *battleState) createUnit(unitType unitType, coords point, bld *buil
 	bState.Board.Tiles[newUnit.X][newUnit.Y].Unit = newUnit
 	bState.Units = append(bState.Units, newUnit)
 
+	fmt.Print("Rejestruję jednostkę w budynku\n")
 	bld.registerUnit(newUnit.ID)
+
+	ownerState := bState.getPlayerState(bld.Owner)
+
+	if ownerState != nil {
+		ownerState.CurrentPopulation++
+	}
 }
 
 // @reminder: to nie powinno przyjmować x,y uint8 a strukturę point
@@ -457,10 +472,12 @@ func (bState *battleState) initUnit(unitType unitType, x, y uint8, newUnitID Uni
 		newUnit.Mana = stats.MaxMana / 2
 		newUnit.ManaRegen = stats.BaseManaRegen
 	} else {
-		log.Printf("OSTRZEŻENIE: Nieznany rodzaj jednostki w init: %d.", unitType)
+		log.Printf("OSTRZEŻENIE: Nieznany rodzaj jednostki w init: %d.\n", unitType)
 	}
 
 	newUnit.Delay = newUnit.MaxDelay
+
+	fmt.Printf("initUnit: rodzaj %d, UnitID: %d\n", newUnit.Type, newUnit.ID)
 
 	return newUnit
 }

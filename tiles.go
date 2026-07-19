@@ -282,7 +282,7 @@ func (t *tile) processBurntTree(bState *battleState) {
 
 	// Obalamy spalone drzewo
 	t.IsBurnt = true
-	t.treeFall(bState)
+	t.treeFall(&bState.FallingTreesList)
 }
 
 // Odpowiada za zadanie obrażeń jednostce lub budynkowi, który się znajduje na danym kafelku.
@@ -311,23 +311,23 @@ func (t *tile) applyFallingTreeDamage(bState *battleState) {
 	}
 }
 
-func (t *tile) accumulateTreeCuts(bState *battleState) {
+func (t *tile) accumulateTreeCuts(fallingTreesList *[]*tile) {
 	t.treeCuts++
 
 	if t.treeCuts >= strikesToCutTree {
-		t.treeFall(bState)
+		t.treeFall(fallingTreesList)
 	}
 }
 
 // Odpowiada za rozpoczęcie całego procesu upadania drzewa.
-func (t *tile) treeFall(bState *battleState) {
+func (t *tile) treeFall(fallingTreesList *[]*tile) {
 	// Drzewa, które już upadają nie są obsługiwane!
 	if t.treeState != treeStraight {
 		return
 	}
 
 	// Nie pozwalamy na duplikaty!
-	if slices.Contains(bState.FallingTreesList, t) {
+	if slices.Contains(*fallingTreesList, t) {
 		return
 	}
 
@@ -337,7 +337,7 @@ func (t *tile) treeFall(bState *battleState) {
 	t.treeCuts = 0
 
 	// 2. Dodajemy kafelkek do listy obsługiwanej centralnie
-	bState.FallingTreesList = append(bState.FallingTreesList, t)
+	*fallingTreesList = append(*fallingTreesList, t)
 }
 
 func (t *tile) ghost(ghostDamage uint16, bState *battleState) {

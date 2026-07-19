@@ -124,7 +124,7 @@ func startFirstCampaign(ps *programState, bState *battleState) {
 	bState.WaterAnimationFrame = 0
 	bState.FireAnimationFrame = 0
 	bState.GlobalFrameCounter = 0
-	bState.NextUniqueObjectID = 1
+	bState.NextUnitID = 1
 
 	// Nowe, czyste wycinki
 	bState.Units = make([]*unit, 0)

@@ -87,17 +87,18 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, bState *
 	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, targetX, targetY, damage)
 }
 
-// @reminder: zdobywanie doświadczenia jest niezależne od wyniku ataku. Wykonał atak→gainExperience()
+// @reminder: zdobywanie doświadczenia jest niezależne od wyniku ataku. Wykonał atak→gainExperience().
 func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, bState *battleState) {
 	switch {
 	case target.Unit != nil && target.Unit.Exists:
+		// @reminder: ↓↓↓↓↓↓↓ Bez ogarnięcia tej metody nie pozbędę się bState z sygnatury!
 		target.Unit.takeDamage(damage, bState)
 		handleGainExperience(u, target.Unit, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
 	case target.Building != nil && target.Building.Exists:
 		target.Building.takeDamage(damage)
 		handleGainExperience(u, nil, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
-	case target.Tile != nil:
-		target.Tile.accumulateTreeCuts(bState)
+	case target.Tile.isTree():
+		target.Tile.accumulateTreeCuts(&bState.FallingTreesList)
 	default:
 		log.Printf("UWAGA: jednostka %d: cel ataku wręcz już nie istnieje", u.ID)
 	}
@@ -177,6 +178,7 @@ func (u *unit) castMagicShield() {
 
 // @reminder: najprawdopodobniej objectResolver nie jest prawidłowo użyty i będzie wyrzucony.
 // @reminder: wydaje mi się, że każde „idle” ustawiane wewnątrz tej metody jest zbyteczne.
+// @todo: brakuje ustawienia uruchomienia (animacji) ataku przy rzucaniu czarów.
 func (u *unit) castSpell(resolver objectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
@@ -212,7 +214,6 @@ func (u *unit) castSpell(resolver objectResolver, board *boardData, pathfindingB
 
 	default:
 		// Nigdy nie powinno się przytafić
-
 	}
 }
 

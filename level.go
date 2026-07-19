@@ -44,7 +44,8 @@ func initBoard(bState *battleState) {
 		}
 	}
 
-	bState.NextUniqueObjectID = 1
+	bState.NextUnitID = 1
+	bState.NextBuildingID = 1
 
 	log.Println("INFO: Zaczyn planszy zrobiony.")
 }
@@ -354,9 +355,9 @@ func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) 
 		}
 
 		// Tworzymy nową jednostkę
-		newUnit := bState.initUnit(uType, unitData.Position.X, unitData.Position.Y, UnitID(bState.NextUniqueObjectID))
+		newUnit := bState.initUnit(uType, unitData.Position.X, unitData.Position.Y, bState.NextUnitID)
 
-		bState.NextUniqueObjectID++ // @reminder: będę musiał w końcu zacząć używać bState.NextUnitID
+		bState.NextUnitID++ // @reminder: będę musiał w końcu zacząć używać bState.NextUnitID
 		newUnit.Owner = unitOwnerID
 
 		// Wstawiamy na planszę

@@ -743,12 +743,13 @@ func newBattleState(pState *programState) *battleState {
 		),
 
 		// Reszta domyślnych ustawień technicznych
-		NextUniqueObjectID: 1,
-		Board:              &boardData{},
-		CurrentSelection:   selectionState{},
-		MouseState:         mouseStateNormal,
-		DragContext:        dragContext{},
-		Map:                false,
+		NextBuildingID:   1,
+		NextUnitID:       1,
+		Board:            &boardData{},
+		CurrentSelection: selectionState{},
+		MouseState:       mouseStateNormal,
+		DragContext:      dragContext{},
+		Map:              false,
 
 		CurrentLevel:          0,
 		DifficultyLevel:       pState.SelectedDifficulty,

@@ -105,28 +105,36 @@ func (playerS *playerState) handleProductionCommand(cmd *command, bState *battle
 	if !ok {
 		switch errCode {
 		case produceErrNoRoom:
+			fmt.Print("handleProductionCommand NIE MA MIEJSCA W BUDYNKU!\n")
 			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: NIE MA MIEJSCA W BUDYNKU!"
 			bState.CurrentMessage.Duration = 60
 		case produceErrInvalidOwner:
 			// nie powinno mieć miejsca
+			fmt.Print("handleProductionCommand NIE TWÓJ BUDYNEK!\n")
 			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: TO NIE TWÓJ BUDYNEK!"
 			bState.CurrentMessage.Duration = 60
 		case produceErrPopulationLimit:
+			fmt.Print("handleProductionCommand NIE MOŻESZ MIEĆ WIĘCEJ JEDNOSTEK!\n")
 			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: NIE MOŻESZ MIEĆ WIĘCEJ JEDNOSTEK!"
 			bState.CurrentMessage.Duration = 60
 		case produceErrInvalidType:
+			fmt.Print("handleProductionCommand NIEZNANY RODZAJ JEDNOSTKI!\n")
 			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: NIEZNANY RODZAJ JEDNOSTKI!"
 			bState.CurrentMessage.Duration = 60
 		case produceErrMilk:
+			fmt.Print("handleProductionCommand NIEDOBÓR MLEKA!\n")
 			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: NIEDOBÓR MLEKA!"
 			bState.CurrentMessage.Duration = 60
 		case produceErrNoSpace:
+			fmt.Print("handleProductionCommand NIE MA MIEJSCA PRZY BUDYNKU!\n")
 			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: NIE MA MIEJSCA PRZY BUDYNKU!"
 			bState.CurrentMessage.Duration = 60
 		default:
+			fmt.Print("handleProductionCommand COŚ POSZŁO PIERUŃSKO NIE TAK ZE SPRAWDZENIEM!\n")
 			bState.CurrentMessage.Text = "TWORZENIE JEDNOSTKI: COŚ POSZŁO PIERUŃSKO NIE TAK ZE SPRAWDZENIEM!"
 			bState.CurrentMessage.Duration = 60
 		}
+		fmt.Print("Jakiś błąd w handleProductionCommand\n")
 
 		return
 	}
@@ -134,6 +142,7 @@ func (playerS *playerState) handleProductionCommand(cmd *command, bState *battle
 	// 2. Wykonanie
 	// Jest to natychmiastowe wykonanie więc raczej nie powinno być potrzeby dalszego
 	// sprawdzania.
+	fmt.Print("Wchodzę w tryProduceUnit")
 	bState.tryProduceUnit(unitType(cmd.CreateType), execBld)
 }
 

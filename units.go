@@ -4,7 +4,6 @@ package main
 
 import (
 	"log"
-	"math/rand"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -359,7 +358,11 @@ func (u *unit) resolveMagicShowerStats() (damage uint16, missileKind uint8, ok b
 	}
 }
 
-// @todo: przenieś logikę tworzenia ran, bo jednostka nie musi o tym wiedzieć.
+func (u *unit) isLightType() bool {
+	return u.Type != unitCommander && u.Type != unitSpearman && u.Type != unitSwordsman &&
+		u.Type != unitBear && u.Type != unitUnknown && u.Type != unitCrossbowman
+}
+
 func (u *unit) takeDamage(damage uint16, bState *battleState) {
 	// 0. Sprawdzamy, czy jednostka jest chroniona przed obrażeniami.
 	if u.hasMagicShield {
@@ -380,77 +383,11 @@ func (u *unit) takeDamage(damage uint16, bState *battleState) {
 		u.HP = 0
 	}
 
+	u.wasAttacked = true
+
 	log.Printf("unit %d otrzymał %d obrażeń. HP: %d/%d", u.ID, finalDamage, u.HP, u.MaxHP)
-	// === Zapisywanie informacji o odniesionych ranach
 
-	if len(u.Wounds) < maxWoundsCount {
-		offX := float32(rand.Intn(11) - 4)
-		offY := float32(rand.Intn(9) - 3)
-
-		isSevere := false
-		// @todo zastąp to prostym sprawdzeniem Armor dla ranionej jednostki
-		// lub % MaxHP, żeby to było wizualnie czytelniejsze w trakcie bitwy.
-		// Za maxhp przemawia, że w finalDamage już jest ukryta poprawka na u.Armor
-		isUnitLight := u.Type != unitCommander && u.Type != unitSpearman && u.Type != unitSwordsman &&
-			u.Type != unitBear && u.Type != unitUnknown && u.Type != unitCrossbowman
-
-		var baseScale float32 = 1.0
-
-		if finalDamage > severeDamage && isUnitLight {
-			isSevere = true
-			baseScale = 1.1
-		}
-		// @todo: skala powinna zależeć od ilości obrażeń i tylko dla isSevere
-
-		rotation := rand.Float32() * 120.0
-		newWound := wound{
-			Timer:    20,
-			OffsetX:  offX,
-			OffsetY:  offY,
-			IsSevere: isSevere,
-			Scale:    baseScale,
-			Rotation: rotation,
-		}
-
-		u.Wounds = append(u.Wounds, newWound)
-	}
-
-	if u.Type == unitCow && u.Exists {
-		if u.Udder < fullUdderAmount && u.Command != cmdUFlee {
-			barnX, barnY, foundBarn := findNearestBarnMilkingSpot(u, bState)
-			if foundBarn {
-				cmd := &command{
-					ActionType:          cmdUFlee,
-					TargetX:             barnX,
-					TargetY:             barnY,
-					InteractionTargetID: 0,
-				}
-				u.addUnitCommand(cmd, bState)
-				log.Printf("unit %d (COW): Otrzymała obrażenia, ucieka do obory na (%d,%d).", u.ID, barnX, barnY)
-			} else {
-				log.Printf("unit %d (COW): Otrzymała obrażenia, ale nie znalazła obory do ucieczki. ", u.ID)
-			}
-		}
-	}
-
-	// Sprawdzamy, czy jednostka została zabita
-	if u.HP == 0 {
-		u.Exists = false
-
-		// @todo: to nie powinno w ogóle być w jednostce, a tam obok aktualizowania
-		//  budynków. Bo mamy dostęp do potrzebnych rzeczy.
-		// Zabita jednostka nie powinna zliczać się do górnej granicy ludności
-		bState.decreasePopulation(u.Owner)
-
-		occupiedTile := &bState.Board.Tiles[u.X][u.Y]
-		if occupiedTile.Unit == u {
-			occupiedTile.Unit = nil
-		}
-
-		bState.createCorpses(u)
-		u.unregisterFromBuilding()
-		log.Printf("Jednostka %d została zabita!", u.ID)
-	}
+	createWound(finalDamage, u)
 }
 
 func (u *unit) unregisterFromBuilding() {
