@@ -134,7 +134,6 @@ func (playerS *playerState) handleProductionCommand(cmd *command, bState *battle
 	// 2. Wykonanie
 	// Jest to natychmiastowe wykonanie więc raczej nie powinno być potrzeby dalszego
 	// sprawdzania.
-	fmt.Print("Wchodzę w tryProduceUnit")
 	bState.tryProduceUnit(unitType(cmd.CreateType), execBld)
 }
 
