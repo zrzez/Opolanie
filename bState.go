@@ -402,14 +402,11 @@ func (bState *battleState) tryProduceUnit(newUnitType unitType, bld *building) {
 	ownerState := bState.getPlayerState(bld.Owner)
 	if ownerState == nil {
 		// Wypadałoby coś tutaj zrobić, bo to krytyczny błąd
-		fmt.Print("ownerState == nil")
-
 		return
 	}
 
 	// 4. Tworzymy jednostkę
 	coords, _ := bState.Board.electSpawnTile(bld)
-	fmt.Println("wchodzę w createUnit")
 	bState.createUnit(newUnitType, coords, bld)
 
 	// 5. Pobieramy mleko za jednostkę
@@ -419,8 +416,6 @@ func (bState *battleState) tryProduceUnit(newUnitType unitType, bld *building) {
 // To nie powinna być metoda budynku tylko bState lub board ponieważ w tej chwili
 // budynek zna szczegóły tworzenia jednostek, a nie powinien.
 func (bState *battleState) createUnit(unitType unitType, coords point, bld *building) {
-	fmt.Print("jestem w createUnit\n")
-	fmt.Printf("Chcę stworzyć jednostkę od ID %d\n", bState.NextUnitID)
 	newUnit := bState.initUnit(unitType, coords.X, coords.Y, bState.NextUnitID)
 	bState.NextUnitID++
 
@@ -430,7 +425,6 @@ func (bState *battleState) createUnit(unitType unitType, coords point, bld *buil
 	bState.Board.Tiles[newUnit.X][newUnit.Y].Unit = newUnit
 	bState.Units = append(bState.Units, newUnit)
 
-	fmt.Print("Rejestruję jednostkę w budynku\n")
 	bld.registerUnit(newUnit.ID)
 
 	ownerState := bState.getPlayerState(bld.Owner)

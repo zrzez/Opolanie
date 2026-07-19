@@ -351,7 +351,7 @@ func findNearestEnemyExtended(seeker *unit, bState *battleState) (*unit, *buildi
 		if u == nil || !u.Exists || u.Owner == seeker.Owner {
 			continue
 		}
-		distance := float64(seeker.calculateDistanceToTarget(&combatTarget{Unit: u}, bState.Board))
+		distance := float64(seeker.calculateDistanceToTarget(&combatTarget{Unit: u}))
 
 		if distance > float64(seeker.SightRange) || distance == float64(math.MaxInt32) {
 			continue

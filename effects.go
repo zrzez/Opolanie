@@ -147,7 +147,7 @@ func burningTileEffect(bState *battleState) {
 
 			// Co osiem klatek dodatkowe obrażenia od ognia.
 			if bState.GlobalFrameCounter%8 == 0 {
-				burningTile.applyFireDamage(bState)
+				burningTile.applyFireDamage()
 			}
 
 		// Jeśli kafelek się już nie pali, to można przejść do zarządzania popiołem
@@ -164,7 +164,7 @@ func ghostEffect(bState *battleState) {
 			ghostTile.GhostEffectCounter--
 			// 2. Zadaję obrażenia
 			if ghostTile.Unit != nil && ghostTile.Unit.Exists {
-				ghostTile.Unit.takeDamage(ghostTile.GhostDamage, bState)
+				ghostTile.Unit.takeDamage(ghostTile.GhostDamage)
 			}
 		} else {
 			ghostTile.GhostEffect = false
@@ -212,7 +212,7 @@ func fallingTreeEffect(bState *battleState) {
 						adjacentTile.treeFall(&bState.FallingTreesList)
 					} else {
 						// Lub zadajemy obrażenia
-						adjacentTile.applyFallingTreeDamage(bState)
+						adjacentTile.applyFallingTreeDamage()
 					}
 				}
 

@@ -440,11 +440,10 @@ type battleState struct {
 	CampaignData     campaignData // Zawiera rzeczy związane wyprawą i obecną bitwą
 
 	// === PRZEDMIOTY I JEDNOSTKI NA MAPIE ===
-	Units          []*unit     // Żyjące jednostki
-	Buildings      []*building // Działające budynki
-	NextUnitID     UnitID      // Licznik do tworzenia nowych identyfikatorów dla jednostek
-	NextBuildingID BuildingID  // Licznik do tworzenia nowych identyfikatorów dla budynków
-	// NextUniqueObjectID ObjectID               // Ogólny licznik identyfikatorów dla wszystkich.
+	Units              []*unit                // Żyjące jednostki
+	Buildings          []*building            // Działające budynki
+	NextUnitID         UnitID                 // Licznik do tworzenia nowych identyfikatorów dla jednostek
+	NextBuildingID     BuildingID             // Licznik do tworzenia nowych identyfikatorów dla budynków
 	Board              *boardData             // Wszystko co związane z przechowywaniem współrzędnych na planszy
 	Projectiles        []*projectile          // Pociski
 	HealingShrines     []point                // Wykaz współrzędnych miejsc leczenia

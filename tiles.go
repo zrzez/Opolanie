@@ -286,13 +286,13 @@ func (t *tile) processBurntTree(bState *battleState) {
 }
 
 // Odpowiada za zadanie obrażeń jednostce lub budynkowi, który się znajduje na danym kafelku.
-func (t *tile) applyFireDamage(bState *battleState) {
+func (t *tile) applyFireDamage() {
 	if !t.IsBurning {
 		return
 	}
 
 	if t.Unit != nil && t.Unit.Exists {
-		t.Unit.takeDamage(burnDamage, bState)
+		t.Unit.takeDamage(burnDamage)
 	}
 
 	if t.Building != nil && t.Building.Exists {
@@ -301,9 +301,9 @@ func (t *tile) applyFireDamage(bState *battleState) {
 }
 
 // Odpowiada za zadanie obrażeń jednostce lub budynkowi, który się znajduje na danym kafelku.
-func (t *tile) applyFallingTreeDamage(bState *battleState) {
+func (t *tile) applyFallingTreeDamage() {
 	if t.Unit != nil && t.Unit.Exists {
-		t.Unit.takeDamage(fallingTreeDamage, bState)
+		t.Unit.takeDamage(fallingTreeDamage)
 	}
 
 	if t.Building != nil && t.Building.Exists {

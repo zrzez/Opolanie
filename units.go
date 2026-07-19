@@ -363,7 +363,7 @@ func (u *unit) isLightType() bool {
 		u.Type != unitBear && u.Type != unitUnknown && u.Type != unitCrossbowman
 }
 
-func (u *unit) takeDamage(damage uint16, bState *battleState) {
+func (u *unit) takeDamage(damage uint16) {
 	// 0. Sprawdzamy, czy jednostka jest chroniona przed obrażeniami.
 	if u.hasMagicShield {
 		return

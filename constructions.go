@@ -6,20 +6,24 @@ import (
 
 // constructions.go
 
-func (bld *building) repair(amount uint16) {
+func (bld *building) repair(amount uint16) bool {
 	if !bld.Exists || bld.HP >= bld.MaxHP {
-		return
+		return false
 	}
 
 	bld.increaseHP(amount)
+
+	return true
 }
 
-func (bld *building) build(amount uint16) {
+func (bld *building) build(amount uint16) bool {
 	if !bld.Exists || !bld.IsUnderConstruction {
-		return
+		return false
 	}
 
 	bld.increaseHP(amount)
+
+	return true
 }
 
 // increaseHP dla każdej istniejącej budowli zwiększa PŻ o amount

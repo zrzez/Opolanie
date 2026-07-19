@@ -137,7 +137,18 @@ func (u *unit) executeStandardUnitCommand(resolver objectResolver, board *boardD
 			}
 
 			u.clearPath()
-			u.build(bState)
+			_, targetBuilding := bState.getObjectByID(u.TargetID)
+
+			var amount uint16
+
+			switch u.Owner {
+			case bState.PlayerID:
+				amount = repairAmountPlayer
+			case bState.AIPlayerID:
+				amount = repairAmountAI
+			}
+
+			u.build(targetBuilding, amount)
 		} else {
 			u.State = stateMoving
 
@@ -157,7 +168,18 @@ func (u *unit) executeStandardUnitCommand(resolver objectResolver, board *boardD
 			}
 
 			u.clearPath()
-			u.repair(bState)
+			_, targetBuilding := bState.getObjectByID(u.TargetID)
+
+			var amount uint16
+
+			switch u.Owner {
+			case bState.PlayerID:
+				amount = repairAmountPlayer
+			case bState.AIPlayerID:
+				amount = repairAmountAI
+			}
+
+			u.repair(targetBuilding, amount)
 		} else {
 			u.State = stateMoving
 
@@ -187,7 +209,7 @@ func (u *unit) canAttackTargetFromCurrentPosition(resolver objectResolver, board
 
 	log.Println("Obliczam odległość")
 
-	distance := u.calculateDistanceToTarget(target, board)
+	distance := u.calculateDistanceToTarget(target)
 
 	log.Printf("Odległość obliczona %d", distance)
 	log.Println(distance <= u.AttackRange)
@@ -195,7 +217,9 @@ func (u *unit) canAttackTargetFromCurrentPosition(resolver objectResolver, board
 	return distance <= u.AttackRange
 }
 
-func (u *unit) calculateDistanceToTarget(target *combatTarget, board *boardData) uint8 {
+// @reminder: o ile kojarzęto tutaj korzystam ze złego sposobu obliczania odległości.
+//    Powinna być odległość Czebyszewa.
+func (u *unit) calculateDistanceToTarget(target *combatTarget) uint8 {
 	if target.Unit != nil {
 		return uint8(math.Max(
 			math.Abs(float64(int(u.X)-int(target.Unit.X))),
@@ -379,8 +403,8 @@ func (u *unit) validateAttackTarget(resolver objectResolver, board *boardData) (
 	return target, nil
 }
 
-func (u *unit) canAttackTarget(target *combatTarget, board *boardData) bool {
-	distance := u.calculateDistanceToTarget(target, board)
+func (u *unit) canAttackTarget(target *combatTarget) bool {
+	distance := u.calculateDistanceToTarget(target)
 
 	return distance <= u.AttackRange
 }
@@ -644,7 +668,7 @@ func (u *unit) executeActionBasedOnDistance(resolver objectResolver, board *boar
 		return
 	}
 
-	distance := u.calculateDistanceToTarget(target, board)
+	distance := u.calculateDistanceToTarget(target)
 	u.executeActionByDistance(distance, bState)
 }
 
@@ -760,10 +784,31 @@ func (u *unit) handleTargetReached(resolver objectResolver, board *boardData, bS
 		u.State = stateCastingSpell
 	case cmdUBuild:
 		u.State = stateBuilding
-		u.build(bState)
+		_, targetBuilding := bState.getObjectByID(u.TargetID)
+
+		var amount uint16
+
+		switch u.Owner {
+		case bState.PlayerID:
+			amount = repairAmountPlayer
+		case bState.AIPlayerID:
+			amount = repairAmountAI
+		}
+
+		u.build(targetBuilding, amount)
 	case cmdURepair:
 		u.State = stateRepairing
-		u.repair(bState)
+		_, targetBuilding := bState.getObjectByID(u.TargetID)
+
+		var amount uint16
+
+		switch u.Owner {
+		case bState.PlayerID:
+			amount = repairAmountPlayer
+		case bState.AIPlayerID:
+			amount = repairAmountAI
+		}
+		u.repair(targetBuilding, amount)
 	default:
 		u.setIdle()
 	}

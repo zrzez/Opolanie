@@ -298,6 +298,9 @@ func (board *boardData) electSpawnTile(bld *building) (point, bool) {
 	return board.getFreeTileInList(coords)
 }
 
+// @reminder: repair używa tego do „odnajdywania drogi”.
+// @reminder: build używa tego do „odnajdywania drogi”.
+// @reminder: calculateDistanceToTarget używa tego do „odnajdywania drogi”.
 func getDistanceToUnit(bldType buildingType, bldTopLeft point, unitX, unitY uint8) uint8 {
 	var minX, minY, maxX, maxY uint8
 
@@ -349,6 +352,7 @@ func getDistanceToUnit(bldType buildingType, bldTopLeft point, unitX, unitY uint
 
 // @reminder: funkcja przyjmuje aż 5 argumentów, więc można by przekazać strukturę z celami zamiast każdy osobno.
 //    Nie wiem, czy tak byłoby lepiej dlatego tak nie robię. Może w przyszłości się zdecyduję na zmianę.
+// @reminder: mogę użyć combatTarget i odchudzić sygnaturę.
 func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, targetTile *point, board *boardData) ([]point, bool) {
 	var validCoords []point // wykaz prawidłowych kafelków, które można odwiedzić.
 

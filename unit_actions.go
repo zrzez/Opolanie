@@ -31,7 +31,7 @@ func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleS
 		return
 	}
 
-	if u.canAttackTarget(target, board) {
+	if u.canAttackTarget(target) {
 		log.Printf("units.go attack weszliśmy do canAttackTarget")
 
 		u.performDirectAttack(target, bState)
@@ -92,7 +92,7 @@ func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, bState *b
 	switch {
 	case target.Unit != nil && target.Unit.Exists:
 		// @reminder: ↓↓↓↓↓↓↓ Bez ogarnięcia tej metody nie pozbędę się bState z sygnatury!
-		target.Unit.takeDamage(damage, bState)
+		target.Unit.takeDamage(damage)
 		handleGainExperience(u, target.Unit, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
 	case target.Building != nil && target.Building.Exists:
 		target.Building.takeDamage(damage)
@@ -104,75 +104,15 @@ func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, bState *b
 	}
 }
 
-func (u *unit) repair(bState *battleState) {
-	// Bezpiecznik, bo cel mógł się zmienić w międzyczasie
-	_, targetBuilding := bState.getObjectByID(u.TargetID)
-	validRepairTarget, _ := validateRepairContext(u, targetBuilding)
-
-	if !validRepairTarget {
-		u.setIdleWithReason("Nie można naprawić budynku")
-
-		return
-	}
-
-	// Szukamy drogi do celu
-	distance := getDistanceToUnit(targetBuilding.Type, targetBuilding.OccupiedTiles[0], u.X, u.Y)
-
-	var amount uint16
-
-	switch u.Owner {
-	case bState.PlayerID:
-		amount = repairAmountPlayer
-	case bState.AIPlayerID:
-		amount = repairAmountAI
-	}
-
-	if distance == 1 {
-		targetBuilding.repair(amount)
+func (u *unit) repair(targetBuilding *building, amount uint16) {
+	if !targetBuilding.repair(amount) {
+		u.setIdleWithReason("naprawa ukończona")
 	}
 }
 
-func (u *unit) build(bState *battleState) {
-	// Bezpiecznik, bo budowa mogą się zmienić w międzyczasie
-	_, targetBuilding := bState.getObjectByID(u.TargetID)
-	validBuildTarget, _ := validateBuildingContext(u, targetBuilding)
-
-	if !validBuildTarget {
-		u.setIdleWithReason("Nie można budować")
-
-		return
-	}
-
-	// Szukamy drogi do celu
-	distance := getDistanceToUnit(targetBuilding.Type, targetBuilding.OccupiedTiles[0], u.X, u.Y)
-
-	var amount uint16
-
-	switch u.Owner {
-	case bState.PlayerID:
-		amount = repairAmountPlayer
-	case bState.AIPlayerID:
-		amount = repairAmountAI
-	}
-
-	if distance == 1 {
-		targetBuilding.build(amount)
-	}
-}
-
-func (u *unit) castMagicShield() {
-	// 0. Jeśli już jest magiczna tarcza, to nie można rzucić nowej
-	if u.hasMagicShield {
-		return
-	}
-	// 1. Odejmujemy potrzebną manę
-	// @todo: sprawdź ile rzeczywiście kosztowała
-	if u.tryToDecreaseMana(spellCostMagicShield) {
-		// 2. aktywujemy efekt
-		u.hasMagicShield = true
-		// 3. Ustalamy ile ma trwać
-		// @todo: sprawdź ile rzeczywiście trwała
-		u.MagicShieldCooldown = spellDurationMagicShield
+func (u *unit) build(targetBuilding *building, amount uint16) {
+	if !targetBuilding.build(amount) {
+		u.setIdleWithReason("budowa ukończona")
 	}
 }
 
@@ -214,6 +154,23 @@ func (u *unit) castSpell(resolver objectResolver, board *boardData, pathfindingB
 
 	default:
 		// Nigdy nie powinno się przytafić
+	}
+}
+
+// @reminder: przechodzenie w idle powinno być inaczej załatwione.
+func (u *unit) castMagicShield() {
+	// 0. Jeśli już jest magiczna tarcza, to nie można rzucić nowej
+	if u.hasMagicShield {
+		return
+	}
+	// 1. Odejmujemy potrzebną manę
+	// @todo: sprawdź ile rzeczywiście kosztowała
+	if u.tryToDecreaseMana(spellCostMagicShield) {
+		// 2. aktywujemy efekt
+		u.hasMagicShield = true
+		// 3. Ustalamy ile ma trwać
+		// @todo: sprawdź ile rzeczywiście trwała
+		u.MagicShieldCooldown = spellDurationMagicShield
 	}
 }
 
@@ -284,8 +241,7 @@ func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID Play
 	return true
 }
 
-// ! Całość wydaje się obsługiwać jedynie magicShower! Dzwine, bo wydawało mi się, że każdy czar
-//  Tutaj idzie. Może nawet lepiej, bo rozwiązuje to wtedy sprawę z zerowymi interactionTarget.
+// @reminder: przechodzenie w idle powinno być inaczej załatwione.
 func (u *unit) castMagicShower(board *boardData, humanPID, aiPID PlayerID, projs *[]*projectile) {
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
@@ -308,6 +264,8 @@ func (u *unit) castMagicShower(board *boardData, humanPID, aiPID PlayerID, projs
 }
 
 // @reminder: napisane na czuja, pewnie nie działa.
+// @todo: ogarnij
+// @reminder: przechodzenie w idle powinno być inaczej załatwione.
 func (u *unit) castMagicSight(board *boardData) {
 	if u.Mana >= spellCostMagicSight {
 		u.Mana -= spellCostMagicSight

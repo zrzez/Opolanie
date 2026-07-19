@@ -137,7 +137,7 @@ func (p *projectile) hit(bState *battleState) {
 		isEnemy := hitUnit.Owner != p.Owner
 
 		if isEnemy || p.AllowFriendlyFire {
-			hitUnit.takeDamage(p.Damage, bState)
+			hitUnit.takeDamage(p.Damage)
 		}
 	} else if targetTile.Building != nil && targetTile.Building.Exists {
 		// 2. Trafienie budynku
