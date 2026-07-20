@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math"
 	"math/rand"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -232,102 +231,6 @@ func (bState *battleState) createCorpses(u *unit) {
 	}
 
 	bState.CorpsesList = append(bState.CorpsesList, currentCorpse)
-}
-
-func (bState *battleState) assignGroupCommand(
-	command commandType, mainTargetX, mainTargetY uint8, mainTargetID ObjectID,
-	selectedUnits []*unit,
-) {
-	if len(selectedUnits) == 0 {
-		return
-	}
-
-	targetX, targetY := bState.resolveActualTarget(mainTargetX, mainTargetY, mainTargetID)
-
-	if len(selectedUnits) <= 4 {
-		bState.assignSmallGroupTargets(selectedUnits, command, targetX, targetY, mainTargetID)
-		return
-	}
-
-	bState.assignScatteredGroupTargets(selectedUnits, command, targetX, targetY, mainTargetID)
-}
-
-func (bState *battleState) resolveActualTarget(mainTargetX, mainTargetY uint8, mainTargetID ObjectID) (uint8, uint8) {
-	if mainTargetID == 0 {
-		return mainTargetX, mainTargetY
-	}
-
-	targetUnit, targetBuilding := bState.getObjectByID(mainTargetID)
-
-	if targetUnit != nil && targetUnit.Exists {
-		return targetUnit.X, targetUnit.Y
-	}
-
-	if targetBuilding != nil && targetBuilding.Exists {
-		centerX, centerY, ok := targetBuilding.getCenter()
-		if ok {
-			return centerX, centerY
-		}
-	}
-
-	return mainTargetX, mainTargetY
-}
-
-func (bState *battleState) assignSmallGroupTargets(units []*unit, cmdType commandType, targetX, targetY uint8, targetID ObjectID) {
-	for _, currentUnit := range units {
-		cmd := &command{
-			ActionType:          cmdType,
-			TargetX:             targetX,
-			TargetY:             targetY,
-			InteractionTargetID: targetID,
-		}
-		currentUnit.addUnitCommand(cmd, bState)
-	}
-}
-
-func (bState *battleState) assignScatteredGroupTargets(units []*unit, cmdType commandType, targetX, targetY uint8, targetID ObjectID) {
-	positions := bState.generateFormationPositions(targetX, targetY, uint8(len(units)))
-
-	for i, currentUnit := range units {
-		assignedX, assignedY := targetX, targetY
-
-		if i < len(positions) {
-			assignedX = positions[i].X
-			assignedY = positions[i].Y
-		}
-		cmd := &command{
-			ActionType:          cmdType,
-			TargetX:             assignedX,
-			TargetY:             assignedY,
-			InteractionTargetID: targetID,
-		}
-
-		currentUnit.addUnitCommand(cmd, bState)
-	}
-}
-
-func (bState *battleState) generateFormationPositions(centerX, centerY, count uint8) []point {
-	positions := make([]point, 0, count)
-	cols := uint8(math.Sqrt(float64(count))) + 1
-
-	for i := uint8(0); i < count; i++ {
-		row := i / cols
-		col := i % cols
-
-		offsetX := col - cols/2
-		offsetY := row - count/(cols*2)
-
-		x := centerX + offsetX
-		y := centerY + offsetY
-
-		if x < boardMaxX && y < boardMaxY && isWalkable(bState.Board, x, y) {
-			positions = append(positions, point{X: x, Y: y})
-		} else {
-			positions = append(positions, point{X: centerX, Y: centerY})
-		}
-	}
-
-	return positions
 }
 
 func (bState *battleState) canProduceUnit(unitType unitType, bld *building) (bool, uint8) {

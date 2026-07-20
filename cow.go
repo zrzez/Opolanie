@@ -29,7 +29,7 @@ func (u *unit) handleCowBehavior(resolver objectResolver, board *boardData, path
 
 	// 0. Ucieczka
 	if u.Command == cmdUFlee {
-		u.handleCowFlee(bState)
+		bState.handleCowFlee(u)
 	}
 
 	// 1. Tryb: "Stać bezmyślnie", rozkaz od gracza
@@ -309,7 +309,7 @@ func (u *unit) addAndMove(resolver objectResolver, board *boardData, pathfinding
 			TargetY:             y,
 			InteractionTargetID: id,
 		}
-		u.addUnitCommand(cmd, bState)
+		u.addUnitCommand(cmd, bState.Board, bState, bState)
 	}
 
 	u.move(resolver, board, pathfindingBudget, bState)
@@ -560,7 +560,7 @@ func findReachableGrass(u *unit, bState *battleState, originX, originY, radius u
 	return 0, 0, false
 }
 
-func (u *unit) handleCowFlee(bState *battleState) {
+func (bState *battleState) handleCowFlee(u *unit) {
 	if u.Type == unitCow && u.Exists {
 		if u.Udder < fullUdderAmount && u.Command != cmdUFlee {
 			barnX, barnY, foundBarn := findNearestBarnMilkingSpot(u, bState)
@@ -571,7 +571,7 @@ func (u *unit) handleCowFlee(bState *battleState) {
 					TargetY:             barnY,
 					InteractionTargetID: 0,
 				}
-				u.addUnitCommand(cmd, bState)
+				u.addUnitCommand(cmd, bState.Board, bState, bState)
 				log.Printf("unit %d (COW): Otrzymała obrażenia, ucieka do obory na (%d,%d).", u.ID, barnX, barnY)
 			} else {
 				log.Printf("unit %d (COW): Otrzymała obrażenia, ale nie znalazła obory do ucieczki. ", u.ID)

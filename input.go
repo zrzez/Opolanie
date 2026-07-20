@@ -474,7 +474,7 @@ func handleGameShortcuts(bState *battleState) bool {
 
 		if rl.IsKeyPressed(rl.KeyS) {
 			log.Println("SKRÓT: Komenda STOP dla jednostki")
-			selectedUnit.addUnitCommand(bState.PendingCommand, bState) // zamiast cmd* daję pendingcommand, może się nie popsuje
+			selectedUnit.addUnitCommand(bState.PendingCommand, bState.Board, bState, bState) // zamiast cmd* daję pendingcommand, może się nie popsuje
 			//↑↑↑ targetID = 0
 			return true
 		}

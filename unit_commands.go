@@ -12,7 +12,7 @@ const palisadeStrategicBuildingProximity = 10
 // Próba rozplątania units.go, tutaj powinny trafiać funkcje związane z
 // przetwarzaniem rozkazów przez jednoski.
 
-func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
+func (u *unit) addUnitCommand(cmd *command, board *boardData, resolver objectResolver, bState *battleState) {
 	log.Printf("INFO: unit.go dodano rozkaz %d.", cmd.ActionType)
 	// ŁATANIE DZIURY W KOMPLETOWANIU ROZKAÓW DLA JEDNOSTEK
 	// @reminder: Łatanie dziury w kompletowaniu rozkazów dla jednostek
@@ -34,17 +34,16 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 		}
 	} else {
 		// Nie wymaga interakcji, np. cmdMove, to cel jest miejscem w które się udajemy
-		// @todo: sprawdź, czemu tutaj nie wpadają zaklęcia spellMagicShield
-		// oraz spellMagicSight.
 		approach = &point{X: cmd.TargetX, Y: cmd.TargetY}
 	}
 
-	// @todo: @reminder: sprawdzenia powinny się odbywać w castle.go
-	if !u.validateCommand(cmd.ActionType, cmd.InteractionTargetID, cmd.TargetX, cmd.TargetY, bState) {
-		log.Printf("INFO: unit.go rozkaz nie przeszedł sprawdzenia %t.",
-			u.validateCommand(cmd.ActionType, cmd.InteractionTargetID, cmd.TargetX, cmd.TargetY, bState))
+	// ! tutaj się zastanawiam, co zrobić
+	if cmd.ActionType == cmdUAttack {
+		if !u.canAttack(cmd.InteractionTargetID, cmd.TargetX, cmd.TargetY, board, resolver) {
+			fmt.Print("rozkaz nie przeszedł sprawdzenia canAttack w addUnitCommand")
 
-		return
+			return
+		}
 	}
 
 	// Przekazujemy cel oraz podejście
@@ -91,6 +90,9 @@ func (u *unit) applyCommandState(command commandType) {
 		u.Command = cmdUIdle
 	case cmdUCastSpell:
 		u.State = stateCastingSpell
+		u.AnimationType = "fight"
+		u.AnimationFrame = 3
+		u.AnimationCounter = 0
 	case cmdUGraze:
 		u.State = stateGrazing
 	case cmdUBuild:
@@ -304,27 +306,19 @@ func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, bS
 	return findBestReachableTile(u, validCoords, bState.Board)
 }
 
-// @todo: ogarnij, co tu się dzieje, bo jednostka nie powinna sprawdzać poprawności.
-func (u *unit) validateCommand(command commandType, targetID ObjectID, intentionX, intentionY uint8, bState *battleState) bool {
-	switch command {
-	case cmdUAttack:
-		return u.canAttack(targetID, intentionX, intentionY, bState)
-	default:
-		return true
-	}
-}
-
 // @todo: nie powinna to być metoda jednostki, bo to sprawdzanie poprawności
-func (u *unit) canAttack(targetID ObjectID, intentionX, intentionY uint8, bState *battleState) bool {
+// ! albo przekazuję objectResolver albo combattarget? coś mi tutaj nie pasuje.
+func (u *unit) canAttack(targetID ObjectID, intentionX, intentionY uint8, board *boardData, resolver objectResolver) bool {
 	// Drzewa
 	// dany kafelek musi istnieć więc nie robię != nil
+	// ! sprawdzenie raczej bez sensu, bo nie tworzymy sobie współrzędnych bez sensu
 	if targetID == 0 {
 		if u.TargetX >= boardMaxX || u.TargetY >= boardMaxY {
 			fmt.Print("DUPA BOARDMAX")
 			return false
 		}
 
-		targetTile := &bState.Board.Tiles[intentionX][intentionY]
+		targetTile := &board.Tiles[intentionX][intentionY]
 
 		if targetTile.isTree() {
 			fmt.Print("DUPA TO NIE DRZEWO")
@@ -336,7 +330,7 @@ func (u *unit) canAttack(targetID ObjectID, intentionX, intentionY uint8, bState
 		return false
 	}
 
-	targetUnit, targetBuilding := bState.getObjectByID(ObjectID(targetID))
+	targetUnit, targetBuilding := resolver.getObjectByID(targetID)
 
 	// Jednostki
 	// musi istnieć
@@ -652,7 +646,7 @@ func (u *unit) startMoveToAttack(bState *battleState) {
 		TargetY:             u.TargetY,
 		InteractionTargetID: u.TargetID,
 	}
-	u.addUnitCommand(cmd, bState)
+	u.addUnitCommand(cmd, bState.Board, bState, bState)
 	u.State = stateMoving
 	u.AnimationType = "walk"
 
@@ -698,7 +692,7 @@ func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bState *battl
 		InteractionTargetID: u.TargetID,
 	}
 
-	u.addUnitCommand(cmd, bState)
+	u.addUnitCommand(cmd, bState.Board, bState, bState)
 
 	u.State = stateAttacking
 	u.AnimationType = "fight"
@@ -808,6 +802,7 @@ func (u *unit) handleTargetReached(resolver objectResolver, board *boardData, bS
 		case bState.AIPlayerID:
 			amount = repairAmountAI
 		}
+
 		u.repair(targetBuilding, amount)
 	default:
 		u.setIdle()

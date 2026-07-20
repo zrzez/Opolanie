@@ -518,14 +518,11 @@ func (bState *battleState) updateUnits() {
 			continue
 		}
 
-		currentUnit.updateUnit(bState)
+		bState.updateUnit(currentUnit)
+		updateWounds(currentUnit)
 
 		if currentUnit.HP == 0 {
 			currentUnit.Exists = false
-
-			// @todo: to nie powinno w ogóle być w jednostce, a tam obok aktualizowania
-			//  budynków. Bo mamy dostęp do potrzebnych rzeczy.
-			// Zabita jednostka nie powinna zliczać się do górnej granicy ludności
 			bState.decreasePopulation(currentUnit.Owner)
 
 			occupiedTile := &bState.Board.Tiles[currentUnit.X][currentUnit.Y]
@@ -562,9 +559,9 @@ func (bState *battleState) updateBuildings() {
 // Odświeżane jednostek
 // ================
 
-func (u *unit) updateUnit(bState *battleState) {
+func (bState *battleState) updateUnit(u *unit) {
 	if u.wasAttacked {
-		u.handleCowFlee(bState)
+		bState.handleCowFlee(u)
 		u.wasAttacked = false
 	}
 
@@ -573,26 +570,6 @@ func (u *unit) updateUnit(bState *battleState) {
 	var resolver objectResolver = bState
 
 	pathfindingBudget := &bState.PathfindingBudget
-
-	// Aktualizowanie ran
-	// @todo przenieś do osobnej funkcji, szkoda zajmować tutaj miejsce
-	// !@todo: sprawdź, czy układ ran nie jest już obecny gdzie indziej, bo takie mam przeczucie
-	nextFreeIndex := 0
-
-	for scanIndex := range u.Wounds {
-		currentWound := &u.Wounds[scanIndex]
-		currentWound.Timer--
-
-		if currentWound.Timer > 1 {
-			if scanIndex != nextFreeIndex {
-				u.Wounds[nextFreeIndex] = *currentWound
-			}
-
-			nextFreeIndex++
-		}
-	}
-
-	u.Wounds = u.Wounds[:nextFreeIndex]
 
 	u.handleAttackCooldown(bState.GlobalFrameCounter)
 
@@ -618,6 +595,25 @@ func (u *unit) updateUnit(bState *battleState) {
 
 	u.executeCommandAction(resolver, board, pathfindingBudget, bState)
 	u.resetDelayIfActive()
+}
+
+func updateWounds(u *unit) {
+	nextFreeIndex := 0
+
+	for scanIndex := range u.Wounds {
+		currentWound := &u.Wounds[scanIndex]
+		currentWound.Timer--
+
+		if currentWound.Timer > 1 {
+			if scanIndex != nextFreeIndex {
+				u.Wounds[nextFreeIndex] = *currentWound
+			}
+
+			nextFreeIndex++
+		}
+	}
+
+	u.Wounds = u.Wounds[:nextFreeIndex]
 }
 
 // Ustawia tekstury w zależności od stopnia zaawansowania budowy.

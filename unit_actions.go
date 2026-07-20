@@ -7,8 +7,6 @@ import (
 
 // attack zadaje obrażenia celowi lub ustawia ruch w jego kierunku.
 func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleState) {
-	log.Printf("units.go attack weszliśmy do metody")
-
 	target, err := u.validateAttackTarget(resolver, board)
 	if err != nil {
 		u.setIdleWithReason(err.Error())
@@ -32,29 +30,28 @@ func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleS
 	}
 
 	if u.canAttackTarget(target) {
-		log.Printf("units.go attack weszliśmy do canAttackTarget")
+		u.performAttack(target, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID,
+			&bState.Projectiles, &bState.FallingTreesList)
 
-		u.performDirectAttack(target, bState)
-	} else {
-		log.Printf("units.go attack weszliśmy do !canAttackTarget.")
-
-		// Jeśli cel oddalił się, gonimy go
-		u.startMoveToAttack(bState)
+		return
 	}
+
+	// Jeśli cel oddalił się, gonimy go
+	u.startMoveToAttack(bState)
 }
 
-func (u *unit) performDirectAttack(target *combatTarget, bState *battleState) {
+func (u *unit) performAttack(target *combatTarget, hPID, aiPID PlayerID, projs *[]*projectile, fallingTrees *[]*tile) {
 	if u.AttackRange > 1 {
-		u.performRangedAttack(target, u.Damage, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID, &bState.Projectiles)
+		u.performRangedAttack(target, u.Damage, hPID, aiPID, projs)
 	} else {
-		u.performMeleeAttack(target, u.Damage, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID, &bState.FallingTreesList)
+		u.performMeleeAttack(target, u.Damage, hPID, aiPID, fallingTrees)
 	}
 
 	u.setAttackTimings()
 	u.handleTargetPostAttack(target.Unit, target.Building)
 }
 
-func (u *unit) performRangedAttack(target *combatTarget, damage uint16, humanPID, aiPID PlayerID, projs *[]*projectile) {
+func (u *unit) performRangedAttack(target *combatTarget, damage uint16, hPID, aiPID PlayerID, projs *[]*projectile) {
 	targetCoords, ok := u.getRangedTargetCoords(target)
 	if !ok {
 		log.Printf("UWAGA: jednostka %d: nie udało się określić koordynatów celu dla pocisku", u.ID)
@@ -83,7 +80,7 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, humanPID
 	// Za stworzenie jakiegokolwiek pocisku jest przyznawane doświadczenie.
 	// Muszę dodać logikę rozdziało pomięcy celem jednostką a celem budynkiem.
 	// u.gainExperience tutaj!
-	handleGainExperience(u, target.Unit, humanPID, aiPID)
+	handleGainExperience(u, target.Unit, hPID, aiPID)
 
 	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, u.TargetX, u.TargetY, damage)
 }
