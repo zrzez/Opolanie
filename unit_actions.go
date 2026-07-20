@@ -37,7 +37,23 @@ func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleS
 	}
 
 	// Jeśli cel oddalił się, gonimy go
-	u.startMoveToAttack(bState)
+	var intention *point
+
+	if u.TargetID == 0 {
+		intention = &point{X: u.TargetX, Y: u.TargetY}
+	}
+
+	whereToGo, err := u.findApproachTileForTarget(intention, u.TargetID, board, resolver)
+	if err != nil {
+		return
+	}
+
+	u.invalidatePathForRecalculation()
+
+	u.State = stateMoving
+	u.AnimationType = "walk"
+	u.ApproachX = whereToGo.X
+	u.ApproachY = whereToGo.Y
 }
 
 func (u *unit) performAttack(target *combatTarget, hPID, aiPID PlayerID, projs *[]*projectile, fallingTrees *[]*tile) {

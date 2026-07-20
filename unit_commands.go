@@ -316,6 +316,7 @@ func (u *unit) canAttack(targetID ObjectID, intentionX, intentionY uint8, board 
 	if targetID == 0 {
 		if u.TargetX >= boardMaxX || u.TargetY >= boardMaxY {
 			fmt.Print("DUPA BOARDMAX")
+
 			return false
 		}
 
@@ -323,6 +324,7 @@ func (u *unit) canAttack(targetID ObjectID, intentionX, intentionY uint8, board 
 
 		if targetTile.isTree() {
 			fmt.Print("DUPA TO NIE DRZEWO")
+
 			return u.canDamageTree(targetTile)
 		}
 
@@ -535,7 +537,7 @@ func (u *unit) handleTargetSearch(resolver objectResolver, board *boardData, bSt
 // @reminder: szukanie celu dla gracza i SI różnią się szczegółami, np. jednostka gracza nie napadają
 //    samoistnie na wrogie budynki.
 func (u *unit) handleTargetSearchForHumanPlayer(resolver objectResolver, board *boardData, bState *battleState) {
-	primaryTargetUnit, primaryTargetBuilding, foundPrimary := findNearestEnemyExtended(u, bState)
+	primaryTargetUnit, _, foundPrimary := findNearestEnemyExtended(u, bState)
 
 	if !foundPrimary {
 		u.setIdle()
@@ -545,12 +547,6 @@ func (u *unit) handleTargetSearchForHumanPlayer(resolver objectResolver, board *
 
 	if primaryTargetUnit != nil && primaryTargetUnit.Exists {
 		u.handleUnitTarget(primaryTargetUnit, resolver, board, bState)
-
-		return
-	}
-
-	if primaryTargetBuilding != nil && primaryTargetBuilding.Exists {
-		u.setIdle()
 
 		return
 	}
@@ -572,7 +568,7 @@ func (u *unit) handleTargetSearchForAI(resolver objectResolver, board *boardData
 			palisadeTarget := u.findNearestPalisade(bState, u.SightRange)
 
 			if palisadeTarget != nil {
-				u.handleBuildingTarget(palisadeTarget, bState)
+				u.handleBuildingTarget(palisadeTarget, board, resolver, bState)
 
 				return
 			}
@@ -581,13 +577,16 @@ func (u *unit) handleTargetSearchForAI(resolver objectResolver, board *boardData
 
 	if !foundPrimary {
 		u.setIdle()
+
 		return
 	}
 
 	if primaryTargetUnit != nil {
 		u.handleUnitTarget(primaryTargetUnit, resolver, board, bState)
-	} else {
-		u.handleBuildingTarget(primaryTargetBuilding, bState)
+	}
+
+	if primaryTargetBuilding != nil {
+		u.handleBuildingTarget(primaryTargetBuilding, board, resolver, bState)
 	}
 }
 
@@ -621,41 +620,30 @@ func (u *unit) validateTargetExists(resolver objectResolver, board *boardData) (
 
 // @todo: nie pamiętam po co to, chyba tylko do odsiania obiektów, których jednostka
 //   „nie widzi”. Tutaj trzeba będzie dać poprawkę na to, czy gracz odsłonił kafelek.
-func (u *unit) executeActionByDistance(distance uint8, bState *battleState) {
+func (u *unit) executeActionByDistance(distance uint8) {
 	if distance > u.SightRange {
-		log.Printf("DEBUG_AI: U %d: cel ID %d poza zasięgiem widzenia. IDLE", u.ID, u.TargetID)
-		u.setIdle()
-
+		u.setIdleWithReason("cel poza zasięgiem widzenia")
 		return
 	}
 
+	u.Command = cmdUAttack
+
 	if distance <= u.AttackRange {
-		log.Printf("DEBUT_AI: U %d: Odległość <= zasięg ataku. Rozpoczynam bezpośredni atak na cel ID %d.",
-			u.ID, u.TargetID)
-		u.startDirectAttack(u.TargetX, u.TargetY, bState)
+		// Cel w zasięgu, od razu przechodzimy do ataku
+		u.State = stateAttacking
+		u.AnimationType = "fight"
+		u.AnimationFrame = 0
+		u.AnimationCounter = 0
+		log.Printf("INFO: unit %d zaczyna atakować cel ID %d z miejsca.", u.ID, u.TargetID)
 	} else {
-		log.Printf("DEBUG_AI: U %d: odległość %d > zasięg ataku %d. Ruszam w kierunku %d.",
-			u.ID, distance, u.AttackRange, u.TargetID)
-		u.startMoveToAttack(bState)
+		// Cel poza zasięgiem, przechodzimy w stan ruchu do wyliczonego ApproachX/Y
+		u.State = stateMoving
+		u.AnimationType = "walk"
+		u.invalidatePathForRecalculation()
 	}
 }
 
-func (u *unit) startMoveToAttack(bState *battleState) {
-	cmd := &command{
-		ActionType:          cmdUAttack,
-		TargetX:             u.TargetX,
-		TargetY:             u.TargetY,
-		InteractionTargetID: u.TargetID,
-	}
-	u.addUnitCommand(cmd, bState.Board, bState)
-	u.State = stateMoving
-	u.AnimationType = "walk"
-
-	log.Printf("DEBUG_AI: unit %d moving to attack target %d, move to (%d,%d)",
-		u.ID, u.TargetID, u.TargetX, u.TargetY)
-}
-
-func (u *unit) executeActionBasedOnDistance(resolver objectResolver, board *boardData, bState *battleState) {
+func (u *unit) executeActionBasedOnDistance(resolver objectResolver, board *boardData) {
 	target, err := u.validateTargetExists(resolver, board)
 	if err != nil {
 		u.setIdle()
@@ -664,43 +652,7 @@ func (u *unit) executeActionBasedOnDistance(resolver objectResolver, board *boar
 	}
 
 	distance := u.calculateDistanceToTarget(target)
-	u.executeActionByDistance(distance, bState)
-}
-
-func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bState *battleState) {
-	realTargetX := placeholderX
-	realTargetY := placeholderY
-
-	if u.TargetID != 0 {
-		targetUnit, targetBld := bState.getObjectByID(u.TargetID)
-
-		if targetUnit != nil && targetUnit.Exists {
-			realTargetX = targetUnit.X
-			realTargetY = targetUnit.Y
-		} else if targetBld != nil && targetBld.Exists {
-			targetCoord, ok := getClosestOccupiedTile(&point{X: u.X, Y: u.Y}, &targetBld.OccupiedTiles)
-			if ok {
-				realTargetX = targetCoord.X
-				realTargetY = targetCoord.Y
-			}
-		}
-	}
-
-	cmd := &command{
-		ActionType:          cmdUAttack,
-		TargetX:             realTargetX,
-		TargetY:             realTargetY,
-		InteractionTargetID: u.TargetID,
-	}
-
-	u.addUnitCommand(cmd, bState.Board, bState)
-
-	u.State = stateAttacking
-	u.AnimationType = "fight"
-	u.AnimationFrame = 0
-
-	log.Printf("DEBUG_AI: unit %d attacking target %d at real pos (%d,%d)",
-		u.ID, u.TargetID, realTargetX, realTargetY)
+	u.executeActionByDistance(distance)
 }
 
 // @reminder: dla bezczynnych jednostek. Nie powinna się sama zadaniować.
@@ -746,25 +698,38 @@ func (u *unit) isReadyToAct(resolver objectResolver, board *boardData) bool {
 
 func (u *unit) handleUnitTarget(targetUnit *unit, resolver objectResolver, board *boardData, bState *battleState) {
 	u.TargetID = ObjectID(targetUnit.ID)
-	//        interface↓↓↓↓
-	u.setMoveTargetForUnit(targetUnit, board, bState)
 
-	u.executeActionBasedOnDistance(resolver, board, bState)
-}
-
-func (u *unit) handleBuildingTarget(targetBuilding *building, bState *battleState) {
-	u.TargetID = ObjectID(targetBuilding.ID)
-	u.startDirectAttack(u.X, u.Y, bState)
-}
-
-func (u *unit) setMoveTargetForUnit(targetUnit *unit, board *boardData, resolver objectResolver) {
-	// bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState.Board)
-	coords, err := u.findApproachTileForTarget(nil, targetUnit.TargetID, board, resolver)
+	coords, err := u.findApproachTileForTarget(nil, u.TargetID, board, resolver)
 	if err != nil {
-		fmt.Print("Jakiś błąd %w", err)
+		u.setIdleWithReason("nie można znaleźć drogi do wrogiej jednostki")
+
+		return
 	}
 
-	u.TargetX, u.TargetY = coords.X, coords.Y
+	u.ApproachX = coords.X
+	u.ApproachY = coords.Y
+	u.TargetX = coords.X
+	u.TargetY = coords.Y
+
+	u.executeActionBasedOnDistance(resolver, board)
+}
+
+func (u *unit) handleBuildingTarget(targetBuilding *building, board *boardData, resolver objectResolver, bState *battleState) {
+	u.TargetID = ObjectID(targetBuilding.ID)
+
+	coords, err := u.findApproachTileForTarget(nil, u.TargetID, board, resolver)
+	if err != nil {
+		u.setIdleWithReason("nie można znaleźć drogi do wrogiego budynku")
+
+		return
+	}
+
+	u.ApproachX = coords.X
+	u.ApproachY = coords.Y
+	u.TargetX = coords.X
+	u.TargetY = coords.Y
+
+	u.executeActionBasedOnDistance(resolver, board)
 }
 
 func (u *unit) handleTargetReached(resolver objectResolver, board *boardData, bState *battleState) {

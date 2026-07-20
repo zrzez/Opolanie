@@ -250,7 +250,6 @@ func (u *unit) handlePersistentBlock() {
 func (u *unit) invalidatePathForRecalculation() {
 	u.Path = nil
 	u.PathIndex = 0
-	// log.Printf("unit %d: path invalidated for recalculation", u.ID)
 }
 
 func (u *unit) resetMovementCounters() {
@@ -302,7 +301,7 @@ func (u *unit) canMoveTo(x, y uint8, board *boardData) bool {
 	return isWalkableUnit(board, x, y, u)
 }
 
-// calculateMilkingSpot oblicza milking spot dla obory
+// calculateMilkingSpot oblicza milking spot dla obory.
 func (bld *building) calculateMilkingSpot() (uint8, uint8, bool) {
 	if len(bld.OccupiedTiles) == 0 {
 		return 0, 0, false
@@ -315,6 +314,7 @@ func (bld *building) calculateMilkingSpot() (uint8, uint8, bool) {
 		if occupiedTile.X < minX {
 			minX = occupiedTile.X
 		}
+
 		if occupiedTile.Y > maxY {
 			maxY = occupiedTile.Y
 		}
