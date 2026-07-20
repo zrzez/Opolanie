@@ -374,7 +374,5 @@ func (bState *battleState) initUnit(unitType unitType, x, y uint8, newUnitID Uni
 
 	newUnit.Delay = newUnit.MaxDelay
 
-	fmt.Printf("initUnit: rodzaj %d, UnitID: %d\n", newUnit.Type, newUnit.ID)
-
 	return newUnit
 }

@@ -12,7 +12,7 @@ const palisadeStrategicBuildingProximity = 10
 // Próba rozplątania units.go, tutaj powinny trafiać funkcje związane z
 // przetwarzaniem rozkazów przez jednoski.
 
-func (u *unit) addUnitCommand(cmd *command, board *boardData, resolver objectResolver, bState *battleState) {
+func (u *unit) addUnitCommand(cmd *command, board *boardData, resolver objectResolver) {
 	log.Printf("INFO: unit.go dodano rozkaz %d.", cmd.ActionType)
 	// ŁATANIE DZIURY W KOMPLETOWANIU ROZKAÓW DLA JEDNOSTEK
 	// @reminder: Łatanie dziury w kompletowaniu rozkazów dla jednostek
@@ -26,7 +26,8 @@ func (u *unit) addUnitCommand(cmd *command, board *boardData, resolver objectRes
 		var err error
 		// Jeśli czar wymaga interakcji, to obliczamy gdzie podejść
 		// Na drzewo nie da się wejść, więc trzeba znaleźć kafelek obok
-		approach, err = u.calculateApproachTile(&point{X: cmd.TargetX, Y: cmd.TargetY}, cmd.InteractionTargetID, bState)
+		targetCoords := &point{X: cmd.TargetX, Y: cmd.TargetY}
+		approach, err = u.calculateApproachTile(targetCoords, cmd.InteractionTargetID, board, resolver)
 		if err != nil {
 			u.setIdleWithReason("cel nieosiągalny")
 
@@ -240,9 +241,9 @@ func (u *unit) calculateDistanceToTarget(target *combatTarget) uint8 {
 	))
 }
 
-func (u *unit) calculateApproachTile(intention *point, targetID ObjectID, bState *battleState) (*point, error) {
+func (u *unit) calculateApproachTile(intention *point, targetID ObjectID, board *boardData, resolver objectResolver) (*point, error) {
 	if u.CurrentSpell != spellNone {
-		approachTile, err := u.findApproachTileForSpell(intention, bState)
+		approachTile, err := u.findApproachTileForSpell(intention, board)
 		if err != nil {
 			return nil, err
 		}
@@ -251,19 +252,19 @@ func (u *unit) calculateApproachTile(intention *point, targetID ObjectID, bState
 	}
 
 	// Budynki, jednostki i drzewa jako cel
-	return u.findApproachTileForTarget(intention, targetID, bState)
+	return u.findApproachTileForTarget(intention, targetID, board, resolver)
 }
 
-func (u *unit) findApproachTileForSpell(targetPosition *point, bState *battleState) (*point, error) {
+func (u *unit) findApproachTileForSpell(targetPosition *point, board *boardData) (*point, error) {
 	switch u.CurrentSpell {
 	case spellMagicShower:
 
-		validCoords, ok := findTileForAttacking(u, nil, nil, targetPosition, bState.Board)
+		validCoords, ok := findTileForAttacking(u, nil, nil, targetPosition, board)
 		if !ok {
 			return nil, fmt.Errorf("nie ma podejścia do celu")
 		}
 
-		return findBestReachableTile(u, validCoords, bState.Board)
+		return findBestReachableTile(u, validCoords, board)
 
 	// ↓↓↓↓↓ Poniższe przypadki nie muszą korzystać z A*
 	case spellMagicShield, spellMagicSight:
@@ -280,8 +281,8 @@ func (u *unit) findApproachTileForSpell(targetPosition *point, bState *battleSta
 }
 
 // @reminder: nazwa dla kafelka z drzewem „intention” jest bardzo kiepska, ale nie mam teraz do tego głowy.
-func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, bState *battleState) (*point, error) {
-	targetUnit, targetBuilding := bState.getObjectByID(targetID)
+func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, board *boardData, resolver objectResolver) (*point, error) {
+	targetUnit, targetBuilding := resolver.getObjectByID(targetID)
 
 	var targetU *unit
 
@@ -294,16 +295,16 @@ func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, bS
 		targetBld = targetBuilding
 	case targetUnit != nil && targetUnit.Exists:
 		targetU = targetUnit
-	case intention != nil && bState.Board.Tiles[intention.X][intention.Y].isTree():
+	case intention != nil && board.Tiles[intention.X][intention.Y].isTree():
 		targetTree = intention
 	}
 
-	validCoords, ok := findTileForAttacking(u, targetU, targetBld, targetTree, bState.Board)
+	validCoords, ok := findTileForAttacking(u, targetU, targetBld, targetTree, board)
 	if !ok {
 		return nil, fmt.Errorf("nie ma podejścia do celu: %t", ok)
 	}
 
-	return findBestReachableTile(u, validCoords, bState.Board)
+	return findBestReachableTile(u, validCoords, board)
 }
 
 // @todo: nie powinna to być metoda jednostki, bo to sprawdzanie poprawności
@@ -646,7 +647,7 @@ func (u *unit) startMoveToAttack(bState *battleState) {
 		TargetY:             u.TargetY,
 		InteractionTargetID: u.TargetID,
 	}
-	u.addUnitCommand(cmd, bState.Board, bState, bState)
+	u.addUnitCommand(cmd, bState.Board, bState)
 	u.State = stateMoving
 	u.AnimationType = "walk"
 
@@ -692,7 +693,7 @@ func (u *unit) startDirectAttack(placeholderX, placeholderY uint8, bState *battl
 		InteractionTargetID: u.TargetID,
 	}
 
-	u.addUnitCommand(cmd, bState.Board, bState, bState)
+	u.addUnitCommand(cmd, bState.Board, bState)
 
 	u.State = stateAttacking
 	u.AnimationType = "fight"
@@ -745,7 +746,8 @@ func (u *unit) isReadyToAct(resolver objectResolver, board *boardData) bool {
 
 func (u *unit) handleUnitTarget(targetUnit *unit, resolver objectResolver, board *boardData, bState *battleState) {
 	u.TargetID = ObjectID(targetUnit.ID)
-	u.setMoveTargetForUnit(targetUnit, bState)
+	//        interface↓↓↓↓
+	u.setMoveTargetForUnit(targetUnit, board, bState)
 
 	u.executeActionBasedOnDistance(resolver, board, bState)
 }
@@ -755,9 +757,9 @@ func (u *unit) handleBuildingTarget(targetBuilding *building, bState *battleStat
 	u.startDirectAttack(u.X, u.Y, bState)
 }
 
-func (u *unit) setMoveTargetForUnit(targetUnit *unit, bState *battleState) {
+func (u *unit) setMoveTargetForUnit(targetUnit *unit, board *boardData, resolver objectResolver) {
 	// bestX, bestY := u.findBestPositionAroundUnit(targetUnit, bState.Board)
-	coords, err := u.findApproachTileForTarget(nil, targetUnit.TargetID, bState)
+	coords, err := u.findApproachTileForTarget(nil, targetUnit.TargetID, board, resolver)
 	if err != nil {
 		fmt.Print("Jakiś błąd %w", err)
 	}

@@ -309,7 +309,7 @@ func (u *unit) addAndMove(resolver objectResolver, board *boardData, pathfinding
 			TargetY:             y,
 			InteractionTargetID: id,
 		}
-		u.addUnitCommand(cmd, bState.Board, bState, bState)
+		u.addUnitCommand(cmd, bState.Board, bState)
 	}
 
 	u.move(resolver, board, pathfindingBudget, bState)
@@ -571,7 +571,7 @@ func (bState *battleState) handleCowFlee(u *unit) {
 					TargetY:             barnY,
 					InteractionTargetID: 0,
 				}
-				u.addUnitCommand(cmd, bState.Board, bState, bState)
+				u.addUnitCommand(cmd, bState.Board, bState)
 				log.Printf("unit %d (COW): Otrzymała obrażenia, ucieka do obory na (%d,%d).", u.ID, barnX, barnY)
 			} else {
 				log.Printf("unit %d (COW): Otrzymała obrażenia, ale nie znalazła obory do ucieczki. ", u.ID)

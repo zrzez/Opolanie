@@ -245,12 +245,12 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	switch cmd.ActionType {
 	case cmdUMove:
 		log.Printf("INFO: castle.go wydano cmdMove.")
-		targetUnit.addUnitCommand(cmd, bState.Board, bState, bState)
+		targetUnit.addUnitCommand(cmd, bState.Board, bState)
 	case cmdUAttack:
 		log.Printf("INFO: castle.go wydano cmdAttack.")
-		targetUnit.addUnitCommand(cmd, bState.Board, bState, bState)
+		targetUnit.addUnitCommand(cmd, bState.Board, bState)
 	case cmdUStop:
-		targetUnit.addUnitCommand(cmd, bState.Board, bState, bState)
+		targetUnit.addUnitCommand(cmd, bState.Board, bState)
 	case cmdUBuild:
 		targetBuilding, ok2 := bState.getBuildingByID(BuildingID(cmd.InteractionTargetID))
 
@@ -280,7 +280,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 			return
 		}
 
-		targetUnit.addUnitCommand(cmd, bState.Board, bState, bState)
+		targetUnit.addUnitCommand(cmd, bState.Board, bState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz BUDOWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
 	case cmdURepair:
@@ -311,11 +311,11 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 			return
 		}
 
-		targetUnit.addUnitCommand(cmd, bState.Board, bState, bState)
+		targetUnit.addUnitCommand(cmd, bState.Board, bState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
 			targetUnit.ID, cmd.InteractionTargetID)
 	case cmdUCastSpell:
-		targetUnit.addUnitCommand(cmd, bState.Board, bState, bState)
+		targetUnit.addUnitCommand(cmd, bState.Board, bState)
 	default:
 		log.Printf("handleUnitCommand: Nieznany ActionType %d dla jednostki %d.",
 			cmd.ActionType, targetUnit.ID)
