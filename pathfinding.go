@@ -254,7 +254,7 @@ func calculateMoveCost(from, to *pathNode, board *boardData, mover *unit) float6
 	// Inne jednostki nie są ścianą (isWalkableUnit puszcza), ale są bardzo drogie.
 	currentTile := &board.Tiles[to.X][to.Y]
 	if currentTile.Unit != nil && currentTile.Unit.Owner == mover.Owner {
-		cost *= 3
+		cost *= 30
 	}
 
 	return cost

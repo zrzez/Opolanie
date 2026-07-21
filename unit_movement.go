@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	maxNoMoveTicks        = 200
+	maxNoMoveTicks        = 100
 	maxBlockedTicks       = 50
 	maxPathfindingBudget  = 40
 	maxPathfindingRetries = 3
@@ -24,6 +24,25 @@ func (u *unit) executeAStarMovement(resolver objectResolver, board *boardData, p
 }
 
 func (u *unit) ensureValidPath(resolver objectResolver, board *boardData, pathfindingBudget *int) bool {
+	if u.Command.isInteraction() {
+		approachTile := &board.Tiles[u.ApproachX][u.ApproachY]
+
+		if approachTile.Unit != nil && approachTile.Unit.ID != u.ID {
+			intention := &point{X: u.TargetX, Y: u.TargetY}
+
+			newApproach, err := u.calculateApproachTile(intention, u.TargetID, board, resolver)
+			if err == nil {
+				u.ApproachX = newApproach.X
+				u.ApproachY = newApproach.Y
+				u.invalidatePathForRecalculation()
+			} else {
+				u.setIdleWithReason("brak wolnego miejsca do podejścia")
+
+				return false
+			}
+		}
+	}
+
 	if u.hasValidPath(resolver, board) {
 		return true
 	}
@@ -89,7 +108,7 @@ func (u *unit) moveAlongPath(board *boardData) {
 		u.State = stateWaiting
 		u.Delay = 1
 
-		if u.BlockedCounter >= 4 {
+		if u.BlockedCounter >= 2 {
 			u.invalidatePathForRecalculation()
 			u.BlockedCounter = 0
 		}
@@ -200,7 +219,8 @@ func (u *unit) handleNoMovementDetection() bool {
 	if (u.X == u.LastX && u.Y == u.LastY) && u.State != stateMilking && u.State != stateRepairing {
 		u.NoMoveTicks++
 		if u.NoMoveTicks > maxNoMoveTicks {
-			u.clearPath()
+			// u.clearPath()
+			u.invalidatePathForRecalculation()
 			u.setIdleWithReason("zbyt długi bezruch")
 
 			return true
