@@ -2,7 +2,6 @@ package main
 
 import (
 	"container/heap"
-	"fmt"
 	"math"
 )
 
@@ -16,6 +15,7 @@ type pathNode struct {
 	heuristicCost float64   // Szacowana cena od tego węzła do celu
 	finalCost     float64   // Suma goCost i heuristicCost
 	index         int       // Wskaźnik miejsca węzła w stosie
+	closed        bool      // węzeł już przetworzony
 }
 
 // pathNodeHeap wdraża heap.Interface i przechowuje węzły
@@ -56,6 +56,9 @@ func (h *pathNodeHeap) update(node, parent *pathNode, goCost, heuristicCost floa
 }
 
 // Ograniczenie prób.
+// @reminder: Nie widze żadnego wpływu na jakość, ale 1000 nie potrafi odnaleźć drogi.
+//    Coś tu chyba jest mocno popsute, bo plansza ma 66na66 kafelków i niewiele
+//    przeszkód. Czemu to tak słabo działa?!
 const maxPathfindingIterations = 10000
 
 // odnajduje ścieżkę do celu używając algo A*.
@@ -66,11 +69,17 @@ func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) [
 	heap.Init(openHeap)
 	heap.Push(openHeap, startNode)
 
-	nodeMap := make(map[string]*pathNode)
-	nodeMap[fmt.Sprintf("%d.%d", startX, startY)] = startNode
+	const maxNodes = 256 * 256
+	nodeMap := make([]*pathNode, maxNodes)
+
+	getIndex := func(x, y int) int {
+		return y<<8 | x
+	}
+
+	startIdx := getIndex(int(startX), int(startY))
+	nodeMap[startIdx] = startNode
 
 	iterations := 0
-
 	for openHeap.Len() > 0 {
 		iterations++
 		if iterations >= maxPathfindingIterations {
@@ -78,13 +87,12 @@ func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) [
 		}
 
 		currentNode := heap.Pop(openHeap).(*pathNode)
+		currentNode.closed = true
 
-		// Jeśli dotarliśmy do celu
 		if currentNode.X == endX && currentNode.Y == endY {
 			return reconstructPath(currentNode)
 		}
 
-		// Sprawdzamy sąsiadów
 		for dy := -1; dy <= 1; dy++ {
 			for dx := -1; dx <= 1; dx++ {
 				if dx == 0 && dy == 0 {
@@ -92,17 +100,25 @@ func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) [
 				}
 
 				checkX, checkY := int(currentNode.X)+dx, int(currentNode.Y)+dy
-				coordKey := fmt.Sprintf("%d.%d", checkX, checkY)
 
-				// 2. KLUCZOWE: Używamy isWalkableUnit zamiast zwykłego isWalkable
-				// To pozwala krowie wejść w ścianę obory, jeśli to jej cel.
+				if checkX < 0 || checkX > 255 || checkY < 0 || checkY > 255 {
+					continue
+				}
+
 				if !isWalkableUnit(board, uint8(checkX), uint8(checkY), mover) {
 					continue
 				}
 
+				idx := getIndex(checkX, checkY)
+				existingNode := nodeMap[idx]
+
 				newGoCost := currentNode.goCost + calculateMoveCost(currentNode, &pathNode{X: uint8(checkX), Y: uint8(checkY)}, board, mover)
 
-				if existingNode, found := nodeMap[coordKey]; found {
+				if existingNode != nil {
+					if existingNode.closed {
+						continue
+					}
+
 					if newGoCost <= existingNode.goCost {
 						openHeap.update(existingNode, currentNode, newGoCost, calcHeuristic(existingNode, &pathNode{X: endX, Y: endY}))
 					}
@@ -116,7 +132,7 @@ func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) [
 					}
 					newNode.finalCost = newNode.goCost + newNode.heuristicCost
 					heap.Push(openHeap, newNode)
-					nodeMap[coordKey] = newNode
+					nodeMap[idx] = newNode
 				}
 			}
 		}
@@ -245,8 +261,8 @@ func calculateMoveCost(from, to *pathNode, board *boardData, mover *unit) float6
 }
 
 func calcHeuristic(from, to *pathNode) float64 {
-	dx := float64(to.X - from.X)
-	dy := float64(to.Y - from.Y)
+	dx := float64(int(to.X) - int(from.X))
+	dy := float64(int(to.Y) - int(from.Y))
 
 	return math.Sqrt(dx*dx + dy*dy)
 }

@@ -84,6 +84,15 @@ func (u *unit) moveAlongPath(board *boardData) {
 
 	if u.canMoveTo(next.X, next.Y, board) {
 		u.executeSuccessfulMove(next.X, next.Y, board)
+	} else {
+		u.BlockedCounter++
+		u.State = stateWaiting
+		u.Delay = 1
+
+		if u.BlockedCounter >= 4 {
+			u.invalidatePathForRecalculation()
+			u.BlockedCounter = 0
+		}
 	}
 }
 
