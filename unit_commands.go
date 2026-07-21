@@ -546,7 +546,7 @@ func (u *unit) handleTargetSearchForHumanPlayer(resolver objectResolver, board *
 	}
 
 	if primaryTargetUnit != nil && primaryTargetUnit.Exists {
-		u.handleUnitTarget(primaryTargetUnit, resolver, board, bState)
+		u.handleUnitTarget(primaryTargetUnit, resolver, board)
 
 		return
 	}
@@ -568,7 +568,7 @@ func (u *unit) handleTargetSearchForAI(resolver objectResolver, board *boardData
 			palisadeTarget := u.findNearestPalisade(bState, u.SightRange)
 
 			if palisadeTarget != nil {
-				u.handleBuildingTarget(palisadeTarget, board, resolver, bState)
+				u.handleBuildingTarget(palisadeTarget, board, resolver)
 
 				return
 			}
@@ -582,11 +582,11 @@ func (u *unit) handleTargetSearchForAI(resolver objectResolver, board *boardData
 	}
 
 	if primaryTargetUnit != nil {
-		u.handleUnitTarget(primaryTargetUnit, resolver, board, bState)
+		u.handleUnitTarget(primaryTargetUnit, resolver, board)
 	}
 
 	if primaryTargetBuilding != nil {
-		u.handleBuildingTarget(primaryTargetBuilding, board, resolver, bState)
+		u.handleBuildingTarget(primaryTargetBuilding, board, resolver)
 	}
 }
 
@@ -696,7 +696,7 @@ func (u *unit) isReadyToAct(resolver objectResolver, board *boardData) bool {
 	return false
 }
 
-func (u *unit) handleUnitTarget(targetUnit *unit, resolver objectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleUnitTarget(targetUnit *unit, resolver objectResolver, board *boardData) {
 	u.TargetID = ObjectID(targetUnit.ID)
 
 	coords, err := u.findApproachTileForTarget(nil, u.TargetID, board, resolver)
@@ -714,7 +714,7 @@ func (u *unit) handleUnitTarget(targetUnit *unit, resolver objectResolver, board
 	u.executeActionBasedOnDistance(resolver, board)
 }
 
-func (u *unit) handleBuildingTarget(targetBuilding *building, board *boardData, resolver objectResolver, bState *battleState) {
+func (u *unit) handleBuildingTarget(targetBuilding *building, board *boardData, resolver objectResolver) {
 	u.TargetID = ObjectID(targetBuilding.ID)
 
 	coords, err := u.findApproachTileForTarget(nil, u.TargetID, board, resolver)

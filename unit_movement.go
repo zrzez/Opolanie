@@ -53,72 +53,10 @@ func (u *unit) calculateNewPath(board *boardData) bool {
 	return true
 }
 
-func (u *unit) findLocalDetour(board *boardData, blockedX, blockedY uint8) (uint8, uint8, bool) {
-	bestX, bestY := 0, 0
-	bestScore := math.MaxFloat64
-
-	for dy := -1; dy <= 1; dy++ {
-		for dx := -1; dx <= 1; dx++ {
-			if dx == 0 && dy == 0 {
-				continue
-			}
-
-			x, y := int(u.X)+dx, int(u.Y)+dy
-
-			if x == int(blockedX) && y == int(blockedY) {
-				continue
-			}
-
-			if !u.canMoveTo(uint8(x), uint8(y), board) {
-				continue
-			}
-
-			score := u.calculateDetourScore(uint8(x), uint8(y))
-			if score < bestScore {
-				bestScore = score
-				bestX, bestY = x, y
-			}
-		}
-	}
-
-	return uint8(bestX), uint8(bestY), true
-}
-
 func (u *unit) executeSuccessfulMove(x, y uint8, board *boardData) {
 	u.executeMove(x, y, board)
 	u.resetMovementCounters()
 	u.updateMovementHistory()
-}
-
-func (u *unit) handleMovementBlocked(board *boardData, blockedX, blockedY uint8) {
-	detourX, detourY, ok := u.findLocalDetour(board, blockedX, blockedY)
-
-	if !ok {
-		u.executeSuccessfulMove(detourX, detourY, board)
-		u.invalidatePathForRecalculation()
-
-		return
-	}
-
-	u.handlePersistentBlock()
-}
-
-func (u *unit) calculateDetourScore(x, y uint8) float64 {
-	distToTarget := math.Abs(float64(u.TargetX-x)) + math.Abs(float64(u.TargetY-y))
-	mainDirection := u.getMainDirection()
-	directionBonus := 0.0
-
-	dx := x - u.X
-	dy := y - u.Y
-
-	if (mainDirection.X > 0 && dx > 0) || (mainDirection.X < 0 && dx < 0) {
-		directionBonus -= 0.5
-	}
-	if (mainDirection.Y > 0 && dy > 0) || (mainDirection.Y < 0 && dy < 0) {
-		directionBonus -= 0.5
-	}
-
-	return distToTarget + directionBonus
 }
 
 func (u *unit) waitForPathfindingBudget() {
@@ -146,8 +84,6 @@ func (u *unit) moveAlongPath(board *boardData) {
 
 	if u.canMoveTo(next.X, next.Y, board) {
 		u.executeSuccessfulMove(next.X, next.Y, board)
-	} else {
-		u.handleMovementBlocked(board, next.X, next.Y)
 	}
 }
 
@@ -230,21 +166,6 @@ func (u *unit) hasValidPath(resolver objectResolver, board *boardData) bool {
 	}
 
 	return false
-}
-
-func (u *unit) handlePersistentBlock() {
-	u.BlockedCounter++
-
-	if u.BlockedCounter > maxBlockedTicks {
-		u.setIdleWithReason("persistently blocked")
-	} else {
-		u.State = stateWaiting
-		u.Delay = uint16(25 + rng.Intn(15))
-
-		if u.BlockedCounter%10 == 0 {
-			u.invalidatePathForRecalculation()
-		}
-	}
 }
 
 func (u *unit) invalidatePathForRecalculation() {
@@ -342,25 +263,6 @@ func (u *unit) executeMove(x, y uint8, board *boardData) {
 	u.updateMovementAnimation(oldX, oldY)
 }
 
-func (u *unit) getMainDirection() point {
-	dx := 0
-	dy := 0
-
-	if u.TargetX > u.X {
-		dx = 1
-	} else if u.TargetX < u.X {
-		dx = -1
-	}
-
-	if u.TargetY > u.Y {
-		dy = 1
-	} else if u.TargetY < u.Y {
-		dy = -1
-	}
-	// @reminder: to się wywali, bo powinno być -1, a będzie zero/255
-	return point{X: uint8(dx), Y: uint8(dy)}
-}
-
 func (u *unit) isAtTarget() bool {
 	return u.X == u.ApproachX && u.Y == u.ApproachY
 }
@@ -380,7 +282,8 @@ func (u *unit) move(resolver objectResolver, board *boardData, pathfindingBudget
 		// 25.04.2026 Dodaję bezpiecznik przerywający ruch jeśli cel przestał istnieć
 		// Bez tego jednostka atakująca drzewo zaczyna się przemieszczać po jego upadku
 		// szukając nowej pozycji do ataku nieistniejącego już celu.
-		if _, err := u.validateTargetExists(resolver, board); err != nil {
+		_, err := u.validateTargetExists(resolver, board)
+		if err != nil {
 			u.setIdleWithReason("cel ataku przestał istnieć")
 
 			return
