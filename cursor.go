@@ -38,20 +38,20 @@ func determineCursorState(bState *battleState, mousePos rl.Vector2, viewW, total
 	tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
 	targetOwner := -1
 
-	var targetBuilding *building // Potrzebujemy wiedzieć, czy to budynek
+	var targetedBuilding *building // Potrzebujemy wiedzieć, czy to budynek
 
 	if tileUnderCursor.Unit != nil && tileUnderCursor.Unit.Exists {
 		targetOwner = int(tileUnderCursor.Unit.Owner)
 	} else if tileUnderCursor.Building != nil && tileUnderCursor.Building.Exists {
 		targetOwner = int(tileUnderCursor.Building.Owner)
-		targetBuilding = tileUnderCursor.Building
+		targetedBuilding = tileUnderCursor.Building
 	}
 
-	hasSelection := bState.CurrentSelection.IsUnit && bState.CurrentSelection.OwnerID == bState.PlayerID
+	hasSelection := bState.CurrentSelection.Selection.Kind == targetUnit && bState.CurrentSelection.OwnerID == bState.PlayerID
 
 	// @todo: przemyśl nazwy poniższych funkcji, bo są bardzo mylące.
 	if hasSelection {
-		return cursorForSelection(bState, tileUnderCursor, targetOwner, targetBuilding, iState)
+		return cursorForSelection(bState, tileUnderCursor, targetOwner, targetedBuilding, iState)
 	}
 
 	return cursorForNoSelection(targetOwner, bState.PlayerID)
@@ -103,7 +103,7 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 	}
 
 	// Podpowiedź naprawy
-	selectedUnit, ok := bState.getUnitByID(bState.CurrentSelection.UnitID)
+	selectedUnit, ok := bState.getUnitByID(UnitID(bState.CurrentSelection.Selection.ID))
 	isAxeman := ok && selectedUnit.Type == unitAxeman
 
 	if isAxeman && targetBuilding != nil && targetBuilding.Exists {
@@ -174,18 +174,18 @@ func cursorForNoSelection(targetOwner int, playerID PlayerID) uint16 {
 
 // @todo: do przebudowy, bo sprawdzanie legalności w kursorach jest oderwane od legalności rozkazów.
 func cursorForEnemy(bState *battleState, tileUnderCursor *tile) uint16 {
-	targetBuilding := tileUnderCursor.Building
+	targetedBuilding := tileUnderCursor.Building
 
-	if targetBuilding != nil && targetBuilding.Exists {
+	if targetedBuilding != nil && targetedBuilding.Exists {
 		// Mag nie może atakować żadnych budynków
-		selectedUnit, ok := bState.getUnitByID(bState.CurrentSelection.UnitID)
+		selectedUnit, ok := bState.getUnitByID(UnitID(bState.CurrentSelection.Selection.ID))
 
 		if ok && selectedUnit.Type == unitMage {
 			return spriteCursorStop
 		}
 
-		if targetBuilding.Type == buildingPalisade {
-			if !targetBuilding.IsUnderConstruction {
+		if targetedBuilding.Type == buildingPalisade {
+			if !targetedBuilding.IsUnderConstruction {
 				if ok && !selectedUnit.Type.canDamagePalisades() {
 					return spriteCursorStop
 				}
@@ -194,7 +194,7 @@ func cursorForEnemy(bState *battleState, tileUnderCursor *tile) uint16 {
 			}
 		}
 
-		if targetBuilding.Type == buildingBridge {
+		if targetedBuilding.Type == buildingBridge {
 			return spriteCursorStop
 		}
 	}

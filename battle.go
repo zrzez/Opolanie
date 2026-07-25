@@ -565,10 +565,6 @@ func (bState *battleState) updateUnit(u *unit) {
 		u.wasAttacked = false
 	}
 
-	board := bState.Board
-
-	var resolver objectResolver = bState
-
 	pathfindingBudget := &bState.PathfindingBudget
 
 	u.handleAttackCooldown(bState.GlobalFrameCounter)
@@ -586,14 +582,14 @@ func (bState *battleState) updateUnit(u *unit) {
 	}
 
 	u.handleWaitingToActiveTransition()
-	u.handleMovementTargetReached(resolver, board, bState)
+	u.handleMovementTargetReached(bState)
 
 	// @reminder: sprawdzam, czy to ruszy krowy
 	if u.Type == unitCow && u.Command == cmdUGraze {
-		u.grazeCowPhase(resolver, board, pathfindingBudget, bState)
+		u.grazeCowPhase(pathfindingBudget, bState)
 	}
 
-	u.executeCommandAction(resolver, board, pathfindingBudget, bState)
+	u.executeCommandAction(pathfindingBudget, bState)
 	u.resetDelayIfActive()
 }
 
@@ -698,7 +694,13 @@ func (bState *battleState) resolveBuildingDestruction(bld *building) {
 // Ma na celu obsłużenie zniszczenia zwykłego budynku.
 func (bState *battleState) handleBuildingDestruction(bld *building) {
 	// Wywalamy jednostki z budynku
-	bld.unassignUnitsfromBuilding(bState)
+	for _, uID := range bld.AssignedUnits {
+		u, ok := bState.getUnitByID(uID)
+		if ok && u.Exists {
+			u.BelongsTo = nil
+		}
+	}
+	bld.clearAssignedUnitsfromDestroyedBuilding()
 
 	// Wywalamy budynek
 	bld.Exists = false
@@ -706,9 +708,9 @@ func (bState *battleState) handleBuildingDestruction(bld *building) {
 
 	// Budynek przestał działać, gracz powinien odzyskać miejsce
 	player := bState.getPlayerState(bld.Owner)
-	player.decreaseBuildingCount()
 
 	if player != nil {
+		player.decreaseBuildingCount()
 		bState.Board.placeRuins(bld)
 	}
 }

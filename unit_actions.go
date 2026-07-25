@@ -6,15 +6,24 @@ import (
 )
 
 // attack zadaje obrażenia celowi lub ustawia ruch w jego kierunku.
-func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleState) {
-	target, err := u.validateAttackTarget(resolver, board)
+func (u *unit) attack(bState *battleState) {
+	// 1. Bierzemy wskaźnik do celu
+	target, err := bState.resolveTarget(u.Target)
 	if err != nil {
 		u.setIdleWithReason(err.Error())
 
 		return
 	}
 
-	// Sprawdzanie przerwy
+	// 2. Sprawdzamy cel
+	err = u.validateAttackTarget(target)
+	if err != nil {
+		u.setIdleWithReason(err.Error())
+
+		return
+	}
+
+	// 3. Sprawdzanie przerwy
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
 		u.AnimationType = "idle"
@@ -29,6 +38,7 @@ func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleS
 		return
 	}
 
+	// 4. Sprawdzanie zasięgu
 	if u.canAttackTarget(target) {
 		u.performAttack(target, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID,
 			&bState.Projectiles, &bState.FallingTreesList)
@@ -37,13 +47,8 @@ func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleS
 	}
 
 	// Jeśli cel oddalił się, gonimy go
-	var intention *point
-
-	if u.TargetID == 0 {
-		intention = &point{X: u.TargetX, Y: u.TargetY}
-	}
-
-	whereToGo, err := u.findApproachTileForTarget(intention, u.TargetID, board, resolver)
+	// ! trzeba posprzątać
+	whereToGo, err := u.findApproachTileForTarget(u.Target, bState)
 	if err != nil {
 		return
 	}
@@ -52,8 +57,7 @@ func (u *unit) attack(resolver objectResolver, board *boardData, bState *battleS
 
 	u.State = stateMoving
 	u.AnimationType = "walk"
-	u.ApproachX = whereToGo.X
-	u.ApproachY = whereToGo.Y
+	u.Approach = *whereToGo
 }
 
 func (u *unit) performAttack(target *combatTarget, hPID, aiPID PlayerID, projs *[]*projectile, fallingTrees *[]*tile) {
@@ -64,7 +68,7 @@ func (u *unit) performAttack(target *combatTarget, hPID, aiPID PlayerID, projs *
 	}
 
 	u.setAttackTimings()
-	u.handleTargetPostAttack(target.Unit, target.Building)
+	u.handleTargetPostAttack(target)
 }
 
 func (u *unit) performRangedAttack(target *combatTarget, damage uint16, hPID, aiPID PlayerID, projs *[]*projectile) {
@@ -98,7 +102,7 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, hPID, ai
 	// u.gainExperience tutaj!
 	handleGainExperience(u, target.Unit, hPID, aiPID)
 
-	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, u.TargetX, u.TargetY, damage)
+	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, u.Target.Position.X, u.Target.Position.Y, damage)
 }
 
 // @reminder: zdobywanie doświadczenia jest niezależne od wyniku ataku. Wykonał atak→gainExperience().
@@ -132,7 +136,7 @@ func (u *unit) build(targetBuilding *building, amount uint16) {
 // @reminder: najprawdopodobniej objectResolver nie jest prawidłowo użyty i będzie wyrzucony.
 // @reminder: wydaje mi się, że każde „idle” ustawiane wewnątrz tej metody jest zbyteczne.
 // @todo: brakuje ustawienia uruchomienia (animacji) ataku przy rzucaniu czarów.
-func (u *unit) castSpell(resolver objectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
+func (u *unit) castSpell(pathfindingBudget *int, bState *battleState) {
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
 		u.AnimationType = "idle"
@@ -146,10 +150,10 @@ func (u *unit) castSpell(resolver objectResolver, board *boardData, pathfindingB
 		u.castMagicShield()
 
 	case spellMagicSight:
-		u.castMagicSight(board)
+		u.castMagicSight(bState.Board)
 
 	case spellMagicShower:
-		if u.canCastSpellFromCurrentPosition() {
+		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.State = stateCastingSpell
 			u.AnimationType = "fight"
 			u.clearPath()
@@ -157,7 +161,7 @@ func (u *unit) castSpell(resolver objectResolver, board *boardData, pathfindingB
 		} else {
 			u.State = stateMoving
 			u.AnimationType = "walk"
-			u.move(resolver, board, pathfindingBudget, bState)
+			u.move(pathfindingBudget, bState)
 
 			return
 		}
@@ -264,7 +268,7 @@ func (u *unit) castMagicShower(board *boardData, humanPID, aiPID PlayerID, projs
 		return
 	}
 
-	target := &point{X: u.TargetX, Y: u.TargetY}
+	target := &u.Target.Position
 
 	if u.magicShower(target, board, humanPID, aiPID, projs) {
 		u.setRangedTimings()

@@ -209,18 +209,17 @@ func (u *unit) canDamageTree(treeTile *tile) bool {
 	}
 }
 
-func (u *unit) prepareForNewCommand(cmdType commandType, intentionX, intentionY uint8, targetID ObjectID, approachX, approachY uint8) {
+func (u *unit) prepareForNewCommand(cmdType commandType, target TargetReference, approach point) {
 	u.clearPath()
 	u.History = nil
 	u.LoopCount = 0
 	u.TicksNoProgress = 0
 	u.LastPathIndex = 0
+
 	u.Command = cmdType
-	u.TargetX = intentionX
-	u.TargetY = intentionY
-	u.ApproachX = approachX
-	u.ApproachY = approachY
-	u.TargetID = targetID
+	u.Target = target
+	u.Approach = approach
+
 	u.Delay = 0
 }
 

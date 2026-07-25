@@ -189,11 +189,11 @@ func (board *boardData) placeRuins(bld *building) {
 			targetX := occupiedTile.X + uint8(offsetX)
 			targetY := occupiedTile.Y + uint8(offsetY)
 
-			targetTile := &board.Tiles[targetX][targetY]
+			targetedTile := &board.Tiles[targetX][targetY]
 
-			targetTile.TextureID = texID
-			targetTile.Building = nil
-			targetTile.IsWalkable = false
+			targetedTile.TextureID = texID
+			targetedTile.Building = nil
+			targetedTile.IsWalkable = false
 		}
 	}
 }

@@ -75,30 +75,21 @@ type unit struct {
 	ID     UnitID // Unikatowy numer jednostki
 	Exists bool   // Czy jednostka nie została jeszcze zabita
 	// @todo: ↓↓↓↓↓↓↓↓ zamień uint8 na strukturę point
-	X, Y         uint8       // Współrzędne jednostki
-	Position     point       // Docelowo ma zastąpić X,Y uint8
-	Owner        PlayerID    // Kto jest właścicielem. colorRed gracz, inne SI
-	Type         unitType    // Rodzaj jednostki (Drwal = unitAxeman itd.)
-	HP           uint16      // Bieżący wskaźnik życia
-	MaxHP        uint16      // Górna granica wskaźnika życia
-	Command      commandType // Bieżący rozkaz (cmdMove, cmdAttack itd.)
-	CurrentSpell spellID     // Jaki czar ma rzucić
-	TargetID     ObjectID    // Identyfikator przedmiotu (jednostka bądź budynek) rozkazu
-	TargetX      uint8       // Intencja: Współrzędna X celu (dla cmdMove. cmdAttack)
-	TargetY      uint8       // Intencja: Współrzędna Y celu (dla cmdMove. cmdAttack)
-	// ↓↓↓↓↓↓ NOWOŚĆ! TYLKO OD ZRZEZA!
-	ApproachX uint8 // PODEJŚCIE: kafalek na którym trzeba stanąć, aby dobrać się do celu
-	ApproachY uint8 // PODEJŚCIE: kafalek na którym trzeba stanąć, aby dobrać się do celu
-	// ↑↑↑↑↑↑ Powinno zastąpić ułomne interactionTargetX/Y i uzdrowić rozkazy w units.go
-	// Do obsługi atakowania drzew, być może zbędne - 20.04.2026
-	// @todo:↓↓↓ wypierdziel jeśli ApproachXY siądą 02.07.2026
-	interactionTargetX, interactionTargetY uint8
-
-	Experience uint8     // Miara doświadczenia jednostki
-	Level      uint8     // Poziom doświadczenia jednostki
-	IsSelected bool      // Określa czy dana jednostka jest wybrana przez gracza
-	BelongsTo  *building // Określa do którego budynku jest przywiązana dana jednostka
-	IsInQueue  bool      // Wskaźnik, by wiedzieć, czy jednostka jest w kolejce
+	X, Y         uint8           // Współrzędne jednostki
+	Position     point           // Docelowo ma zastąpić X,Y uint8
+	Owner        PlayerID        // Kto jest właścicielem. colorRed gracz, inne SI
+	Type         unitType        // Rodzaj jednostki (Drwal = unitAxeman itd.)
+	HP           uint16          // Bieżący wskaźnik życia
+	MaxHP        uint16          // Górna granica wskaźnika życia
+	Command      commandType     // Bieżący rozkaz (cmdMove, cmdAttack itd.)
+	CurrentSpell spellID         // Jaki czar ma rzucić
+	Target       TargetReference // Co/kto jest celem
+	Approach     point           // pole na którym staniemy, żeby dostać się do celu
+	Experience   uint8           // Miara doświadczenia jednostki
+	Level        uint8           // Poziom doświadczenia jednostki
+	IsSelected   bool            // Określa czy dana jednostka jest wybrana przez gracza
+	BelongsTo    *building       // Określa do którego budynku jest przywiązana dana jednostka
+	IsInQueue    bool            // Wskaźnik, by wiedzieć, czy jednostka jest w kolejce
 	// Dodawalibyśmy jednostkę do określonego budynku i w ten sposób śledzimy
 	// kto do kogo przynależy i np. krowy gdzie idą dać się wydoić!
 	AllowFriendlyFire bool // Wskaźnik, czy możemy napaść swoich
@@ -264,13 +255,7 @@ type command struct {
 
 	// === GDZIE / NA KIM? (Cel działania) ===
 
-	// InteractionTargetID - ID obiektu, NA KTÓRYM wykonujemy akcję.
-	// Np. ID Budynku do naprawy lub ID Wroga do ataku.
-	// WAŻNE: w przyciskach UI to pole jest zazwyczaj puste (0)! Wypełnia je dopiero Input po kliknięciu w mapę.
-	InteractionTargetID ObjectID
-
-	TargetX uint8 // Współrzędna x kliknięcia w mapę (dla ruchu/ataku obszarowego)
-	TargetY uint8 // Współrzędna y kliknięcia w mapę
+	Target TargetReference
 
 	// === INNE ===
 	CreateType   uint8 // Rodzaj obiektu, który stworzymy
@@ -327,11 +312,8 @@ type message struct {
 
 // Opisuje bieżący przedmiot zaznaczenia.
 type selectionState struct {
-	OwnerID PlayerID // Identyfikator zaznaczonego przedmiotu (colorRed, colorYellow itd.)
-	IsUnit  bool     // Określa, czy zaznaczony przedmiot jest jednostką (prawda), czy budynkiem (fałsz)
-	// Nie wiem, co ze zgliszczami
-	UnitID     UnitID     // Identyfikator przedmiotu zaznaczenia jeżeli jednostka
-	BuildingID BuildingID // Identyfikator przedmiotu zaznaczenia jeżeli budynek
+	OwnerID   PlayerID // Identyfikator zaznaczonego przedmiotu (colorRed, colorYellow itd.)
+	Selection TargetReference
 }
 
 // controlGroupUnit określa jednostkę w zarządzanym zespole - 02.01.2026 ciekawe co miałem na myśli pisząc to.
@@ -639,15 +621,17 @@ type bounds struct {
 
 type unitDirection uint8
 
-// ============ INTERFACE
-type objectResolver interface {
-	getObjectByID(id ObjectID) (*unit, *building)
-}
+type TargetKind uint8
 
-type unitResolver interface {
-	getUnitByID(id UnitID) (*unit, bool)
-}
+const (
+	targetNone TargetKind = iota
+	targetUnit
+	targetBuilding
+	targetTile
+)
 
-type buildingResolver interface {
-	getBuildingByID(id BuildingID) (*building, bool)
+type TargetReference struct {
+	Kind     TargetKind
+	ID       uint
+	Position point
 }

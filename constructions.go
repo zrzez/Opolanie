@@ -139,13 +139,7 @@ func (bld *building) isRepairable(playerID PlayerID) bool {
 	return bld.Type == buildingPalisade || bld.Type == buildingBridge || bld.Owner == playerID
 }
 
-func (bld *building) unassignUnitsfromBuilding(resolver unitResolver) {
-	// Trzeba dać znać jednostkom, że nie mają już domu
-	for _, uID := range bld.AssignedUnits {
-		u, ok := resolver.getUnitByID(uID)
-
-		if ok && u.Exists {
-			u.BelongsTo = nil
-		}
-	}
+func (bld *building) clearAssignedUnitsfromDestroyedBuilding() {
+	bld.AssignedUnits = nil
+	bld.Food = 0
 }

@@ -70,7 +70,7 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 	targetBuilding, ok := bState.getBuildingByID(BuildingID(cmd.ExecutorID))
 
 	if !ok || !targetBuilding.Exists || targetBuilding.IsUnderConstruction {
-		log.Printf("handleBuildingCommand: Nie znaleziono ID %d, nie istnieje lub w budowie.", cmd.InteractionTargetID)
+		log.Printf("handleBuildingCommand: Nie znaleziono ID %d, nie istnieje lub w budowie.", cmd.Target.ID)
 
 		return
 	}
@@ -169,7 +169,7 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 	}
 
 	// Walidacja środowiskowa
-	ok, errCode = validateConstructionSite(bType, cmd.TargetX, cmd.TargetY, bState)
+	ok, errCode = validateConstructionSite(bType, cmd.Target.Position.X, cmd.Target.Position.Y, bState)
 
 	if !ok {
 		switch errCode {
@@ -207,7 +207,7 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 
 	// 1. Wykonanie
 	// tryBuildStructure(bType, cmd.TargetX, cmd.TargetY, playerS.PlayerID, bState)
-	err := bState.tryBuildStructure(bType, cmd.TargetX, cmd.TargetY, playerS.PlayerID)
+	err := bState.tryBuildStructure(bType, cmd.Target.Position.X, cmd.Target.Position.Y, playerS.PlayerID)
 	if err != nil {
 		// Nigdy nie powinno się wydarzyć
 		log.Printf("BłĄD KRYTYCZNY PRZY BUDOWIE %v", err)
@@ -220,7 +220,7 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 	}
 
 	// 2. Zakończenie, czyścimy
-	log.Printf("[castle.go] Przyjęto rozkaz budowy: %d (%d,%d)", bType, cmd.TargetX, cmd.TargetY)
+	log.Printf("[castle.go] Przyjęto rozkaz budowy: %d (%d,%d)", bType, cmd.Target.Position.X, cmd.Target.Position.Y)
 	bState.PendingCommand = nil
 	bState.MouseState = mouseStateNormal
 }
@@ -228,16 +228,16 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 // handleUnitCommand przetwarza rozkazy dotyczące jednostek.
 // Obsługuje np. ruch, atak, stop, magię.
 func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState) {
-	targetUnit, ok := bState.getUnitByID(UnitID(cmd.ExecutorID))
-	if !ok || !targetUnit.Exists {
+	targetedUnit, ok := bState.getUnitByID(UnitID(cmd.ExecutorID))
+	if !ok || !targetedUnit.Exists {
 		log.Printf("handleUnitCommand: Nie znaleziono jednostki ID %d lub nie istnieje.", cmd.ExecutorID)
 
 		return
 	}
 
-	if targetUnit.Owner != playerS.PlayerID {
+	if targetedUnit.Owner != playerS.PlayerID {
 		log.Printf("handleUnitCommand: Próba wydania komendy jednostce ID %d, która nie należy do frakcji %d.",
-			targetUnit.ID, playerS.PlayerID)
+			targetedUnit.ID, playerS.PlayerID)
 
 		return
 	}
@@ -245,20 +245,20 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	switch cmd.ActionType {
 	case cmdUMove:
 		log.Printf("INFO: castle.go wydano cmdMove.")
-		targetUnit.addUnitCommand(cmd, bState.Board, bState)
+		targetedUnit.addUnitCommand(cmd, bState)
 	case cmdUAttack:
 		log.Printf("INFO: castle.go wydano cmdAttack.")
-		targetUnit.addUnitCommand(cmd, bState.Board, bState)
+		targetedUnit.addUnitCommand(cmd, bState)
 	case cmdUStop:
-		targetUnit.addUnitCommand(cmd, bState.Board, bState)
+		targetedUnit.addUnitCommand(cmd, bState)
 	case cmdUBuild:
-		targetBuilding, ok2 := bState.getBuildingByID(BuildingID(cmd.InteractionTargetID))
+		targetedBuilding, ok2 := bState.getBuildingByID(BuildingID(cmd.Target.ID))
 
 		if !ok2 {
 			return
 		}
 
-		valid, errCode := validateBuildingContext(targetUnit, targetBuilding)
+		valid, errCode := validateBuildingContext(targetedUnit, targetedBuilding)
 
 		if !valid {
 			switch errCode {
@@ -280,16 +280,16 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 			return
 		}
 
-		targetUnit.addUnitCommand(cmd, bState.Board, bState)
+		targetedUnit.addUnitCommand(cmd, bState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz BUDOWY budynku %d.",
-			targetUnit.ID, cmd.InteractionTargetID)
+			targetedUnit.ID, cmd.Target.ID)
 	case cmdURepair:
-		targetBuilding, ok3 := bState.getBuildingByID(BuildingID(cmd.InteractionTargetID))
+		targetedBuilding, ok3 := bState.getBuildingByID(BuildingID(cmd.Target.ID))
 		if !ok3 {
 			return
 		}
 
-		valid, errCode := validateRepairContext(targetUnit, targetBuilding)
+		valid, errCode := validateRepairContext(targetedUnit, targetedBuilding)
 
 		if !valid {
 			switch errCode {
@@ -311,14 +311,14 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 			return
 		}
 
-		targetUnit.addUnitCommand(cmd, bState.Board, bState)
+		targetedUnit.addUnitCommand(cmd, bState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
-			targetUnit.ID, cmd.InteractionTargetID)
+			targetedUnit.ID, cmd.Target.ID)
 	case cmdUCastSpell:
-		targetUnit.addUnitCommand(cmd, bState.Board, bState)
+		targetedUnit.addUnitCommand(cmd, bState)
 	default:
 		log.Printf("handleUnitCommand: Nieznany ActionType %d dla jednostki %d.",
-			cmd.ActionType, targetUnit.ID)
+			cmd.ActionType, targetedUnit.ID)
 	}
 }
 
@@ -326,19 +326,19 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 // Sprawdza dostępność celu i wyznacza ścieżkę.
 func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *battleState) {
 	log.Printf("DEBUG: handleMoveCommand: Rozkaz ruchu dla jednostki ID %d do (%d,%d).",
-		u.ID, cmd.TargetX, cmd.TargetY)
+		u.ID, cmd.Target.Position.X, cmd.Target.Position.Y)
 
 	// 1. Sprawdzenie czy kafelek jest przechodni (używamy isWalkable)
-	if !isWalkable(bState.Board, cmd.TargetX, cmd.TargetY) {
+	if !isWalkable(bState.Board, cmd.Target.Position.X, cmd.Target.Position.Y) {
 		// Pobieramy ID tekstury z nowej struktury Tiles
 		var terrainID uint16
-		if cmd.TargetX < boardMaxX && cmd.TargetY < boardMaxY {
-			terrainID = bState.Board.Tiles[cmd.TargetX][cmd.TargetY].TextureID
+		if cmd.Target.Position.X < boardMaxX && cmd.Target.Position.Y < boardMaxY {
+			terrainID = bState.Board.Tiles[cmd.Target.Position.X][cmd.Target.Position.Y].TextureID
 		}
 
 		log.Printf(
 			"handleMoveCommand: ODRZUCONO ROZKAZ: Cel (%d,%d) jest nieprzechodni (TextureID: %d). Jednostka ID %d.",
-			cmd.TargetX, cmd.TargetY, terrainID, u.ID,
+			cmd.Target.Position.X, cmd.Target.Position.Y, terrainID, u.ID,
 		)
 
 		return
@@ -349,14 +349,14 @@ func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *bat
 		u,
 		u.X,
 		u.Y,
-		cmd.TargetX,
-		cmd.TargetY,
+		cmd.Target.Position.X,
+		cmd.Target.Position.Y,
 	)
 
 	if len(path) == 0 {
 		log.Printf(
 			"DEBUG: handleMoveCommand: Pathfinding nie znalazł ścieżki dla jednostki %d do (%d,%d). Komenda odrzucona.",
-			u.ID, cmd.TargetX, cmd.TargetY,
+			u.ID, cmd.Target.Position.X, cmd.Target.Position.Y,
 		)
 
 		return
@@ -368,7 +368,7 @@ func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *bat
 		"handleMoveCommand: Ścieżka znaleziona, ustawiona dla jednostki %d. Długość: %d. Rozkaz MOVE do (%d,%d).",
 		u.ID,
 		len(path),
-		cmd.TargetX,
-		cmd.TargetY,
+		cmd.Target.Position.X,
+		cmd.Target.Position.Y,
 	)
 }

@@ -15,25 +15,22 @@ const (
 	maxMovementHistory    = 6
 )
 
-func (u *unit) executeAStarMovement(resolver objectResolver, board *boardData, pathfindingBudget *int) {
-	if !u.ensureValidPath(resolver, board, pathfindingBudget) {
+func (u *unit) executeAStarMovement(pathfindingBudget *int, bState *battleState) {
+	if !u.ensureValidPath(pathfindingBudget, bState) {
 		return
 	}
 
-	u.moveAlongPath(board)
+	u.moveAlongPath(bState.Board)
 }
 
-func (u *unit) ensureValidPath(resolver objectResolver, board *boardData, pathfindingBudget *int) bool {
+func (u *unit) ensureValidPath(pathfindingBudget *int, bState *battleState) bool {
 	if u.Command.isInteraction() {
-		approachTile := &board.Tiles[u.ApproachX][u.ApproachY]
+		approachTile := &bState.Board.Tiles[u.Approach.X][u.Approach.Y]
 
 		if approachTile.Unit != nil && approachTile.Unit.ID != u.ID {
-			intention := &point{X: u.TargetX, Y: u.TargetY}
-
-			newApproach, err := u.calculateApproachTile(intention, u.TargetID, board, resolver)
+			newApproach, err := u.calculateApproachTile(u.Target, bState)
 			if err == nil {
-				u.ApproachX = newApproach.X
-				u.ApproachY = newApproach.Y
+				u.Approach = *newApproach
 				u.invalidatePathForRecalculation()
 			} else {
 				u.setIdleWithReason("brak wolnego miejsca do podejścia")
@@ -43,7 +40,7 @@ func (u *unit) ensureValidPath(resolver objectResolver, board *boardData, pathfi
 		}
 	}
 
-	if u.hasValidPath(resolver, board) {
+	if u.hasValidPath(bState) {
 		return true
 	}
 
@@ -55,11 +52,11 @@ func (u *unit) ensureValidPath(resolver objectResolver, board *boardData, pathfi
 
 	*pathfindingBudget++
 
-	return u.calculateNewPath(board)
+	return u.calculateNewPath(bState.Board)
 }
 
 func (u *unit) calculateNewPath(board *boardData) bool {
-	newPath := findPath(board, u, u.X, u.Y, u.ApproachX, u.ApproachY)
+	newPath := findPath(board, u, u.X, u.Y, u.Approach.X, u.Approach.Y)
 
 	if newPath == nil {
 		u.handlePathfindingFailure()
@@ -86,8 +83,8 @@ func (u *unit) waitForPathfindingBudget() {
 
 func (u *unit) setPathAndState(path []*pathNode) {
 	u.setPath(path)
-	u.LastTargetX = u.TargetX
-	u.LastTargetY = u.TargetY
+	u.LastTargetX = u.Target.Position.X
+	u.LastTargetY = u.Target.Position.Y
 	u.State = u.determineActiveStateFromCommand()
 	u.RetryAttempts = 0
 }
@@ -171,26 +168,31 @@ func (u *unit) detectSimpleOscillation() bool {
 	return a.X == c.X && a.Y == c.Y && b.X == d.X && b.Y == d.Y
 }
 
-func (u *unit) hasValidPath(resolver objectResolver, board *boardData) bool {
+func (u *unit) hasValidPath(bState *battleState) bool {
 	if len(u.Path) == 0 || u.PathIndex >= len(u.Path) {
 		return false
 	}
 
-	target, err := u.validateTargetExists(resolver, board)
+	target, err := bState.resolveTarget(u.Target)
 	if err != nil {
 		return false
 	}
 
-	if u.TargetID == 0 {
+	switch u.Target.Kind {
+	case targetTile: // drzewa, puste pola
 		return true
-	}
-
-	if target.Building != nil {
-		return u.TargetID == ObjectID(target.Building.ID)
-	}
-
-	if target.Unit != nil {
-		return u.TargetX == target.Unit.X && u.TargetY == target.Unit.Y
+	case targetBuilding:
+		return true
+	case targetUnit:
+		if target.Unit != nil {
+			return u.Target.Position.X == target.Unit.X && u.Target.Position.Y == target.Unit.Y
+		}
+	case targetNone:
+		// nie wiem co to miałoby oznaczać
+		return false
+	default:
+		// jeśli nie wiemy co, to przypał
+		return false
 	}
 
 	return false
@@ -293,14 +295,14 @@ func (u *unit) executeMove(x, y uint8, board *boardData) {
 }
 
 func (u *unit) isAtTarget() bool {
-	return u.X == u.ApproachX && u.Y == u.ApproachY
+	return u.X == u.Approach.X && u.Y == u.Approach.Y
 }
 
-func (u *unit) move(resolver objectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
+func (u *unit) move(pathfindingBudget *int, bState *battleState) {
 	if u.Command == cmdUAttack {
 		log.Printf("INFO: units.go move rozkaz to cmdAttack")
 
-		if u.canAttackTargetFromCurrentPosition(resolver, board) {
+		if u.canAttackTargetFromCurrentPosition(bState) {
 			log.Printf("INFO: units.go move cel osiągalny z tego miejsca")
 			u.clearPath()
 			u.State = stateAttacking
@@ -311,7 +313,7 @@ func (u *unit) move(resolver objectResolver, board *boardData, pathfindingBudget
 		// 25.04.2026 Dodaję bezpiecznik przerywający ruch jeśli cel przestał istnieć
 		// Bez tego jednostka atakująca drzewo zaczyna się przemieszczać po jego upadku
 		// szukając nowej pozycji do ataku nieistniejącego już celu.
-		_, err := u.validateTargetExists(resolver, board)
+		_, err := bState.resolveTarget(u.Target)
 		if err != nil {
 			u.setIdleWithReason("cel ataku przestał istnieć")
 
@@ -322,7 +324,7 @@ func (u *unit) move(resolver objectResolver, board *boardData, pathfindingBudget
 	if u.isAtTarget() {
 		log.Printf("INFO: units.go move u celu")
 
-		u.handleTargetReached(resolver, board, bState)
+		u.handleTargetReached(bState)
 
 		return
 	}
@@ -333,11 +335,12 @@ func (u *unit) move(resolver objectResolver, board *boardData, pathfindingBudget
 		return
 	}
 
-	u.executeAStarMovement(resolver, board, pathfindingBudget)
+	u.executeAStarMovement(pathfindingBudget, bState)
 }
 
-func (u *unit) handleMovementTargetReached(resolver objectResolver, board *boardData, bState *battleState) {
-	if u.State == stateMoving && u.X == u.TargetX && u.Y == u.TargetY {
-		u.handleTargetReached(resolver, board, bState)
+func (u *unit) handleMovementTargetReached(bState *battleState) {
+	// @todo: ogarnij, czy nie powinienem Target.position zastąpić u.Approach
+	if u.State == stateMoving && u.X == u.Target.Position.X && u.Y == u.Target.Position.Y {
+		u.handleTargetReached(bState)
 	}
 }

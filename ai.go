@@ -98,9 +98,9 @@ func (econ *economyAI) produceCows(bState *battleState) bool {
 
 	// Wytwarzamy krowę
 	cmd := command{
-		ActionType:          cmdBProduce,
-		InteractionTargetID: ObjectID(barn.ID),
-		CreateType:          uint8(unitCow),
+		ActionType: cmdBProduce,
+		Target:     TargetReference{Kind: targetBuilding, ID: uint(barn.ID)},
+		CreateType: uint8(unitCow),
 	}
 	bState.CurrentCommands[1] = cmd
 	bState.AIEnemyState.Milk -= cowCost

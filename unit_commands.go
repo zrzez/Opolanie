@@ -12,7 +12,7 @@ const palisadeStrategicBuildingProximity = 10
 // Próba rozplątania units.go, tutaj powinny trafiać funkcje związane z
 // przetwarzaniem rozkazów przez jednoski.
 
-func (u *unit) addUnitCommand(cmd *command, board *boardData, resolver objectResolver) {
+func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	log.Printf("INFO: unit.go dodano rozkaz %d.", cmd.ActionType)
 	// ŁATANIE DZIURY W KOMPLETOWANIU ROZKAÓW DLA JEDNOSTEK
 	// @reminder: Łatanie dziury w kompletowaniu rozkazów dla jednostek
@@ -24,10 +24,8 @@ func (u *unit) addUnitCommand(cmd *command, board *boardData, resolver objectRes
 
 	if cmd.ActionType.isInteraction() {
 		var err error
-		// Jeśli czar wymaga interakcji, to obliczamy gdzie podejść
-		// Na drzewo nie da się wejść, więc trzeba znaleźć kafelek obok
-		targetCoords := &point{X: cmd.TargetX, Y: cmd.TargetY}
-		approach, err = u.calculateApproachTile(targetCoords, cmd.InteractionTargetID, board, resolver)
+
+		approach, err = u.calculateApproachTile(cmd.Target, bState)
 		if err != nil {
 			u.setIdleWithReason("cel nieosiągalny")
 
@@ -35,20 +33,27 @@ func (u *unit) addUnitCommand(cmd *command, board *boardData, resolver objectRes
 		}
 	} else {
 		// Nie wymaga interakcji, np. cmdMove, to cel jest miejscem w które się udajemy
-		approach = &point{X: cmd.TargetX, Y: cmd.TargetY}
+		approach = &cmd.Target.Position
 	}
 
 	// ! tutaj się zastanawiam, co zrobić
 	if cmd.ActionType == cmdUAttack {
-		if !u.canAttack(cmd.InteractionTargetID, cmd.TargetX, cmd.TargetY, board, resolver) {
-			fmt.Print("rozkaz nie przeszedł sprawdzenia canAttack w addUnitCommand")
+		target, err := bState.resolveTarget(cmd.Target)
+		if err != nil {
+			log.Printf("INFO: rozkaz ataku odrzucony: %v", err)
+
+			return
+		}
+
+		if !u.canAttack(target) {
+			log.Printf("INFO: rozkaz ataku odrzucony: jdnostka %d nie może zaatakować", u.ID)
 
 			return
 		}
 	}
 
 	// Przekazujemy cel oraz podejście
-	u.prepareForNewCommand(cmd.ActionType, cmd.TargetX, cmd.TargetY, cmd.InteractionTargetID, approach.X, approach.Y)
+	u.prepareForNewCommand(cmd.ActionType, cmd.Target, *approach)
 	u.applyCommandState(cmd.ActionType)
 }
 
@@ -63,9 +68,8 @@ func (u *unit) setIdleWithReason(reason string) {
 
 	// 25.04.2026 dodaję czyszczenie celu, bo powoduje niespójność w stanie
 	// bez tego jednostka jednocześnie jest bezczynna, jak i ma cel do ataku!
-	u.TargetX, u.TargetY = 0, 0
-	u.TargetID = 0
-	u.interactionTargetX, u.interactionTargetY = 0, 0
+	u.Target = TargetReference{}
+	u.Approach = point{}
 
 	if u.State != stateWaiting {
 		u.IsInQueue = false
@@ -108,114 +112,102 @@ func (u *unit) applyCommandState(command commandType) {
 	}
 }
 
-func (u *unit) executeCommandAction(resolver objectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
+func (u *unit) executeCommandAction(pathfindingBudget *int, bState *battleState) {
 	switch u.Type {
 	case unitCow:
-		u.handleCowBehavior(resolver, board, pathfindingBudget, bState)
+		u.handleCowBehavior(pathfindingBudget, bState)
 	default:
-		u.executeStandardUnitCommand(resolver, board, pathfindingBudget, bState)
+		u.executeStandardUnitCommand(pathfindingBudget, bState)
 	}
 }
 
-func (u *unit) executeStandardUnitCommand(resolver objectResolver, board *boardData, pathfindingBudget *int, bState *battleState) {
+func (u *unit) executeStandardUnitCommand(pathfindingBudget *int, bState *battleState) {
 	switch u.Command {
 	case cmdUMove:
-		u.move(resolver, board, pathfindingBudget, bState)
+		u.move(pathfindingBudget, bState)
 	case cmdUAttack:
-		if u.canAttackTargetFromCurrentPosition(resolver, board) {
+		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.State = stateAttacking
 			u.clearPath()
-			u.attack(resolver, board, bState)
+			u.attack(bState)
 		} else {
 			u.State = stateMoving
-			u.move(resolver, board, pathfindingBudget, bState)
+			u.move(pathfindingBudget, bState)
 		}
-	case cmdUBuild:
-		if u.canAttackTargetFromCurrentPosition(resolver, board) {
-			u.State = stateBuilding
+	case cmdUBuild, cmdURepair:
+		u.handleWorkCommand(pathfindingBudget, bState)
 
-			if u.AnimationType != "fight" {
-				u.AnimationType = "fight"
-				u.AnimationFrame = 0
-			}
-
-			u.clearPath()
-			_, targetBuilding := bState.getObjectByID(u.TargetID)
-
-			var amount uint16
-
-			switch u.Owner {
-			case bState.PlayerID:
-				amount = repairAmountPlayer
-			case bState.AIPlayerID:
-				amount = repairAmountAI
-			}
-
-			u.build(targetBuilding, amount)
-		} else {
-			u.State = stateMoving
-
-			if u.AnimationType != "walk" {
-				u.AnimationType = "walk"
-			}
-
-			u.move(resolver, board, pathfindingBudget, bState)
-		}
-	case cmdURepair:
-		if u.canAttackTargetFromCurrentPosition(resolver, board) {
-			u.State = stateRepairing
-
-			if u.AnimationType != "fight" {
-				u.AnimationType = "fight"
-				u.AnimationFrame = 0
-			}
-
-			u.clearPath()
-			_, targetBuilding := bState.getObjectByID(u.TargetID)
-
-			var amount uint16
-
-			switch u.Owner {
-			case bState.PlayerID:
-				amount = repairAmountPlayer
-			case bState.AIPlayerID:
-				amount = repairAmountAI
-			}
-
-			u.repair(targetBuilding, amount)
-		} else {
-			u.State = stateMoving
-
-			if u.AnimationType != "walk" {
-				u.AnimationType = "walk"
-			}
-
-			u.move(resolver, board, pathfindingBudget, bState)
-		}
 	case cmdUCastSpell:
-		u.castSpell(resolver, board, pathfindingBudget, bState)
+		u.castSpell(pathfindingBudget, bState)
 
 	case cmdUIdle, cmdUStop:
-		u.actOnIdle(resolver, board, bState)
+		u.actOnIdle(bState)
 	default:
 		panic("unhandled default case")
 	}
 }
 
-func (u *unit) canAttackTargetFromCurrentPosition(resolver objectResolver, board *boardData) bool {
-	log.Println("Sprawdzam, czy cel istnieje")
+func (u *unit) handleWorkCommand(pathfindingBudget *int, bState *battleState) {
+	// 1. Zasięg
+	if !u.canAttackTargetFromCurrentPosition(bState) {
+		u.State = stateMoving
 
-	target, err := u.validateTargetExists(resolver, board)
+		if u.AnimationType != "walk" {
+			u.AnimationType = "walk"
+		}
+
+		u.move(pathfindingBudget, bState)
+
+		return
+	}
+
+	// 2. Pobieramy cel
+	target, err := bState.resolveTarget(u.Target)
+	if err != nil || target.Building == nil {
+		u.setIdleWithReason("cel prac zniknał lub nie jest budynkiem")
+
+		return
+	}
+
+	// 3. Ustawiamy odpowiedni stan
+	if u.Command == cmdUBuild {
+		u.State = stateBuilding
+	} else {
+		u.State = stateRepairing
+	}
+
+	if u.AnimationType != "fight" {
+		u.AnimationType = "fight"
+		u.AnimationFrame = 0
+	}
+
+	u.clearPath()
+
+	// 4. Ustalamy ile da jedna jednostka pracy
+	var amount uint16
+
+	switch u.Owner {
+	case bState.HumanPlayerState.PlayerID:
+		amount = repairAmountPlayer
+	case bState.AIEnemyState.PlayerID:
+		amount = repairAmountAI
+	}
+
+	// 5. Wykon
+	if u.Command == cmdUBuild {
+		u.build(target.Building, amount)
+	} else {
+		u.repair(target.Building, amount)
+	}
+}
+
+func (u *unit) canAttackTargetFromCurrentPosition(bState *battleState) bool {
+	target, err := bState.resolveTarget(u.Target)
 	if err != nil {
 		return false
 	}
 
-	log.Println("Obliczam odległość")
-
 	distance := u.calculateDistanceToTarget(target)
-
-	log.Printf("Odległość obliczona %d", distance)
-	log.Println(distance <= u.AttackRange)
 
 	return distance <= u.AttackRange
 }
@@ -241,9 +233,9 @@ func (u *unit) calculateDistanceToTarget(target *combatTarget) uint8 {
 	))
 }
 
-func (u *unit) calculateApproachTile(intention *point, targetID ObjectID, board *boardData, resolver objectResolver) (*point, error) {
+func (u *unit) calculateApproachTile(targetRef TargetReference, bState *battleState) (*point, error) {
 	if u.CurrentSpell != spellNone {
-		approachTile, err := u.findApproachTileForSpell(intention, board)
+		approachTile, err := u.findApproachTileForSpell(targetRef.Position, bState.Board)
 		if err != nil {
 			return nil, err
 		}
@@ -252,14 +244,14 @@ func (u *unit) calculateApproachTile(intention *point, targetID ObjectID, board 
 	}
 
 	// Budynki, jednostki i drzewa jako cel
-	return u.findApproachTileForTarget(intention, targetID, board, resolver)
+	return u.findApproachTileForTarget(targetRef, bState)
 }
 
-func (u *unit) findApproachTileForSpell(targetPosition *point, board *boardData) (*point, error) {
+func (u *unit) findApproachTileForSpell(targetPosition point, board *boardData) (*point, error) {
 	switch u.CurrentSpell {
 	case spellMagicShower:
 
-		validCoords, ok := findTileForAttacking(u, nil, nil, targetPosition, board)
+		validCoords, ok := findTileForAttacking(u, nil, nil, &targetPosition, board)
 		if !ok {
 			return nil, fmt.Errorf("nie ma podejścia do celu")
 		}
@@ -281,8 +273,11 @@ func (u *unit) findApproachTileForSpell(targetPosition *point, board *boardData)
 }
 
 // @reminder: nazwa dla kafelka z drzewem „intention” jest bardzo kiepska, ale nie mam teraz do tego głowy.
-func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, board *boardData, resolver objectResolver) (*point, error) {
-	targetUnit, targetBuilding := resolver.getObjectByID(targetID)
+func (u *unit) findApproachTileForTarget(targetRef TargetReference, bState *battleState) (*point, error) {
+	target, err := bState.resolveTarget(targetRef)
+	if err != nil {
+		return nil, err
+	}
 
 	var targetU *unit
 
@@ -291,113 +286,93 @@ func (u *unit) findApproachTileForTarget(intention *point, targetID ObjectID, bo
 	var targetTree *point
 
 	switch {
-	case targetBuilding != nil && (targetBuilding.Exists || targetBuilding.Type == buildingBridge):
-		targetBld = targetBuilding
-	case targetUnit != nil && targetUnit.Exists:
-		targetU = targetUnit
-	case intention != nil && board.Tiles[intention.X][intention.Y].isTree():
-		targetTree = intention
+	case target.Building != nil && (target.Building.Exists || target.Building.Type == buildingBridge):
+		targetBld = target.Building
+	case target.Unit != nil && target.Unit.Exists:
+		targetU = target.Unit
+	case target.Tile != nil && target.Tile.isTree():
+		targetTree = &targetRef.Position
 	}
 
-	validCoords, ok := findTileForAttacking(u, targetU, targetBld, targetTree, board)
+	validCoords, ok := findTileForAttacking(u, targetU, targetBld, targetTree, bState.Board)
 	if !ok {
 		return nil, fmt.Errorf("nie ma podejścia do celu: %t", ok)
 	}
 
-	return findBestReachableTile(u, validCoords, board)
+	return findBestReachableTile(u, validCoords, bState.Board)
 }
 
 // @todo: nie powinna to być metoda jednostki, bo to sprawdzanie poprawności
 // ! albo przekazuję objectResolver albo combattarget? coś mi tutaj nie pasuje.
-func (u *unit) canAttack(targetID ObjectID, intentionX, intentionY uint8, board *boardData, resolver objectResolver) bool {
-	// Drzewa
-	// dany kafelek musi istnieć więc nie robię != nil
-	// ! sprawdzenie raczej bez sensu, bo nie tworzymy sobie współrzędnych bez sensu
-	if targetID == 0 {
-		if u.TargetX >= boardMaxX || u.TargetY >= boardMaxY {
-			fmt.Print("DUPA BOARDMAX")
-
+func (u *unit) canAttack(target *combatTarget) bool {
+	switch {
+	case target.Tile != nil:
+		// Jeśli pole nie zawiera drzewa
+		if !target.Tile.isTree() {
 			return false
 		}
 
-		targetTile := &board.Tiles[intentionX][intentionY]
+		// Pole z drzewem, sprawdzamy, czy możemy je niszczyć
+		return u.canDamageTree(target.Tile)
 
-		if targetTile.isTree() {
-			fmt.Print("DUPA TO NIE DRZEWO")
-
-			return u.canDamageTree(targetTile)
-		}
-
-		fmt.Print("DUPA DRZEWO, ALE WYPAD")
-		// Jeśli ID == 0, ale nie jest drzewem, to mamy problem…
-		return false
-	}
-
-	targetUnit, targetBuilding := resolver.getObjectByID(targetID)
-
-	// Jednostki
-	// musi istnieć
-	if targetUnit != nil && targetUnit.ID != u.ID {
-		// musi być oznaczona jako żywa
-		return targetUnit.Exists
-	}
-
-	// Budynki
-	if targetBuilding != nil {
-		if !targetBuilding.Exists {
+	case target.Unit != nil:
+		// Nie możemy okaleczyć samego siebie
+		return target.Unit.Exists && target.Unit.ID != u.ID
+	case target.Building != nil:
+		// Tylko istniejące budynki
+		if !target.Building.Exists {
 			return false
 		}
 
-		// magowie nie mogą atakować budynków
+		// Magowie nie mogą atakować budynków
 		if u.Type == unitMage {
 			return false
 		}
 
-		if targetBuilding.Type == buildingPalisade && !u.Type.canDamagePalisades() {
-			log.Printf("INFO: Jednostka %d nie może atakować palisad", u.ID)
-
+		// Tylko niektóre jednostki mogą niszczyć palisady
+		if target.Building.Type == buildingPalisade && !u.Type.canDamagePalisades() {
 			return false
 		}
 
-		if targetBuilding.Type == buildingBridge {
+		// Wybudowany most jest nietykalny
+		if target.Building.Type == buildingBridge {
 			return false
 		}
 
 		return true
 	}
 
-	// cel nie istnieje
+	// Wydaje się, że cel nie istnieje
 	return false
 }
 
-func (u *unit) validateAttackTarget(resolver objectResolver, board *boardData) (*combatTarget, error) {
-	target, err := u.validateTargetExists(resolver, board)
-	if err != nil {
-		return nil, fmt.Errorf("cel zniknął")
-	}
-
+func (u *unit) validateAttackTarget(target *combatTarget) error {
 	isFriendly := (target.Unit != nil && target.Unit.Owner == u.Owner) ||
 		(target.Building != nil && target.Building.Owner == u.Owner)
 
 	if isFriendly && !u.AllowFriendlyFire {
-		return nil, fmt.Errorf("atak na jednostkę sojuszniczą niedozwolony")
+		return fmt.Errorf("atak na jednostkę sojuszniczą niedozwolony")
 	}
 
 	if target.Building != nil {
 		if target.Building.Type == buildingPalisade && !u.Type.canDamagePalisades() {
-			return nil, fmt.Errorf("jednostka nie może niszczyć palisad")
+			return fmt.Errorf("jednostka nie może niszczyć palisad")
 		}
 
 		if target.Building.HP == 0 {
-			return nil, fmt.Errorf("budynek zburzony")
+			return fmt.Errorf("budynek zburzony")
 		}
 	}
 
 	if target.Unit != nil && target.Unit.HP == 0 {
-		return nil, fmt.Errorf("cel już ubity")
+		return fmt.Errorf("cel już ubity")
 	}
 
-	return target, nil
+	if target.Tile != nil && !target.Tile.isStandingTree() {
+		return fmt.Errorf("drzewo zostało już ścięte")
+	}
+
+	return nil
 }
 
 func (u *unit) canAttackTarget(target *combatTarget) bool {
@@ -421,18 +396,18 @@ func (u *unit) getRangedTargetCoords(target *combatTarget) (*point, bool) {
 	return nil, false
 }
 
-func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
+func (u *unit) handleTargetPostAttack(target *combatTarget) {
 	// Sprawdź czy cel przestał istnieć LUB ma 0 HP
 	var targetDestroyed bool
 
-	if targetUnit != nil && (!targetUnit.Exists || targetUnit.HP == 0) {
+	if target.Unit != nil && (!target.Unit.Exists || target.Unit.HP == 0) {
 		targetDestroyed = true
 	}
 
-	if targetBld != nil {
-		if targetBld.Type == buildingBridge {
+	if target.Building != nil {
+		if target.Building.Type == buildingBridge {
 			targetDestroyed = false
-		} else if !targetBld.Exists || targetBld.HP == 0 {
+		} else if !target.Building.Exists || target.Building.HP == 0 {
 			targetDestroyed = true
 		}
 	}
@@ -444,21 +419,6 @@ func (u *unit) handleTargetPostAttack(targetUnit *unit, targetBld *building) {
 		u.AnimationType = "fight"
 		u.AnimationFrame = 0
 	}
-}
-
-func (u *unit) canCastSpellFromCurrentPosition() bool {
-	targetX, targetY := u.interactionTargetX, u.interactionTargetY
-
-	if targetX == 0 && targetY == 0 {
-		targetX, targetY = u.TargetX, u.TargetY
-	}
-
-	dist := uint8(math.Max(
-		math.Abs(float64(int(u.X)-int(targetX))),
-		math.Abs(float64(int(u.Y)-int(targetY))),
-	))
-
-	return dist <= u.AttackRange
 }
 
 func (u *unit) findNearestPalisade(bState *battleState, radius uint8,
@@ -526,17 +486,17 @@ func (u *unit) isImportantPalisade(palisade *building, bState *battleState) bool
 	return false
 }
 
-func (u *unit) handleTargetSearch(resolver objectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleTargetSearch(bState *battleState) {
 	if u.Owner == bState.HumanPlayerState.PlayerID {
-		u.handleTargetSearchForHumanPlayer(resolver, board, bState)
+		u.handleTargetSearchForHumanPlayer(bState)
 	} else {
-		u.handleTargetSearchForAI(resolver, board, bState)
+		u.handleTargetSearchForAI(bState)
 	}
 }
 
 // @reminder: szukanie celu dla gracza i SI różnią się szczegółami, np. jednostka gracza nie napadają
 //    samoistnie na wrogie budynki.
-func (u *unit) handleTargetSearchForHumanPlayer(resolver objectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleTargetSearchForHumanPlayer(bState *battleState) {
 	primaryTargetUnit, _, foundPrimary := findNearestEnemyExtended(u, bState)
 
 	if !foundPrimary {
@@ -546,7 +506,7 @@ func (u *unit) handleTargetSearchForHumanPlayer(resolver objectResolver, board *
 	}
 
 	if primaryTargetUnit != nil && primaryTargetUnit.Exists {
-		u.handleUnitTarget(primaryTargetUnit, resolver, board)
+		u.handleUnitTarget(primaryTargetUnit, bState)
 
 		return
 	}
@@ -556,7 +516,7 @@ func (u *unit) handleTargetSearchForHumanPlayer(resolver objectResolver, board *
 
 // @reminder: szukanie celu dla gracza i SI różnią się szczegółami, np. jednostka gracza nie napadają
 //    samoistnie na wrogie budynki.
-func (u *unit) handleTargetSearchForAI(resolver objectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleTargetSearchForAI(bState *battleState) {
 	isPalisadeBreaker := u.Type.canDamagePalisades()
 
 	primaryTargetUnit, primaryTargetBuilding, foundPrimary := findNearestEnemyExtended(u, bState)
@@ -568,7 +528,7 @@ func (u *unit) handleTargetSearchForAI(resolver objectResolver, board *boardData
 			palisadeTarget := u.findNearestPalisade(bState, u.SightRange)
 
 			if palisadeTarget != nil {
-				u.handleBuildingTarget(palisadeTarget, board, resolver)
+				u.handleBuildingTarget(palisadeTarget, bState)
 
 				return
 			}
@@ -582,40 +542,12 @@ func (u *unit) handleTargetSearchForAI(resolver objectResolver, board *boardData
 	}
 
 	if primaryTargetUnit != nil {
-		u.handleUnitTarget(primaryTargetUnit, resolver, board)
+		u.handleUnitTarget(primaryTargetUnit, bState)
 	}
 
 	if primaryTargetBuilding != nil {
-		u.handleBuildingTarget(primaryTargetBuilding, board, resolver)
+		u.handleBuildingTarget(primaryTargetBuilding, bState)
 	}
-}
-
-func (u *unit) validateTargetExists(resolver objectResolver, board *boardData) (*combatTarget, error) {
-	targetUnit, targetBuilding := resolver.getObjectByID(u.TargetID)
-
-	// To chyba jest chodzenie po moście albo jego budowa.
-	// Szkoda, że nie zostawiłem komentarzy.
-	if targetBuilding != nil && targetBuilding.Type == buildingBridge {
-		return &combatTarget{Building: targetBuilding}, nil
-	}
-
-	// Do atakowania drzew. Muszę poprawić!
-	if u.TargetID == 0 {
-		treeTile := &board.Tiles[u.TargetX][u.TargetY]
-		if treeTile.isStandingTree() && !treeTile.IsBurning {
-			return &combatTarget{Tile: treeTile}, nil
-		}
-
-		return nil, fmt.Errorf("cel (drzewo) nie istnieje")
-	}
-
-	// Wyłapujemy, czy budynek lub jednostka przestały istnieć
-	if (targetUnit == nil || !targetUnit.Exists) && (targetBuilding == nil || !targetBuilding.Exists) {
-		return nil, fmt.Errorf("cel nie istnieje")
-	}
-
-	// Jest spoko, można przepuścić cel
-	return &combatTarget{Unit: targetUnit, Building: targetBuilding}, nil
 }
 
 // @todo: nie pamiętam po co to, chyba tylko do odsiania obiektów, których jednostka
@@ -635,7 +567,7 @@ func (u *unit) executeActionByDistance(distance uint8) {
 		u.AnimationType = "fight"
 		u.AnimationFrame = 0
 		u.AnimationCounter = 0
-		log.Printf("INFO: unit %d zaczyna atakować cel ID %d z miejsca.", u.ID, u.TargetID)
+		log.Printf("INFO: unit %d zaczyna atakować cel ID %d z miejsca.", u.ID, u.Target.ID)
 	} else {
 		// Cel poza zasięgiem, przechodzimy w stan ruchu do wyliczonego ApproachX/Y
 		u.State = stateMoving
@@ -643,10 +575,10 @@ func (u *unit) executeActionByDistance(distance uint8) {
 	}
 }
 
-func (u *unit) executeActionBasedOnDistance(resolver objectResolver, board *boardData) {
-	target, err := u.validateTargetExists(resolver, board)
+func (u *unit) executeActionBasedOnDistance(bState *battleState) {
+	target, err := bState.resolveTarget(u.Target)
 	if err != nil {
-		u.setIdle()
+		u.setIdleWithReason("cel przestał istnieć lub jest nieosiągalny")
 
 		return
 	}
@@ -656,8 +588,7 @@ func (u *unit) executeActionBasedOnDistance(resolver objectResolver, board *boar
 }
 
 // @reminder: dla bezczynnych jednostek. Nie powinna się sama zadaniować.
-
-func (u *unit) actOnIdle(resolver objectResolver, board *boardData, bState *battleState) {
+func (u *unit) actOnIdle(bState *battleState) {
 	if !u.canActOnIdle() {
 		return
 	}
@@ -666,73 +597,87 @@ func (u *unit) actOnIdle(resolver objectResolver, board *boardData, bState *batt
 		return
 	}
 
-	if !u.shouldSearchForTarget(resolver, board) {
+	if !u.isReadyToAct(bState) {
 		return
 	}
 
-	u.handleTargetSearch(resolver, board, bState)
+	u.handleTargetSearch(bState)
 }
 
 func (u *unit) canActOnIdle() bool {
 	return u.Type != unitCow && u.Type != unitShepherd
 }
 
-func (u *unit) shouldSearchForTarget(resolver objectResolver, board *boardData) bool {
-	return u.isReadyToAct(resolver, board)
-}
-
-func (u *unit) isReadyToAct(resolver objectResolver, board *boardData) bool {
+func (u *unit) isReadyToAct(bState *battleState) bool {
+	// 1. Siedzi i nie robi nic
 	if u.State == stateIdle && u.Command == cmdUIdle {
 		return true
 	}
 
+	// 2. Próbuje atakować
 	if u.Command == cmdUAttack {
-		_, err := u.validateTargetExists(resolver, board)
+		// Więc sprawdzamy, czy cel jeszcze istnieje
+		_, err := bState.resolveTarget(u.Target)
 		if err != nil {
+			// Nie istnieje więc można zacząć robić co innego
 			return true
 		}
 	}
 
+	// Jednostka robi coś innego, jest zajęta
 	return false
 }
 
-func (u *unit) handleUnitTarget(targetUnit *unit, resolver objectResolver, board *boardData) {
-	u.TargetID = ObjectID(targetUnit.ID)
+func (u *unit) handleUnitTarget(targetedUnit *unit, bState *battleState) {
+	u.Target = TargetReference{
+		Kind:     targetUnit,
+		ID:       uint(targetedUnit.ID),
+		Position: targetedUnit.Position,
+	}
 
-	coords, err := u.findApproachTileForTarget(nil, u.TargetID, board, resolver)
+	coords, err := u.findApproachTileForTarget(u.Target, bState)
 	if err != nil {
 		u.setIdleWithReason("nie można znaleźć drogi do wrogiej jednostki")
 
 		return
 	}
 
-	u.ApproachX = coords.X
-	u.ApproachY = coords.Y
-	u.TargetX = coords.X
-	u.TargetY = coords.Y
+	u.Approach = *coords
+	u.Target.Position = *coords
 
-	u.executeActionBasedOnDistance(resolver, board)
+	u.executeActionBasedOnDistance(bState)
 }
 
-func (u *unit) handleBuildingTarget(targetBuilding *building, board *boardData, resolver objectResolver) {
-	u.TargetID = ObjectID(targetBuilding.ID)
+func (u *unit) handleBuildingTarget(targetedBuilding *building, bState *battleState) {
+	// @reminder: tymczasowe, później trzeba to posprzątać, bo findApproachTileForTarget powiela
+	bldCenterX, bldCenterY, ok := targetedBuilding.getCenter()
+	if !ok {
+		u.setIdleWithReason("cel (budynek) jest nieprawidłowy")
 
-	coords, err := u.findApproachTileForTarget(nil, u.TargetID, board, resolver)
+		return
+	}
+
+	u.Target = TargetReference{
+		Kind:     targetBuilding,
+		ID:       uint(targetedBuilding.ID),
+		Position: point{X: bldCenterX, Y: bldCenterY},
+	}
+
+	coords, err := u.findApproachTileForTarget(u.Target, bState)
 	if err != nil {
 		u.setIdleWithReason("nie można znaleźć drogi do wrogiego budynku")
 
 		return
 	}
 
-	u.ApproachX = coords.X
-	u.ApproachY = coords.Y
-	u.TargetX = coords.X
-	u.TargetY = coords.Y
+	// @reminder: wygląda to bardzo podejrzanie, że „podejście” do budynku jest tym samym, co cel ataku!
+	u.Approach = *coords
+	u.Target.Position = *coords
 
-	u.executeActionBasedOnDistance(resolver, board)
+	u.executeActionBasedOnDistance(bState)
 }
 
-func (u *unit) handleTargetReached(resolver objectResolver, board *boardData, bState *battleState) {
+func (u *unit) handleTargetReached(bState *battleState) {
 	u.clearPath()
 
 	switch u.Command {
@@ -740,12 +685,16 @@ func (u *unit) handleTargetReached(resolver objectResolver, board *boardData, bS
 		log.Printf("INFO: units.go handleTargetReached cmdAttack jesteśmy u celu")
 
 		u.State = stateAttacking
-		u.attack(resolver, board, bState)
+		u.attack(bState)
 	case cmdUCastSpell:
 		u.State = stateCastingSpell
-	case cmdUBuild:
-		u.State = stateBuilding
-		_, targetBuilding := bState.getObjectByID(u.TargetID)
+	case cmdUBuild, cmdURepair:
+		target, err := bState.resolveTarget(u.Target)
+		if err != nil || target.Building == nil {
+			u.setIdleWithReason("cel budywy/naprawy przepadł")
+
+			return
+		}
 
 		var amount uint16
 
@@ -756,21 +705,14 @@ func (u *unit) handleTargetReached(resolver objectResolver, board *boardData, bS
 			amount = repairAmountAI
 		}
 
-		u.build(targetBuilding, amount)
-	case cmdURepair:
-		u.State = stateRepairing
-		_, targetBuilding := bState.getObjectByID(u.TargetID)
-
-		var amount uint16
-
-		switch u.Owner {
-		case bState.PlayerID:
-			amount = repairAmountPlayer
-		case bState.AIPlayerID:
-			amount = repairAmountAI
+		if u.Command == cmdUBuild {
+			u.State = stateBuilding
+			u.build(target.Building, amount)
+		} else {
+			u.State = stateRepairing
+			u.repair(target.Building, amount)
 		}
 
-		u.repair(targetBuilding, amount)
 	default:
 		u.setIdle()
 	}

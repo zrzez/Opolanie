@@ -167,18 +167,6 @@ func (bState *battleState) getUnitByID(uID UnitID) (*unit, bool) {
 	return nil, false
 }
 
-func (bState *battleState) getObjectByID(oID ObjectID) (*unit, *building) {
-	if currentUnit, ok := bState.getUnitByID(UnitID(oID)); ok {
-		return currentUnit, nil
-	}
-
-	if currentBuilding, ok := bState.getBuildingByID(BuildingID(oID)); ok {
-		return nil, currentBuilding
-	}
-
-	return nil, nil
-}
-
 // Zwraca listę zaznaczonych jednostek, które należą do gracza.
 func (bState *battleState) getSelectedUnits() []*unit {
 	var selected []*unit
@@ -375,4 +363,36 @@ func (bState *battleState) initUnit(unitType unitType, x, y uint8, newUnitID Uni
 	newUnit.Delay = newUnit.MaxDelay
 
 	return newUnit
+}
+
+// Jeszcze nie wiem, jak to opisać - 25.07.2026
+func (bState *battleState) resolveTarget(reference TargetReference) (*combatTarget, error) {
+	switch reference.Kind {
+	case targetUnit:
+		targetedUnit, ok := bState.getUnitByID(UnitID(reference.ID))
+		if !ok || !targetedUnit.Exists {
+			return nil, fmt.Errorf("jednotka do zaatakowania nie istnieje", reference.ID)
+		}
+
+		return &combatTarget{Unit: targetedUnit}, nil
+	case targetBuilding:
+		targetedBld, ok := bState.getBuildingByID(BuildingID(reference.ID))
+		if !ok || !targetedBld.Exists {
+			return nil, fmt.Errorf("budynek do zaatakowania nie istnieje", reference.ID)
+		}
+
+		return &combatTarget{Building: targetedBld}, nil
+	case targetTile:
+		if reference.Position.X >= boardMaxX || reference.Position.Y >= boardMaxY {
+			return nil, fmt.Errorf("pole poza planszą")
+		}
+
+		targetedTile := &bState.Board.Tiles[reference.Position.X][reference.Position.Y]
+
+		return &combatTarget{Tile: targetedTile}, nil
+	case targetNone:
+		return nil, fmt.Errorf("nieprawidłowy cel ataku (targetNone)")
+	default:
+		return nil, fmt.Errorf("nieprawidłowy cel ataku (default)")
+	}
 }

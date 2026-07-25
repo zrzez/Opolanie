@@ -19,10 +19,23 @@ func updateActionButtons(bState *battleState) {
 	}
 
 	// 3. Przekazujemy dobór logiki do odpowiednich pomocników
-	if selected.IsUnit {
-		fillUnitActions(bState, selected.UnitID)
-	} else if selected.BuildingID != 0 {
-		fillBuildingActions(bState, selected.BuildingID)
+	// nic nie jest zaznaczone
+	if selected.Selection.Kind == targetNone {
+		return
+	}
+
+	selectedObject, err := bState.resolveTarget(selected.Selection)
+	if err != nil {
+		// coś poszło nie tak z zaznaczonym obiektem w międzyczasie
+		bState.CurrentSelection = selectionState{}
+
+		return
+	}
+
+	if selectedObject.Unit != nil {
+		fillUnitActions(bState, selectedObject.Unit.ID)
+	} else if selectedObject.Building != nil {
+		fillBuildingActions(bState, selectedObject.Building.ID)
 	}
 }
 

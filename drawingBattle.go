@@ -482,8 +482,8 @@ func drawBuildingInterface(bld *building, bState *battleState) {
 		Height: float32(heightTiles) * float32(tileHeight),
 	}
 
-	isBuildingSelected := bState.CurrentSelection.BuildingID == bld.ID
-
+	isBuildingSelected := bState.CurrentSelection.Selection.Kind == targetBuilding &&
+		bState.CurrentSelection.Selection.ID == uint(bld.ID)
 	// Jeśli zaznaczymy budynek to trzeba narysować ramkę, aby gracz wiedział
 	// który obiekt został wybrany.
 	if isBuildingSelected {
@@ -552,42 +552,41 @@ func getRenderDirection(u *unit, bState *battleState) (int, int) {
 		var targetX, targetY uint8
 		foundTarget := false
 
-		// 1. Sprawdź, czy mamy cel ataku (Unit lub Building)
-		if u.TargetID != 0 {
-			targetUnit, targetBld := bState.getObjectByID(ObjectID(u.TargetID))
-
-			if targetUnit != nil && targetUnit.Exists {
-				targetX = targetUnit.X
-				targetY = targetUnit.Y
-				foundTarget = true // WAŻNE: Musimy to oznaczyć!
-			} else if targetBld != nil && targetBld.Exists {
-				// Tutaj funkcja zwraca bool, więc używamy go
-				var ok bool
-				target, ok := getClosestOccupiedTile(&point{X: u.X, Y: u.Y}, &targetBld.OccupiedTiles)
-				if ok {
-					targetX, targetY = target.X, target.Y
+		// 1. Sprawdź, czy mamy cel
+		if u.Target.Kind != targetNone {
+			target, err := bState.resolveTarget(u.Target)
+			if err == nil {
+				if target.Unit != nil && target.Unit.Exists {
+					targetX, targetY = target.Unit.X, target.Unit.Y
+					foundTarget = true
+				} else if target.Building != nil && target.Building.Exists {
+					var ok bool
+					var closestPt *point
+					closestPt, ok = getClosestOccupiedTile(&point{X: u.X, Y: u.Y}, &target.Building.OccupiedTiles)
+					if ok && closestPt != nil {
+						targetX, targetY = closestPt.X, closestPt.Y
+						foundTarget = true
+					}
+				} else if target.Tile != nil {
+					targetX, targetY = target.Tile.X, target.Tile.Y
+					foundTarget = true
 				}
-
-				foundTarget = ok
 			}
 		}
 
-		// 2. Fallback: Jeśli nie mamy celu ataku (lub zniknął), patrzymy na cel ruchu
+		// 2. Jeśli nie mamy celu ataku lub zniknął, patrzymy na cel ruchu
 		if !foundTarget {
-			// Sprawdzamy, czy cel ruchu jest różny od obecnej pozycji
-			if u.TargetX != u.X || u.TargetY != u.Y {
-				targetX = u.TargetX
-				targetY = u.TargetY
+			if u.Approach.X != u.X || u.Approach.Y != u.Y {
+				targetX, targetY = u.Approach.X, u.Approach.Y
 				foundTarget = true
 			}
 		}
 
-		// 3. Obliczanie delty (kierunku) - TYLKO jeśli mamy cel
+		// 3. Obliczanie delty
 		if foundTarget {
 			dx := 0
 			dy := 0
 
-			// Bezpieczne porównanie uintów
 			if targetX > u.X {
 				dx = 1
 			} else if targetX < u.X {
@@ -600,15 +599,13 @@ func getRenderDirection(u *unit, bState *battleState) (int, int) {
 				dy = -1
 			}
 
-			// Zwracamy tylko jeśli faktycznie jest jakiś kierunek
 			if dx != 0 || dy != 0 {
 				return dx, dy
 			}
 		}
 	}
 
-	// Domyślny kierunek (np. z wektora ruchu plynnego)
-	// Rzutujemy na int, żeby zachować znak
+	// Domyślny kierunek
 	dx := int(math.Round(float64(u.Direction.X)))
 	dy := int(math.Round(float64(u.Direction.Y)))
 
@@ -766,7 +763,8 @@ func drawUnitInterface(renderUnit *unit, bState *battleState) {
 	screenY := int32(renderUnit.Y) * int32(tileHeight)
 
 	isUnitSelected := renderUnit.IsSelected ||
-		(bState.CurrentSelection.IsUnit && bState.CurrentSelection.UnitID == renderUnit.ID)
+		(bState.CurrentSelection.Selection.Kind == targetUnit &&
+			bState.CurrentSelection.Selection.ID == uint(renderUnit.ID))
 
 	if isUnitSelected {
 		drawUnitSelectionFrame(renderUnit, bState)

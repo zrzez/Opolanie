@@ -447,10 +447,11 @@ func handleGameShortcuts(bState *battleState) bool {
 					currentUnit.IsSelected = true
 					if firstUnitInGroup {
 						bState.CurrentSelection = selectionState{
-							OwnerID:    currentUnit.Owner,
-							IsUnit:     true,
-							UnitID:     currentUnit.ID,
-							BuildingID: 0,
+							OwnerID: currentUnit.Owner,
+							Selection: TargetReference{
+								Kind: targetUnit,
+								ID:   uint(currentUnit.ID),
+							},
 						}
 						firstUnitInGroup = false
 					}
@@ -465,8 +466,8 @@ func handleGameShortcuts(bState *battleState) bool {
 		}
 	}
 
-	if bState.CurrentSelection.IsUnit && bState.CurrentSelection.OwnerID == bState.PlayerID {
-		selectedUnit, ok := bState.getUnitByID(bState.CurrentSelection.UnitID)
+	if bState.CurrentSelection.Selection.Kind == targetUnit && bState.CurrentSelection.OwnerID == bState.PlayerID {
+		selectedUnit, ok := bState.getUnitByID(UnitID(bState.CurrentSelection.Selection.ID))
 		if !ok || !selectedUnit.Exists {
 			clearSelection(bState)
 			return false
@@ -474,8 +475,7 @@ func handleGameShortcuts(bState *battleState) bool {
 
 		if rl.IsKeyPressed(rl.KeyS) {
 			log.Println("SKRÓT: Komenda STOP dla jednostki")
-			selectedUnit.addUnitCommand(bState.PendingCommand, bState.Board, bState) // zamiast cmd* daję pendingcommand, może się nie popsuje
-			//↑↑↑ targetID = 0
+			selectedUnit.addUnitCommand(bState.PendingCommand, bState)
 			return true
 		}
 		if rl.IsKeyPressed(rl.KeyC) {
@@ -622,22 +622,34 @@ func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY 
 		return false
 	}
 
-	targetTile := &bState.Board.Tiles[tileX][tileY]
-	targetID, targetOwner := targetTile.getTargetFromTile()
+	targetedTile := &bState.Board.Tiles[tileX][tileY]
+	targetID, targetOwner := targetedTile.getTargetFromTile()
 
-	cmdType, isCommandValid := resolveRightClickCommandType(targetTile, targetID, targetOwner, selectedUnits, bState, iState)
+	cmdType, isCommandValid := resolveRightClickCommandType(targetedTile, targetID, targetOwner, selectedUnits, bState, iState)
 
 	if !isCommandValid {
 		return true
 	}
 
+	var targetRef TargetReference
+
+	targetRef.Position = point{X: tileX, Y: tileY}
+
+	if targetedTile.Unit != nil {
+		targetRef.Kind = targetUnit
+		targetRef.ID = uint(targetedTile.Unit.ID)
+	} else if targetedTile.Building != nil {
+		targetRef.Kind = targetBuilding
+		targetRef.ID = uint(targetedTile.Building.ID)
+	} else {
+		targetRef.Kind = targetTile
+	}
+
 	cmd := command{
-		ActionType:          cmdType,
-		ExecutorID:          0,
-		TargetX:             tileX,
-		TargetY:             tileY,
-		InteractionTargetID: targetID,
-		FriendlyFire:        iState.IsCtrlKeyDown,
+		ActionType:   cmdType,
+		ExecutorID:   0,
+		Target:       targetRef,
+		FriendlyFire: iState.IsCtrlKeyDown,
 	}
 
 	bState.HumanPlayerState.setCommand(&cmd, bState)
@@ -726,11 +738,11 @@ func resolveRightClickCommandType(
 const dragThresholdPixels float32 = 3.0
 
 func handleMouseStatePlacingConstruction(tileX, tileY uint8, bState *battleState) {
-	log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bState.PendingCommand.InteractionTargetID)
+	log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bState.PendingCommand.Target.ID)
 	cmd := bState.PendingCommand
 
 	// Uzupełniamy rozkaz danymi z planszy wskazanymi przez kursor
-	cmd.TargetX, cmd.TargetY = tileX, tileY
+	cmd.Target.Position.X, cmd.Target.Position.Y = tileX, tileY
 
 	// Przekazujemy do węzła
 	bState.HumanPlayerState.setCommand(cmd, bState) // @todo: czemu do cholery to potrzebuje bState jako argumentu?!
@@ -743,9 +755,9 @@ func handleMouseStateWorking(tileX, tileY uint8, bState *battleState, iState inp
 		return
 	}
 
-	targetBuilding := bState.Board.Tiles[tileX][tileY].Building
+	targetedBuilding := bState.Board.Tiles[tileX][tileY].Building
 
-	if targetBuilding == nil {
+	if targetedBuilding == nil {
 		bState.CurrentMessage.Text = "Wskaż budynek! "
 		bState.CurrentMessage.Duration = 30
 
@@ -754,9 +766,9 @@ func handleMouseStateWorking(tileX, tileY uint8, bState *battleState, iState inp
 
 	// Trzeba wreszcie określić, czy naprawa, czy budowa
 	switch {
-	case targetBuilding.IsUnderConstruction:
+	case targetedBuilding.IsUnderConstruction:
 		cmd.ActionType = cmdUBuild
-	case targetBuilding.isRepairable(bState.PlayerID):
+	case targetedBuilding.isRepairable(bState.PlayerID):
 		cmd.ActionType = cmdURepair
 	default:
 		bState.CurrentMessage.Text = "Budynek nie wymaga naprawy! "
@@ -768,8 +780,11 @@ func handleMouseStateWorking(tileX, tileY uint8, bState *battleState, iState inp
 	}
 
 	// Określiliśmy co dokładnie robić, dobieramy brakujące dane
-	cmd.TargetX, cmd.TargetY = tileX, tileY
-	cmd.InteractionTargetID = ObjectID(targetBuilding.ID)
+	cmd.Target = TargetReference{
+		Kind:     targetBuilding,
+		ID:       uint(targetedBuilding.ID),
+		Position: point{X: tileX, Y: tileY},
+	}
 	cmd.FriendlyFire = iState.IsCtrlKeyDown
 
 	// Całkowity rozkaz idzie do węzła
@@ -787,8 +802,10 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
 	}
 
 	// Dobieramy dane z planszy
-	cmd.TargetX, cmd.TargetY = tileX, tileY
-	cmd.InteractionTargetID = 0 // @reminder: to oznacza, że brak celu… czemu zaczarodziejska liczba?!
+	cmd.Target = TargetReference{
+		Kind:     targetTile,
+		Position: point{X: tileX, Y: tileY},
+	}
 
 	// Przekazujemy do węzła
 	bState.HumanPlayerState.setCommand(cmd, bState)
@@ -797,27 +814,6 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
 	bState.PendingCommand = nil
 	bState.MouseState = mouseStateNormal
 }
-
-/*func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
-	log.Println("DBG_LCLICK: Tryb rzucania czaru ofensywnego.")
-
-	selectedUnit, ok := getUnitByID(bState.CurrentSelection.UnitID, bState)
-	if !ok || !selectedUnit.Exists {
-		bState.MouseState = mouseStateNormal
-
-		return
-	}
-
-	spellActionType := cmdUCastSpell
-
-	// Dodajemy rozkaz do kolejki
-	selectedUnit.addUnitCommand(spellActionType, tileX, tileY, 0, bState)
-	log.Printf("DBG_LCLICK: Wydano rozkaz czaru %d na (%d,%d).", spellActionType, tileX, tileY)
-
-	bState.MouseState = mouseStateNormal
-
-	return
-}*/
 
 // @todo: tymczasowe ogarnianie drużynowych rozkazów. Muszę wrócić i poprawić!
 // @todo: jak poprawnie obsługiwać całe drużyny? Jak dobierać, które przyciski dozwolone?
@@ -994,7 +990,7 @@ func clearSelection(bState *battleState) {
 		}
 	}
 
-	if bState.CurrentSelection.IsUnit || bState.CurrentSelection.BuildingID != 0 {
+	if bState.CurrentSelection.Selection.Kind != targetNone {
 		bState.CurrentSelection = selectionState{}
 	}
 }
@@ -1043,12 +1039,15 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 
 		if currentUnit.Owner != bState.PlayerID {
 			clearSelection(bState)
+
 			bState.CurrentSelection = selectionState{
-				OwnerID:    currentUnit.Owner,
-				IsUnit:     true,
-				UnitID:     currentUnit.ID,
-				BuildingID: 0,
+				OwnerID: currentUnit.Owner,
+				Selection: TargetReference{
+					Kind: targetUnit,
+					ID:   uint(currentUnit.ID),
+				},
 			}
+
 			bState.CurrentMessage.Text = fmt.Sprintf("Wroga jednostka: %v", currentUnit.Type)
 			bState.CurrentMessage.Duration = 20
 			bState.MouseState = mouseStateNormal
@@ -1058,12 +1057,18 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 
 		if isShiftDown {
 			currentUnit.IsSelected = !currentUnit.IsSelected
-			if !currentUnit.IsSelected && bState.CurrentSelection.UnitID == currentUnit.ID {
+			if !currentUnit.IsSelected && bState.CurrentSelection.Selection.ID == uint(currentUnit.ID) &&
+				bState.CurrentSelection.Selection.Kind == targetUnit {
+
 				foundNewPrimary := false
 
 				for _, u := range bState.Units {
 					if u.Exists && u.IsSelected && u.Owner == bState.PlayerID {
-						bState.CurrentSelection = selectionState{OwnerID: u.Owner, IsUnit: true, UnitID: u.ID}
+						bState.CurrentSelection = selectionState{
+							OwnerID:   u.Owner,
+							Selection: TargetReference{Kind: targetUnit, ID: uint(u.ID)},
+						}
+
 						foundNewPrimary = true
 
 						break
@@ -1073,18 +1078,20 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 				if !foundNewPrimary {
 					bState.CurrentSelection = selectionState{}
 				}
-			} else if currentUnit.IsSelected && !bState.CurrentSelection.IsUnit {
-				bState.CurrentSelection = selectionState{OwnerID: currentUnit.Owner, IsUnit: true, UnitID: currentUnit.ID}
+			} else if currentUnit.IsSelected && bState.CurrentSelection.Selection.Kind == targetNone {
+				bState.CurrentSelection = selectionState{
+					OwnerID:   currentUnit.Owner,
+					Selection: TargetReference{Kind: targetUnit, ID: uint(currentUnit.ID)},
+				}
 			}
 
 		} else {
 			clearSelection(bState)
 			currentUnit.IsSelected = true
+
 			bState.CurrentSelection = selectionState{
-				OwnerID:    currentUnit.Owner,
-				IsUnit:     true,
-				UnitID:     currentUnit.ID,
-				BuildingID: 0,
+				OwnerID:   currentUnit.Owner,
+				Selection: TargetReference{Kind: targetUnit, ID: uint(currentUnit.ID)},
 			}
 		}
 
@@ -1108,10 +1115,8 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 		}
 
 		bState.CurrentSelection = selectionState{
-			OwnerID:    bld.Owner,
-			IsUnit:     false,
-			UnitID:     0,
-			BuildingID: bld.ID,
+			OwnerID:   bld.Owner,
+			Selection: TargetReference{Kind: targetBuilding, ID: uint(bld.ID)},
 		}
 		bState.MouseState = mouseStateNormal
 
@@ -1171,10 +1176,8 @@ func performBoxSelection(bState *battleState, startPosition, endPosistion rl.Vec
 
 	if selectedCount > 0 {
 		bState.CurrentSelection = selectionState{
-			OwnerID:    firstSelectedUnit.Owner,
-			IsUnit:     true,
-			UnitID:     firstSelectedUnit.ID,
-			BuildingID: 0,
+			OwnerID:   firstSelectedUnit.Owner,
+			Selection: TargetReference{Kind: targetUnit, ID: uint(firstSelectedUnit.ID)},
 		}
 	} else {
 		clearSelection(bState)
@@ -1303,12 +1306,10 @@ func handleMinimapRightMouse(
 	}
 
 	cmd := command{
-		ActionType:          cmdType,
-		ExecutorID:          0,
-		TargetX:             tileX,
-		TargetY:             tileY,
-		InteractionTargetID: targetID,
-		FriendlyFire:        iState.IsCtrlKeyDown,
+		ActionType:   cmdType,
+		ExecutorID:   0,
+		Target:       TargetReference{Position: point{X: tileX, Y: tileY}, ID: uint(targetID)},
+		FriendlyFire: iState.IsCtrlKeyDown,
 	}
 
 	bState.HumanPlayerState.setCommand(&cmd, bState)
