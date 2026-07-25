@@ -78,7 +78,6 @@ func (u *unit) executeSuccessfulMove(x, y uint8, board *boardData) {
 func (u *unit) waitForPathfindingBudget() {
 	u.State = stateWaiting
 	u.Delay = uint16(3 + rng.Intn(5))
-	log.Printf("unit %d: waiting for pathfinding budget", u.ID)
 }
 
 func (u *unit) setPathAndState(path []*pathNode) {
@@ -132,12 +131,12 @@ func (u *unit) handlePathfindingFailure() {
 	u.RetryAttempts++
 
 	if u.RetryAttempts >= maxPathfindingRetries {
-		u.setIdleWithReason("pathfinding permanently failed")
+		u.setIdleWithReason("odnajdywanie drogi się wyłożyło na dobre")
 		u.RetryAttempts = 0
 	} else {
 		u.State = stateWaiting
 		u.Delay = uint16(40 + rng.Intn(20))
-		log.Printf("unit %d: pathfinding failed (attempt %d/%d)",
+		log.Printf("jednostka %d: odnajdywanie drogi zawiodło (podejście %d/%d)",
 			u.ID, u.RetryAttempts, maxPathfindingRetries)
 	}
 }
@@ -277,8 +276,6 @@ func (bld *building) calculateMilkingSpot() (uint8, uint8, bool) {
 
 // executeMove wykonuje ruch na nową pozycję.
 func (u *unit) executeMove(x, y uint8, board *boardData) {
-	// ZMIANA: Używamy nowej struktury Tiles
-	// Usuń z poprzedniej pozycji (jeśli to ta jednostka tam jest)
 	if board.Tiles[u.X][u.Y].Unit == u {
 		board.Tiles[u.X][u.Y].Unit = nil
 	}

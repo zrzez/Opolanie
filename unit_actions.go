@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"math"
 )
 
@@ -74,7 +73,7 @@ func (u *unit) performAttack(target *combatTarget, hPID, aiPID PlayerID, projs *
 func (u *unit) performRangedAttack(target *combatTarget, damage uint16, hPID, aiPID PlayerID, projs *[]*projectile) {
 	targetCoords, ok := u.getRangedTargetCoords(target)
 	if !ok {
-		log.Printf("UWAGA: jednostka %d: nie udało się określić koordynatów celu dla pocisku", u.ID)
+		return
 	}
 
 	// Mechanizm odejmowania many za rzucenie magicznego pocisku
@@ -101,8 +100,6 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, hPID, ai
 	// Muszę dodać logikę rozdziało pomięcy celem jednostką a celem budynkiem.
 	// u.gainExperience tutaj!
 	handleGainExperience(u, target.Unit, hPID, aiPID)
-
-	log.Printf("jednostka %d wystrzeliła pocisk w (%d, %d) z obrażeniami %d", u.ID, u.Target.Position.X, u.Target.Position.Y, damage)
 }
 
 // @reminder: zdobywanie doświadczenia jest niezależne od wyniku ataku. Wykonał atak→gainExperience().
@@ -117,7 +114,7 @@ func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, hPID, aiP
 	case target.Tile.isTree():
 		target.Tile.accumulateTreeCuts(fallingTrees)
 	default:
-		log.Printf("UWAGA: jednostka %d: cel ataku wręcz już nie istnieje", u.ID)
+		// @reminder: jak coś to można dodać logi tutaj
 	}
 }
 
@@ -195,16 +192,12 @@ func (u *unit) castMagicShield() {
 func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID PlayerID, projs *[]*projectile) bool {
 	// 0. Koszt czaru
 	if u.Mana < spellBufferMagicShower || !u.tryToDecreaseMana(spellCostMagicShower) {
-		log.Printf("INFO: Jednostka %d nie ma wystarczająco many na rzucenie czaru", u.ID)
-
 		return false
 	}
 
 	// 1. Tworzymy czarodziejski deszcz
 	damage, missileKind, ok := u.resolveMagicShowerStats()
 	if !ok {
-		log.Printf("UWAGA: magicShower wywołany dla jednostki o nieobsługiwanym rodzaju %d!", u.Type)
-
 		return false
 	}
 
@@ -241,19 +234,17 @@ func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID Play
 		}
 
 		// 4. Przyzanie doświadczenia za zaatakowanie
-		targetTile := &board.Tiles[spawnX][target.Y]
+		targetedTile := &board.Tiles[spawnX][target.Y]
 
 		switch {
-		case targetTile.Unit != nil && targetTile.Unit.Exists:
-			handleGainExperience(u, targetTile.Unit, humanPID, aiPID)
-		case targetTile.Building != nil && targetTile.Building.Exists:
+		case targetedTile.Unit != nil && targetedTile.Unit.Exists:
+			handleGainExperience(u, targetedTile.Unit, humanPID, aiPID)
+		case targetedTile.Building != nil && targetedTile.Building.Exists:
 			handleGainExperience(u, nil, humanPID, aiPID)
 		default:
 			// Nie przyznajemy nic doświadczenia za napaść na otoczenie
 		}
 	}
-
-	log.Printf("INFO: Jednostka %d rzuciła czar na (%d, %d)", u.ID, target.X, target.Y)
 
 	return true
 }
@@ -286,7 +277,6 @@ func (u *unit) castMagicShower(board *boardData, humanPID, aiPID PlayerID, projs
 func (u *unit) castMagicSight(board *boardData) {
 	if u.Mana >= spellCostMagicSight {
 		u.Mana -= spellCostMagicSight
-		log.Printf("Jednostka %d rzuca czar widzenia", u.ID)
 
 		revealRadius := spellCostRangeMagicSight
 		for i := u.X - revealRadius; i <= u.X+revealRadius; i++ {
@@ -300,6 +290,4 @@ func (u *unit) castMagicSight(board *boardData) {
 			}
 		}
 	}
-
-	log.Printf("unit %d: Rzucono Czar Widoczności. Cała mapa odkryta.", u.ID)
 }

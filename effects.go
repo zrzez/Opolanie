@@ -4,7 +4,7 @@ import "math/rand"
 
 // effects.go
 
-// Funkcja do łączenia dróg/palisad
+// Funkcja do łączenia dróg/palisad.
 func joinPalisade(x, y uint8, board *boardData) {
 	applyPalisadeProcessing(x, y, board)
 	updateAdjacentPalisades(x, y, board)

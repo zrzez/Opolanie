@@ -3,8 +3,6 @@ package main
 // units.go
 
 import (
-	"log"
-
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -114,6 +112,7 @@ func (u *unit) handleDelay(currentTick uint16) bool {
 
 		return false
 	}
+
 	if u.Delay <= 0 {
 		return false
 	}
@@ -209,7 +208,7 @@ func (u *unit) canDamageTree(treeTile *tile) bool {
 	}
 }
 
-func (u *unit) prepareForNewCommand(cmdType commandType, target TargetReference, approach point) {
+func (u *unit) prepareForNewCommand(cmdType commandType, target targetReference, approach point) {
 	u.clearPath()
 	u.History = nil
 	u.LoopCount = 0
@@ -387,14 +386,11 @@ func (u *unit) takeDamage(damage uint16) {
 
 	u.wasAttacked = true
 
-	log.Printf("unit %d otrzymał %d obrażeń. HP: %d/%d", u.ID, finalDamage, u.HP, u.MaxHP)
-
 	createWound(finalDamage, u)
 }
 
 func (u *unit) unregisterFromBuilding() {
 	if u.BelongsTo != nil {
-		log.Printf("Jednostka %d próbuje się wyrejestrować z budynku %d", u.ID, u.BelongsTo.ID)
 		// @reminder: metoda unregisterUnit zwraca bool, który ignorujemy
 		u.BelongsTo.unregisterUnit(u.ID)
 		u.BelongsTo = nil

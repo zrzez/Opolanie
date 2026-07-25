@@ -67,8 +67,6 @@ func (l *jsonLevelLoader) applyJSONLevel(jsonLevel *jsonLevel, bState *battleSta
 	// Ustawienie początkowej pozycji kamery
 	bState.GameCamera.Target.X = float32(jsonLevel.Metadata.StartPos.X * tileWidth)
 	bState.GameCamera.Target.Y = float32(jsonLevel.Metadata.StartPos.Y * tileHeight)
-	log.Printf("INFO: Początkowa pozycja kamery ustawiona na (%f, %f) w kafelkach.",
-		bState.GameCamera.Target.X, bState.GameCamera.Target.Y)
 
 	// Ustawienia SI
 	bState.AI.GatherPointX = jsonLevel.AISettings.GatherPoint.X
@@ -104,12 +102,9 @@ func (l *jsonLevelLoader) applyJSONLevel(jsonLevel *jsonLevel, bState *battleSta
 	bState.HumanPlayerState.Milk = jsonLevel.Metadata.MaxMilk
 	bState.AIEnemyState.MaxMilk = 1800
 	bState.AIEnemyState.Milk = 1800
-
-	log.Printf("Zastosowano poziom: %s (%dx%d)",
-		jsonLevel.Metadata.Name, jsonLevel.Terrain.Width, jsonLevel.Terrain.Height)
 }
 
-// Wyczyść stan gry
+// Wyczyść stan gry.
 func (l *jsonLevelLoader) clearGameState(bState *battleState) {
 	initBoard(bState)
 
@@ -217,23 +212,7 @@ func classifyTreeFromTexture(textureID uint16) (treeState, bool, bool) {
 	}
 }
 
-/*
-	func (l *jsonLevelLoader) spawnPalisade(tileX, tileY uint8, graphicID uint16, bState *battleState) {
-		if graphicID != spritePalisadeNE {
-			return
-		}
-
-		newPalisade := &building{}
-		newPalisade.initConstruction(buildingPalisade, colorNone, buildingBridgeMaxHP, buildingZeroMaxFood, BuildingID(bState.NextUniqueObjectID))
-		bState.NextUniqueObjectID++
-		placeConstructionOnBoard(newPalisade, tileX, tileY, bState.Board)
-
-		bState.Buildings = append(bState.Buildings, newPalisade)
-	}
-*/
 func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bState *battleState) {
-	log.Println("INFO: Nakładanie terenu...")
-
 	// Bezpieczne granice pętli
 	maxY := min(len(terrain.Tiles), int(boardMaxY))
 
@@ -260,8 +239,6 @@ func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bState *battleS
 			}
 		}
 	}
-
-	log.Println("INFO: Teren nałożony pomyślnie.")
 }
 
 // Sprawdzam nowe podejście do ładowania budynków „normalnych” z plików JSON ponieważ przebudowuję
@@ -269,8 +246,6 @@ func (l *jsonLevelLoader) applyTerrain(terrain *jsonTerrainData, bState *battleS
 // Ma to na celu naprostowanie architektonicznego bałaganu do którego dopuściłem.
 // 04.07.2026
 func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bState *battleState) {
-	log.Printf("INFO: Ładowanie %d budynków do battleState...", len(buildingsData))
-
 	// dla każdego budynku z jsonowej listy
 	for _, bldData := range buildingsData {
 		var bldOwnerID PlayerID
@@ -291,8 +266,6 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bStat
 		// W takim przypadku pomijamy.
 		bldType, exists := buildingTypeMap[bldData.Type]
 		if !exists {
-			log.Printf("OSTRZEŻENIE: Nieznany typ budynku: %s", bldData.Type)
-
 			continue
 		}
 
@@ -300,7 +273,6 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bStat
 		// Jeśli JSON zawiera nieprawidłowy rodzaj budynku, to się nie uda i zamiast wykrzaczać pomijamy.
 		bldStats, ok := buildingDefs[bldType]
 		if !ok {
-			log.Printf("BŁĄD: Brak definicji statystyk dla budynku typu %d", bldType)
 			continue
 		}
 
@@ -315,20 +287,14 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bStat
 		// Sprawdzanie poprawności umiejscowienia budynków.
 		// @reminder: znowu sprawdzamy, czy stats, ok := buildingDefs[bType]
 		// @reminder: powinno się sprawdząc jedynie, czy mieścimy się w planszy…
-		valid, errCode := validateConstructionSite(bldType, topLeftX, topLeftY, bState)
+		valid, _ := validateConstructionSite(bldType, topLeftX, topLeftY, bState)
 		if !valid {
-			log.Printf("BŁĄD ŁADOWANIA: Budynek %s na (%d,%d) – nieprawidłowe miejsce (kod %d). Pomijam.",
-				bldData.Type, topLeftX, topLeftY, errCode)
-
 			continue
 		}
 
 		// Przesło sprawdzenia, możemy stawiać na planszy
 		newBuilding := bState.createFinishedBuilding(bldType, topLeftX, topLeftY, bldOwnerID)
 		if newBuilding == nil {
-			log.Printf("BŁĄD ŁADOWANIA: Nie udało się utworzyć budynku %s na (%d,%d). Pomijam.",
-				bldData.Type, topLeftX, topLeftY)
-
 			continue
 		}
 	}
@@ -337,10 +303,9 @@ func (l *jsonLevelLoader) applyBuildings(buildingsData []jsonBuildingData, bStat
 // levelLoader.go - applyUnits - wspaniały i bardzo pouczający komentarz! 04.07.2026.
 // Z pewnością w przyszłości będzie wszystko jasne!
 func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) {
-	log.Printf("INFO: Ładowanie %d jednostek do battleState...", len(units))
-
 	for _, unitData := range units {
 		var unitOwnerID PlayerID
+
 		if unitData.Owner == "ENEMY" {
 			unitOwnerID = bState.AIPlayerID
 		} else {
@@ -349,8 +314,6 @@ func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) 
 
 		uType, exists := unitTypeMap[unitData.Type]
 		if !exists {
-			log.Printf("OSTRZEŻENIE: Pomięto nieznany typ jednostki: %s", unitData.Type)
-
 			continue
 		}
 
@@ -374,8 +337,6 @@ func (l *jsonLevelLoader) applyUnits(units []jsonUnitData, bState *battleState) 
 			bState.AIEnemyState.CurrentPopulation++
 		}
 	}
-	log.Printf("INFO: Załadowano %d jednostek. Populacja Gracza: %d, AI: %d.",
-		len(bState.Units), bState.HumanPlayerState.CurrentPopulation, bState.AIEnemyState.CurrentPopulation)
 }
 
 // Załaduj poziom
@@ -387,8 +348,6 @@ func (l *jsonLevelLoader) loadLevel(levelNum uint8, bState *battleState) error {
 }
 
 func (l *jsonLevelLoader) loadJSONLevel(levelNum uint8, bState *battleState) error {
-	log.Printf("Ładowanie poziomu %d z JSON...", levelNum)
-
 	filename := filepath.Join(l.drivePath, "levels_json", fmt.Sprintf("level_%02d.json", levelNum))
 
 	data, err := os.ReadFile(filename)
@@ -396,13 +355,12 @@ func (l *jsonLevelLoader) loadJSONLevel(levelNum uint8, bState *battleState) err
 		return fmt.Errorf("nie można wczytać pliku %s: %w", filename, err)
 	}
 
-	var jsonLevel jsonLevel
-	if err := json.Unmarshal(data, &jsonLevel); err != nil {
-		return fmt.Errorf("błąd parsowania JSON: %w", err)
+	var jsonLvl jsonLevel
+	if err2 := json.Unmarshal(data, &jsonLvl); err2 != nil {
+		return fmt.Errorf("błąd parsowania JSON: %w", err2)
 	}
 
-	log.Printf("Załadowano poziom: %s", jsonLevel.Metadata.Name)
-	l.applyJSONLevel(&jsonLevel, bState)
+	l.applyJSONLevel(&jsonLvl, bState)
 
 	return nil
 }
@@ -425,9 +383,6 @@ func (l *jsonLevelLoader) validateScreenPosition(bState *battleState) {
 	maxTargetTileX := boardMaxX - uint8(tilesVisibleX/2)
 	maxTargetTileY := boardMaxY - uint8(tilesVisibleY/2)
 
-	log.Printf("DEBUG: Limity kamery w kafelkach: x(%d-%d), y(%d-%d)", minTargetTileX,
-		maxTargetTileX, minTargetTileY, maxTargetTileY)
-
 	// Korekta pozycji celu kamery
 	if cameraTargetTileX < minTargetTileX {
 		cameraTargetTileX = minTargetTileX
@@ -445,14 +400,10 @@ func (l *jsonLevelLoader) validateScreenPosition(bState *battleState) {
 	// Zaktualizuj cel kamery w pikselach
 	bState.GameCamera.Target.X = float32(cameraTargetTileX * tileWidth)
 	bState.GameCamera.Target.Y = float32(cameraTargetTileY * tileHeight)
-
-	log.Printf("DEBUG: Ostateczna pozycja celu kamery (skorygowana): (%d, %d) kafelków = (%.1f, %.1f) pikseli",
-		cameraTargetTileX, cameraTargetTileY, bState.GameCamera.Target.X, bState.GameCamera.Target.Y)
 }
 
 // initBattle - metoda LevelLoader która inicjuje bitwę z ProgramState.
 func (l *jsonLevelLoader) initBattle(levelNumber uint8, bState *battleState) error {
-	log.Printf("Inicjalizacja bitwy poziom %d", levelNumber)
 	// @todo: przekaż poziom trudności do „battlestate”!!
 
 	initBoard(bState)
@@ -462,10 +413,7 @@ func (l *jsonLevelLoader) initBattle(levelNumber uint8, bState *battleState) err
 	}
 
 	processMapTiles(bState)
-
 	l.validateScreenPosition(bState)
-
-	log.Println("INFO: Bitwa rozpoczęta pomyślnie.")
 
 	return nil
 }

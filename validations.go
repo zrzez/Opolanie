@@ -82,12 +82,15 @@ func validateConstructionSite(bType buildingType, tileX, tileY uint8, bState *ba
 		if isPath(textureID) {
 			return false, buildErrAlreadyPath
 		}
+
 		if isWater(textureID) {
 			return false, buildErrWater
 		}
+
 		if !isWalkable(bState.Board, tileX, tileY) {
 			return false, buildErrObstacle
 		}
+
 		if !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) {
 			return false, buildErrNoRoadAccess
 		}
@@ -95,6 +98,7 @@ func validateConstructionSite(bType buildingType, tileX, tileY uint8, bState *ba
 		if !isWater(textureID) {
 			return false, buildErrNoWater
 		}
+
 		if !hasRoadAccess(tileX, tileY, smallBuildingSize, bState) {
 			return false, buildErrNoRoadAccess
 		}
@@ -240,7 +244,7 @@ func hasRoadAccess(x, y, size uint8, bState *battleState) bool {
 }
 
 // ====
-// GRAFICZNA ZWROTKA WALIDACJI ZASADZANIA BUDOWY
+// GRAFICZNA ZWROTKA WALIDACJI ZASADZANIA BUDOWY.
 func drawConstructionValidationBox(bState *battleState, pState *programState) {
 	if bState.MouseState != mouseStatePlaceConstruction {
 		return
@@ -261,10 +265,11 @@ func drawConstructionValidationBox(bState *battleState, pState *programState) {
 	size := buildingDefs[buildingType(bState.PendingCommand.CreateType)].Width
 
 	var tileStates [3][3]uint8
+
 	var hasRoadAccessAnywhere bool
 
-	for dy := uint8(0); dy < size; dy++ {
-		for dx := uint8(0); dx < size; dx++ {
+	for dy := range size {
+		for dx := range size {
 			cx := startX + dx
 			cy := startY + dy
 
@@ -285,8 +290,8 @@ func drawConstructionValidationBox(bState *battleState, pState *programState) {
 		}
 	}
 
-	for dy := uint8(0); dy < size; dy++ {
-		for dx := uint8(0); dx < size; dx++ {
+	for dy := range size {
+		for dx := range size {
 			state := tileStates[dy][dx]
 			finalColor := rl.Red
 

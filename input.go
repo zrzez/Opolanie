@@ -4,290 +4,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
-
-// handleCheats obsługuje wpisywanie i uruchomienie oszustw.
-//func handleCheats(bs *battleState) bool {
-//	if !bs.IsSinglePlayerGame {
-//		return false
-//	}
-//
-//	keyPressed := rl.GetKeyPressed()
-//	if keyPressed == 0 {
-//		return false
-//	}
-//
-//	// Sprawdzamy, czy odblokować oszustwa
-//	if !bs.CheatsEnabled {
-//		switch keyPressed {
-//		case rl.KeyK:
-//			if bs.CheatSequenceProgress == 0 {
-//				bs.CheatSequenceProgress = 1
-//				return true
-//			}
-//		case rl.KeyO:
-//			if bs.CheatSequenceProgress == 1 {
-//				bs.CheatSequenceProgress = 2
-//				return true
-//			}
-//		case rl.KeyD:
-//			if bs.CheatSequenceProgress == 2 {
-//				bs.CheatSequenceProgress = 3
-//				return true
-//			}
-//		case rl.KeyY:
-//			if bs.CheatSequenceProgress == 3 {
-//				bs.CheatsEnabled = true
-//				bs.CheatSequenceProgress = 0
-//				log.Println("OSZUSTWA ODBLOKOWANE")
-//				return true
-//			}
-//		}
-//		bs.CheatSequenceProgress = 0
-//		return false
-//	}
-//
-//	// Jeżeli oszukiwanie jest dozwolone
-//	switch bs.CheatSequenceProgress {
-//	case 0: // Oczekiwanie na pierwszy znak
-//		switch keyPressed {
-//		case rl.KeyD:
-//			bs.CheatSequenceProgress = 10
-//			return true // DOSW
-//		case rl.KeyM:
-//			bs.CheatSequenceProgress = 20
-//			return true // MAGIC lub MILK
-//		case rl.KeyK:
-//			bs.CheatSequenceProgress = 40
-//			return true // KILL
-//		case rl.KeyT:
-//			bs.CheatSequenceProgress = 50
-//			return true // TREE
-//		case rl.KeyE:
-//			bs.CheatSequenceProgress = 60
-//			return true // ENDV/ENDL
-//		case rl.KeyC:
-//			bs.CheatSequenceProgress = 70
-//			return true // COUNT
-//		case rl.KeyS:
-//			bs.CheatSequenceProgress = 80
-//			return true // SHOW
-//		}
-//
-//	// Ciąg "DOSW"
-//	case 10:
-//		if keyPressed == rl.KeyO {
-//			bs.CheatSequenceProgress = 11
-//			return true
-//		}
-//	case 11:
-//		if keyPressed == rl.KeyS {
-//			bs.CheatSequenceProgress = 12
-//			return true
-//		}
-//	case 12:
-//		if keyPressed == rl.KeyW {
-//			selectedUnit := getUnitByID(bs.CurrentSelection.UnitID, bs)
-//			if selectedUnit != nil && bs.CurrentSelection.IsUnit {
-//				selectedUnit.Experience = 100
-//				log.Println("OSZUSTWO: Doświadczenie dla jednostki ustawione na 100")
-//			}
-//			bs.CheatSequenceProgress = 0
-//			return true
-//		}
-//
-//	// Ciąg zaczynające się od 'M' (MAGIC i MILK)
-//	case 20:
-//		if keyPressed == rl.KeyA {
-//			bs.CheatSequenceProgress = 21
-//			return true
-//		}
-//		if keyPressed == rl.KeyI {
-//			bs.CheatSequenceProgress = 30
-//			return true
-//		}
-//
-//	// Gałąź "MAGIC"
-//	case 21:
-//		if keyPressed == rl.KeyG {
-//			bs.CheatSequenceProgress = 22
-//			return true
-//		}
-//	case 22:
-//		if keyPressed == rl.KeyI {
-//			bs.CheatSequenceProgress = 23
-//			return true
-//		}
-//	case 23:
-//		if keyPressed == rl.KeyC {
-//			selectedUnit := getUnitByID(bs.CurrentSelection.UnitID, bs)
-//			if selectedUnit != nil && bs.CurrentSelection.IsUnit {
-//				t := selectedUnit.Type
-//				if t == unitPriestess || t == unitPriest || t == unitUnknown || t == unitMage {
-//					selectedUnit.Mana = 300
-//					log.Println("OSZUSTWO: Magia dla jednostki ustawiona na 300")
-//				}
-//			}
-//			bs.CheatSequenceProgress = 0
-//			return true
-//		}
-//
-//	// Gałąź "MILK"
-//	case 30:
-//		if keyPressed == rl.KeyL {
-//			bs.CheatSequenceProgress = 31
-//			return true
-//		}
-//	case 31:
-//		if keyPressed == rl.KeyK {
-//			bs.HumanPlayerState.Milk = bs.HumanPlayerState.MaxMilk
-//			log.Println("OSZUSTWO: Mleko ustawione na max")
-//			bs.CheatSequenceProgress = 0
-//			return true
-//		}
-//
-//	// Ciąg "KILL"
-//	case 40:
-//		if keyPressed == rl.KeyI {
-//			bs.CheatSequenceProgress = 41
-//			return true
-//		}
-//	case 41:
-//		if keyPressed == rl.KeyL {
-//			bs.CheatSequenceProgress = 42
-//			return true
-//		}
-//	case 42:
-//		if keyPressed == rl.KeyL {
-//			selectedUnit := getUnitByID(bs.CurrentSelection.UnitID, bs)
-//			if selectedUnit != nil && bs.CurrentSelection.IsUnit {
-//				selectedUnit.HP = 0 // Zabicie jednostki
-//				selectedUnit.Exists = false
-//
-//				tile := &bs.Board.Tiles[selectedUnit.X][selectedUnit.Y]
-//				tile.Unit = nil
-//				tile.EffectID = 127 // Efekt śmierci
-//
-//				log.Println("OSZUSTWO: KILL na zaznaczonej jednostce")
-//			}
-//			bs.CheatSequenceProgress = 0
-//			return true
-//		}
-//
-//	// Ciąg "TREE"
-//	case 50:
-//		if keyPressed == rl.KeyR {
-//			bs.CheatSequenceProgress = 51
-//			return true
-//		}
-//	case 51:
-//		if keyPressed == rl.KeyE {
-//			bs.CheatSequenceProgress = 52
-//			return true
-//		}
-//	case 52:
-//		// Powinno się zamienić zaznaczoną jednostkę w drzewo
-//		if keyPressed == rl.KeyE {
-//			selectedUnit := getUnitByID(bs.CurrentSelection.UnitID, bs)
-//			if selectedUnit != nil && bs.CurrentSelection.IsUnit {
-//				tx, ty := selectedUnit.X, selectedUnit.Y
-//				tile := &bs.Board.Tiles[tx][ty]
-//
-//				if tile.TextureID <= spriteGrassEnd {
-//					selectedUnit.Exists = false
-//					tile.EffectID = 100 // @todo: jakaś czarodziejska liczba. Do wywalenia!
-//					tile.Unit = nil     // Usuwamy jednostkę z mapy
-//
-//					tile.TextureID = spriteTreeStump00 + (tx & 3) + (ty & 3)
-//					tile.IsWalkable = false
-//
-//					log.Println("OSZUSTWO: Jednostka zamieniona w drzewo")
-//				}
-//			}
-//			bs.CheatSequenceProgress = 0
-//			return true
-//		}
-//
-//	// Ciąg "ENDV" / "ENDL"
-//	case 60:
-//		if keyPressed == rl.KeyN {
-//			bs.CheatSequenceProgress = 61
-//			return true
-//		}
-//	case 61:
-//		if keyPressed == rl.KeyD {
-//			bs.CheatSequenceProgress = 62
-//			return true
-//		}
-//	case 62:
-//		if keyPressed == rl.KeyV {
-//			bs.BattleOutcome = 1
-//			log.Println("OSZUSTWO: Zakończ poziom - Wygrana")
-//			bs.CheatSequenceProgress = 0
-//			return true
-//		}
-//		if keyPressed == rl.KeyL {
-//			bs.BattleOutcome = 2
-//			log.Println("OSZUSTWO: Zakończ poziom - Przegrana")
-//			bs.CheatSequenceProgress = 0
-//			return true
-//		}
-//
-//	// Ciąg "COUNT"
-//	case 70:
-//		if keyPressed == rl.KeyO {
-//			bs.CheatSequenceProgress = 71
-//			return true
-//		}
-//	case 71:
-//		if keyPressed == rl.KeyU {
-//			bs.CheatSequenceProgress = 72
-//			return true
-//		}
-//	case 72:
-//		if keyPressed == rl.KeyN {
-//			bs.CheatSequenceProgress = 73
-//			return true
-//		}
-//	case 73:
-//		if keyPressed == rl.KeyT {
-//			bs.CheatsEnabled = !bs.CheatsEnabled
-//			log.Printf("OSZUSTWO: Tryb debugowania przełączony na: %v", bs.CheatsEnabled)
-//			bs.CheatSequenceProgress = 0
-//			return true
-//		}
-//
-//	// Ciąg "SHOW"
-//	case 80:
-//		if keyPressed == rl.KeyH {
-//			bs.CheatSequenceProgress = 81
-//			return true
-//		}
-//	case 81:
-//		if keyPressed == rl.KeyO {
-//			bs.CheatSequenceProgress = 82
-//			return true
-//		}
-//	case 82:
-//		if keyPressed == rl.KeyW {
-//			for i := 0; i < boardMaxX; i++ {
-//				for j := 0; j < boardMaxY; j++ {
-//					bs.Board.Tiles[i][j].Visibility = visibilityVisible
-//				}
-//			}
-//			log.Println("OSZUSTWO: Odkryj całą mapę")
-//			bs.CheatSequenceProgress = 0
-//			return true
-//		}
-//	}
-//
-//	bs.CheatSequenceProgress = 0
-//	return true
-//}
 
 // OBSŁUGA WEJŚCIA - UI I INTERFEJS
 
@@ -330,7 +50,6 @@ func handleGameUIClicks(iState inputState, bState *battleState, pState *programS
 
 			rect := bState.UI.ActionButtons[btnIndex]
 			if rl.CheckCollisionPointRec(virtualMouse, rect) {
-				log.Printf("UI: Wybrano akcję przycisku %d: %s (Typ: %d)", btnIndex, action.Label, action.Cmd.ActionType)
 				cmdCopy := action.Cmd // @reminder: rzekomo potrzebne aby nie utracić wskaźnika… no nie wiem 28.06.2026
 
 				if action.State == mouseStateNormal {
@@ -377,10 +96,6 @@ func handleGameUIClicks(iState inputState, bState *battleState, pState *programS
 			}
 		}
 
-		// Logowanie kliknięcia w tło UI (pomocne przy debugowaniu wymiarów)
-		relativeX := virtualMouse.X - pState.GameViewWidth
-		log.Printf("Klik w UI (tło) na: %.1f, %.1f", relativeX, virtualMouse.Y)
-
 		return true
 	}
 
@@ -389,18 +104,16 @@ func handleGameUIClicks(iState inputState, bState *battleState, pState *programS
 
 func handleGameShortcuts(bState *battleState) bool {
 	if rl.IsKeyPressed(rl.KeyKpSubtract) || rl.IsKeyPressed(rl.KeyMinus) {
-		if bState.GameSpeed < 5 {
+		if bState.GameSpeed < 5 && bState.GameSpeed > 0 {
 			bState.GameSpeed--
-			log.Printf("SKRÓT: Prędkość gry zmniejszona do %d", bState.GameSpeed)
 
 			return true
 		}
 	}
 
 	if rl.IsKeyPressed(rl.KeyKpAdd) || rl.IsKeyPressed(rl.KeyEqual) {
-		if bState.GameSpeed > 0 {
+		if bState.GameSpeed > 0 && bState.GameSpeed < 5 {
 			bState.GameSpeed++
-			log.Printf("SKRÓT: Prędkość gry zwiększona do %d", bState.GameSpeed)
 
 			return true
 		}
@@ -417,27 +130,27 @@ func handleGameShortcuts(bState *battleState) bool {
 					return true
 				}
 
-				log.Printf("SKRÓT: Zapamiętywanie grupy %d", i)
-				var selectedUnitIDs []UnitID
+				var selectedUnitIDs []unitID
+
 				for _, currentUnit := range bState.Units {
 					if currentUnit.Exists && currentUnit.Owner == bState.PlayerID && currentUnit.IsSelected {
 						selectedUnitIDs = append(selectedUnitIDs, currentUnit.ID)
 					}
 				}
-				bState.ControlGroups[i] = controlGroup{}
-				for _, unitID := range selectedUnitIDs {
-					bState.ControlGroups[i].Units = append(bState.ControlGroups[i].Units, controlGroupUnit{UnitID: unitID})
-				}
-				log.Printf("SKRÓT: Grupa %d utworzona z %d jednostek.", i, len(bState.ControlGroups[i].Units))
-				return true
 
+				bState.ControlGroups[i] = controlGroup{}
+
+				for _, uID := range selectedUnitIDs {
+					bState.ControlGroups[i].Units = append(bState.ControlGroups[i].Units, controlGroupUnit{UnitID: uID})
+				}
+
+				return true
 			}
 
 			if len(bState.ControlGroups[i].Units) == 0 {
 				return true
 			}
 
-			log.Printf("SKRÓT: Przywoływanie grupy %d", i)
 			clearSelection(bState)
 
 			firstUnitInGroup := true
@@ -448,7 +161,7 @@ func handleGameShortcuts(bState *battleState) bool {
 					if firstUnitInGroup {
 						bState.CurrentSelection = selectionState{
 							OwnerID: currentUnit.Owner,
-							Selection: TargetReference{
+							Selection: targetReference{
 								Kind: targetUnit,
 								ID:   uint(currentUnit.ID),
 							},
@@ -467,21 +180,19 @@ func handleGameShortcuts(bState *battleState) bool {
 	}
 
 	if bState.CurrentSelection.Selection.Kind == targetUnit && bState.CurrentSelection.OwnerID == bState.PlayerID {
-		selectedUnit, ok := bState.getUnitByID(UnitID(bState.CurrentSelection.Selection.ID))
+		selectedUnit, ok := bState.getUnitByID(unitID(bState.CurrentSelection.Selection.ID))
 		if !ok || !selectedUnit.Exists {
 			clearSelection(bState)
 			return false
 		}
 
 		if rl.IsKeyPressed(rl.KeyS) {
-			log.Println("SKRÓT: Komenda STOP dla jednostki")
 			selectedUnit.addUnitCommand(bState.PendingCommand, bState)
 			return true
 		}
 		if rl.IsKeyPressed(rl.KeyC) {
 			if (selectedUnit.Type == unitPriestess || selectedUnit.Type == unitPriest ||
 				selectedUnit.Type == unitMage) && selectedUnit.Mana >= spellBufferMagicShower {
-				log.Println("SKRÓT: Wejście w tryb rzucania czaru bojowego")
 				bState.MouseState = mouseStateCasting
 				return true
 			}
@@ -525,7 +236,6 @@ func handleCameraScroll(iState inputState, bState *battleState, pState *programS
 		// Przypisujemy tylko jeśli wartość faktycznie się zmieniła
 		if newZoom != currentZoom {
 			bState.GameCamera.Zoom = newZoom
-			log.Printf("Przybliżenie kamery (skokowe): %.1f", bState.GameCamera.Zoom)
 			moved = true
 		}
 	}
@@ -604,8 +314,6 @@ func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY 
 	}
 
 	if bState.MouseState > mouseStateNormal {
-		log.Println("INPUT: Anulowano tryb celowania prawym przyciskiem.")
-
 		bState.MouseState = mouseStateNormal
 		// bState.PendingBuildingType = 0
 		bState.PendingCommand = nil
@@ -631,7 +339,7 @@ func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY 
 		return true
 	}
 
-	var targetRef TargetReference
+	var targetRef targetReference
 
 	targetRef.Position = point{X: tileX, Y: tileY}
 
@@ -659,7 +367,7 @@ func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY 
 
 // Odpowiada za dopasowanie rozkazu dla jednostki do sytuacji na planszy.
 func resolveRightClickCommandType(
-	targetTile *tile, targetID ObjectID, targetOwner PlayerID,
+	targetTile *tile, targetID objectID, targetOwner PlayerID,
 	selectedUnits []*unit, bState *battleState, iState inputState,
 ) (cmdType commandType, isCommandValid bool) {
 	cmdType = cmdUMove
@@ -738,7 +446,6 @@ func resolveRightClickCommandType(
 const dragThresholdPixels float32 = 3.0
 
 func handleMouseStatePlacingConstruction(tileX, tileY uint8, bState *battleState) {
-	log.Printf("DBG_LCLICK: Tryb budowy. Typ z pamięci: %d", bState.PendingCommand.Target.ID)
 	cmd := bState.PendingCommand
 
 	// Uzupełniamy rozkaz danymi z planszy wskazanymi przez kursor
@@ -780,7 +487,7 @@ func handleMouseStateWorking(tileX, tileY uint8, bState *battleState, iState inp
 	}
 
 	// Określiliśmy co dokładnie robić, dobieramy brakujące dane
-	cmd.Target = TargetReference{
+	cmd.Target = targetReference{
 		Kind:     targetBuilding,
 		ID:       uint(targetedBuilding.ID),
 		Position: point{X: tileX, Y: tileY},
@@ -802,7 +509,7 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
 	}
 
 	// Dobieramy dane z planszy
-	cmd.Target = TargetReference{
+	cmd.Target = targetReference{
 		Kind:     targetTile,
 		Position: point{X: tileX, Y: tileY},
 	}
@@ -822,8 +529,6 @@ func handleMouseStateCasting(tileX, tileY uint8, bState *battleState) {
 // pięć przycisków: atak(0), stop(1), czar1(2), czar2(3),naprawa(4) jeżeli coś innego będzie
 // dodane to mam problem. Dodatkowo jest problem mieszania kontekstu bojowego z gospodarczym.
 func handleMouseStateNormalPressed(tileX, tileY uint8, bState *battleState, iState inputState, pState *programState) {
-	log.Printf("DBG_LCLICK: Naciśnięto kafelek (%d,%d). Tryb myszy: Normal", tileX, tileY)
-
 	tileUnderCursor := &bState.Board.Tiles[tileX][tileY]
 	targetID, _ := tileUnderCursor.getTargetFromTile()
 
@@ -852,36 +557,12 @@ func handleMouseStateNormalReleased(bState *battleState) {
 	distance := rl.Vector2Distance(bState.DragContext.AnchorPos, bState.DragContext.CurrentPos)
 
 	if distance > dragThresholdPixels {
-		log.Println("DBG_LCLICK: Kończę ramkę zaznaczania.")
 		performBoxSelection(bState, bState.DragContext.AnchorPos, bState.DragContext.CurrentPos)
-	} else {
-		log.Println("DGB_LCLICK: Zbyt mały ruch, nie jest to zaznaczanie ramką.")
 	}
 
 	// Zwolniony przycisk myszy, obsłużyliśmy udane i nieudane zaznaczanie, kończymy.
 	bState.DragContext.IsActive = false
 }
-
-// @todo: ogarnij czemu to nie działa jako przekazanie STOP do wszystkich
-// zaznaczonych jednostek!
-/*
-Funkcja w oczywisty sposób pomijała właściwą ścieżkę wysyłając bezpośrednio do jednostek, zamiast kompletować rozkaz
-i dopiero wysłać do węzła.
-func sendUnitCommand(bState *battleState, units []*unit, command commandType, x, y uint8, targetID uint, ctrlDown bool) {
-	log.Printf("INFO: input.go wysłano rozkaz.")
-
-	for _, u := range units {
-		u.AllowFriendlyFire = ctrlDown
-	}
-
-	if len(units) > 1 {
-		bState.assignGroupCommand(command, x, y, targetID, units)
-	} else {
-		units[0].addUnitCommand(command, x, y, targetID, bState)
-	}
-
-	bState.MouseState = mouseStateNormal
-}*/
 
 func handleBoardInteraction(iState inputState, bState *battleState, pState *programState) {
 	handledInitial, tileX, tileY := handleBoardInitialChecks(iState, bState, pState)
@@ -905,7 +586,7 @@ func handleBoardInteraction(iState inputState, bState *battleState, pState *prog
 		case mouseStateNormal:
 			handleMouseStateNormalPressed(tileX, tileY, bState, iState, pState) // Dodano ps
 		default:
-			log.Printf("BŁĄD KRYTYCZNY: Nieobsługiwany stan myszy: %d", bState.MouseState)
+			// nieobsługiwany stan myszy
 		}
 
 		return
@@ -982,8 +663,6 @@ func handleGameInput(bState *battleState, pState *programState, iState inputStat
 // OBSŁUGA ZAZNACZANIA
 
 func clearSelection(bState *battleState) {
-	log.Println("SELEKCJA: Rozpoczynam clearSelection.")
-
 	for _, currentUnit := range bState.Units {
 		if currentUnit.Exists && currentUnit.IsSelected {
 			currentUnit.IsSelected = false
@@ -1003,7 +682,6 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 	if currentUnit == nil && bld == nil {
 		found := false
 		originalTileX, originalTileY := tileX, tileY
-		log.Printf("DBG_SELECTOBJECT: Na (%d,%d) nie ma bezpośredniego obiektu. Szukam w sąsiedztwie...", tileX, tileY)
 
 		for j := originalTileY - 1; j <= originalTileY+1; j++ {
 			for i := originalTileX - 1; i <= originalTileX+1; i++ {
@@ -1035,14 +713,12 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 	isShiftDown := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift)
 
 	if currentUnit != nil && currentUnit.Exists {
-		log.Printf("DBG_SELECTOBJECT: Znaleziono jednostkę ID %d.", currentUnit.ID)
-
 		if currentUnit.Owner != bState.PlayerID {
 			clearSelection(bState)
 
 			bState.CurrentSelection = selectionState{
 				OwnerID: currentUnit.Owner,
-				Selection: TargetReference{
+				Selection: targetReference{
 					Kind: targetUnit,
 					ID:   uint(currentUnit.ID),
 				},
@@ -1066,7 +742,7 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 					if u.Exists && u.IsSelected && u.Owner == bState.PlayerID {
 						bState.CurrentSelection = selectionState{
 							OwnerID:   u.Owner,
-							Selection: TargetReference{Kind: targetUnit, ID: uint(u.ID)},
+							Selection: targetReference{Kind: targetUnit, ID: uint(u.ID)},
 						}
 
 						foundNewPrimary = true
@@ -1081,7 +757,7 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 			} else if currentUnit.IsSelected && bState.CurrentSelection.Selection.Kind == targetNone {
 				bState.CurrentSelection = selectionState{
 					OwnerID:   currentUnit.Owner,
-					Selection: TargetReference{Kind: targetUnit, ID: uint(currentUnit.ID)},
+					Selection: targetReference{Kind: targetUnit, ID: uint(currentUnit.ID)},
 				}
 			}
 
@@ -1091,7 +767,7 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 
 			bState.CurrentSelection = selectionState{
 				OwnerID:   currentUnit.Owner,
-				Selection: TargetReference{Kind: targetUnit, ID: uint(currentUnit.ID)},
+				Selection: targetReference{Kind: targetUnit, ID: uint(currentUnit.ID)},
 			}
 		}
 
@@ -1109,14 +785,13 @@ func selectObjectByClick(tileX, tileY uint8, bState *battleState) {
 		bState.MouseState = mouseStateNormal
 
 	} else if bld != nil && bld.Exists {
-		log.Printf("DBG_SELECTOBJECT: Znaleziono budynek ID %d.", bld.ID)
 		if !isShiftDown {
 			clearSelection(bState)
 		}
 
 		bState.CurrentSelection = selectionState{
 			OwnerID:   bld.Owner,
-			Selection: TargetReference{Kind: targetBuilding, ID: uint(bld.ID)},
+			Selection: targetReference{Kind: targetBuilding, ID: uint(bld.ID)},
 		}
 		bState.MouseState = mouseStateNormal
 
@@ -1177,7 +852,7 @@ func performBoxSelection(bState *battleState, startPosition, endPosistion rl.Vec
 	if selectedCount > 0 {
 		bState.CurrentSelection = selectionState{
 			OwnerID:   firstSelectedUnit.Owner,
-			Selection: TargetReference{Kind: targetUnit, ID: uint(firstSelectedUnit.ID)},
+			Selection: targetReference{Kind: targetUnit, ID: uint(firstSelectedUnit.ID)},
 		}
 	} else {
 		clearSelection(bState)
@@ -1308,7 +983,7 @@ func handleMinimapRightMouse(
 	cmd := command{
 		ActionType:   cmdType,
 		ExecutorID:   0,
-		Target:       TargetReference{Position: point{X: tileX, Y: tileY}, ID: uint(targetID)},
+		Target:       targetReference{Position: point{X: tileX, Y: tileY}, ID: uint(targetID)},
 		FriendlyFire: iState.IsCtrlKeyDown,
 	}
 

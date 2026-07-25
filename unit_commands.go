@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math"
 )
 
@@ -13,7 +12,6 @@ const palisadeStrategicBuildingProximity = 10
 // przetwarzaniem rozkazów przez jednoski.
 
 func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
-	log.Printf("INFO: unit.go dodano rozkaz %d.", cmd.ActionType)
 	// ŁATANIE DZIURY W KOMPLETOWANIU ROZKAÓW DLA JEDNOSTEK
 	// @reminder: Łatanie dziury w kompletowaniu rozkazów dla jednostek
 	// @todo: ogarnij to łatanie, bo nie powinno to tutaj być! - 02.07.2026
@@ -40,14 +38,10 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	if cmd.ActionType == cmdUAttack {
 		target, err := bState.resolveTarget(cmd.Target)
 		if err != nil {
-			log.Printf("INFO: rozkaz ataku odrzucony: %v", err)
-
 			return
 		}
 
 		if !u.canAttack(target) {
-			log.Printf("INFO: rozkaz ataku odrzucony: jdnostka %d nie może zaatakować", u.ID)
-
 			return
 		}
 	}
@@ -58,7 +52,6 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 }
 
 func (u *unit) setIdleWithReason(reason string) {
-	log.Printf("unit %d going IDLE: %s", u.ID, reason)
 	u.State = stateIdle
 	u.AnimationType = "idle"
 	u.Command = cmdUIdle
@@ -68,7 +61,7 @@ func (u *unit) setIdleWithReason(reason string) {
 
 	// 25.04.2026 dodaję czyszczenie celu, bo powoduje niespójność w stanie
 	// bez tego jednostka jednocześnie jest bezczynna, jak i ma cel do ataku!
-	u.Target = TargetReference{}
+	u.Target = targetReference{}
 	u.Approach = point{}
 
 	if u.State != stateWaiting {
@@ -79,8 +72,6 @@ func (u *unit) setIdleWithReason(reason string) {
 func (u *unit) applyCommandState(command commandType) {
 	switch command {
 	case cmdUAttack:
-		log.Printf("INFO: units.go applyCommandState cmdAttack")
-
 		u.State = stateAttacking
 		u.AnimationType = "fight"
 		u.AnimationFrame = 3
@@ -107,8 +98,7 @@ func (u *unit) applyCommandState(command commandType) {
 	case cmdBMilking:
 		u.State = stateMilking
 	default:
-		fmt.Println("DUUUUPA NIE MA TAKIEJ KOMENDY W PRZEŁĄCZNIKU")
-		panic("unhandled default case")
+		panic("coś poszło pieruńsko źle w applyCommandState")
 	}
 }
 
@@ -143,7 +133,7 @@ func (u *unit) executeStandardUnitCommand(pathfindingBudget *int, bState *battle
 	case cmdUIdle, cmdUStop:
 		u.actOnIdle(bState)
 	default:
-		panic("unhandled default case")
+		panic("coś poszło pieruńsko źle w executeStandardUnitCommand")
 	}
 }
 
@@ -233,7 +223,7 @@ func (u *unit) calculateDistanceToTarget(target *combatTarget) uint8 {
 	))
 }
 
-func (u *unit) calculateApproachTile(targetRef TargetReference, bState *battleState) (*point, error) {
+func (u *unit) calculateApproachTile(targetRef targetReference, bState *battleState) (*point, error) {
 	if u.CurrentSpell != spellNone {
 		approachTile, err := u.findApproachTileForSpell(targetRef.Position, bState.Board)
 		if err != nil {
@@ -273,7 +263,7 @@ func (u *unit) findApproachTileForSpell(targetPosition point, board *boardData) 
 }
 
 // @reminder: nazwa dla kafelka z drzewem „intention” jest bardzo kiepska, ale nie mam teraz do tego głowy.
-func (u *unit) findApproachTileForTarget(targetRef TargetReference, bState *battleState) (*point, error) {
+func (u *unit) findApproachTileForTarget(targetRef targetReference, bState *battleState) (*point, error) {
 	target, err := bState.resolveTarget(targetRef)
 	if err != nil {
 		return nil, err
@@ -475,7 +465,6 @@ func (u *unit) isImportantPalisade(palisade *building, bState *battleState) bool
 			continue
 		}
 
-		//_, _, ok = bld.getClosestWalkableTile(bState)
 		ok = bState.Board.hasSpaceAroundBuilding(bld)
 
 		if !ok {
@@ -567,7 +556,6 @@ func (u *unit) executeActionByDistance(distance uint8) {
 		u.AnimationType = "fight"
 		u.AnimationFrame = 0
 		u.AnimationCounter = 0
-		log.Printf("INFO: unit %d zaczyna atakować cel ID %d z miejsca.", u.ID, u.Target.ID)
 	} else {
 		// Cel poza zasięgiem, przechodzimy w stan ruchu do wyliczonego ApproachX/Y
 		u.State = stateMoving
@@ -629,7 +617,7 @@ func (u *unit) isReadyToAct(bState *battleState) bool {
 }
 
 func (u *unit) handleUnitTarget(targetedUnit *unit, bState *battleState) {
-	u.Target = TargetReference{
+	u.Target = targetReference{
 		Kind:     targetUnit,
 		ID:       uint(targetedUnit.ID),
 		Position: targetedUnit.Position,
@@ -657,7 +645,7 @@ func (u *unit) handleBuildingTarget(targetedBuilding *building, bState *battleSt
 		return
 	}
 
-	u.Target = TargetReference{
+	u.Target = targetReference{
 		Kind:     targetBuilding,
 		ID:       uint(targetedBuilding.ID),
 		Position: point{X: bldCenterX, Y: bldCenterY},
@@ -682,8 +670,6 @@ func (u *unit) handleTargetReached(bState *battleState) {
 
 	switch u.Command {
 	case cmdUAttack:
-		log.Printf("INFO: units.go handleTargetReached cmdAttack jesteśmy u celu")
-
 		u.State = stateAttacking
 		u.attack(bState)
 	case cmdUCastSpell:

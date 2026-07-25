@@ -297,7 +297,7 @@ func (u *unit) returnToBarnArea(pathfindingBudget *int, bState *battleState) {
 }
 
 // Pomocnik do wykonania ruchu
-func (u *unit) addAndMove(pathfindingBudget *int, cmdType commandType, x, y uint8, id ObjectID, bState *battleState, logMsg string) {
+func (u *unit) addAndMove(pathfindingBudget *int, cmdType commandType, x, y uint8, id objectID, bState *battleState, logMsg string) {
 	if u.Command != cmdType || u.Target.Position.X != x || u.Target.Position.Y != y {
 		if logMsg != "" {
 			log.Printf("unit %d (COW): %s", u.ID, logMsg)
@@ -305,7 +305,7 @@ func (u *unit) addAndMove(pathfindingBudget *int, cmdType commandType, x, y uint
 
 		cmd := &command{
 			ActionType: cmdType,
-			Target:     TargetReference{Kind: targetTile, Position: point{X: x, Y: y}},
+			Target:     targetReference{Kind: targetTile, Position: point{X: x, Y: y}},
 		}
 		u.addUnitCommand(cmd, bState)
 	}
@@ -442,7 +442,7 @@ func (bld *building) getMilkingSpotCoords() (uint8, uint8) {
 }
 
 // Szuka wolnego miejsca w pobliżu obory (spiralnie), żeby krowy nie stały na sobie
-func findNearestAvailableWaitingSpot(targetX, targetY uint8, bState *battleState, myUnitID UnitID) (uint8, uint8, bool) {
+func findNearestAvailableWaitingSpot(targetX, targetY uint8, bState *battleState, myUnitID unitID) (uint8, uint8, bool) {
 	// Radius w pętli niech będzie int, łatwiej się operuje
 	for radius := 1; radius <= 5; radius++ {
 		for dx := -radius; dx <= radius; dx++ {
@@ -565,7 +565,7 @@ func (bState *battleState) handleCowFlee(u *unit) {
 			if foundBarn {
 				cmd := &command{
 					ActionType: cmdUFlee,
-					Target:     TargetReference{Kind: targetBuilding, Position: point{X: barnX, Y: barnY}},
+					Target:     targetReference{Kind: targetBuilding, Position: point{X: barnX, Y: barnY}},
 				}
 				u.addUnitCommand(cmd, bState)
 				log.Printf("unit %d (COW): Otrzymała obrażenia, ucieka do obory na (%d,%d).", u.ID, barnX, barnY)

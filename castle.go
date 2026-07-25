@@ -31,7 +31,7 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 		selectedUnits := bState.getSelectedUnits()
 		for _, u := range selectedUnits {
 			unitCmd := *cmd
-			unitCmd.ExecutorID = ObjectID(u.ID)
+			unitCmd.ExecutorID = objectID(u.ID)
 
 			playerS.handleUnitCommand(&unitCmd, bState)
 		}
@@ -44,9 +44,9 @@ func (playerS *playerState) setCommand(cmd *command, bState *battleState) {
 		playerS.handleBuildingCommand(cmd, bState)
 	} else {
 		// @todo: czemu niby miałbym tutaj znowu walidować? Nie rozumiem, do tego ponowne sprawdzanie FF?
-		targetUnit, ok := bState.getUnitByID(UnitID(cmd.ExecutorID))
+		targetedUnit, ok := bState.getUnitByID(unitID(cmd.ExecutorID))
 		if ok {
-			targetUnit.AllowFriendlyFire = cmd.FriendlyFire
+			targetedUnit.AllowFriendlyFire = cmd.FriendlyFire
 		}
 
 		playerS.handleUnitCommand(cmd, bState)
@@ -67,7 +67,7 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 	// ↓↓↓↓↓↓↓↓↓ kod z validations.go!
 
 	// 2. Wytwarzanie jednostek
-	targetBuilding, ok := bState.getBuildingByID(BuildingID(cmd.ExecutorID))
+	targetBuilding, ok := bState.getBuildingByID(buildingID(cmd.ExecutorID))
 
 	if !ok || !targetBuilding.Exists || targetBuilding.IsUnderConstruction {
 		log.Printf("handleBuildingCommand: Nie znaleziono ID %d, nie istnieje lub w budowie.", cmd.Target.ID)
@@ -95,7 +95,7 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 func (playerS *playerState) handleProductionCommand(cmd *command, bState *battleState) {
 	// 1. Sprawdzenie, czy da się wykonać rozkaz
 	newUnitType := unitType(cmd.CreateType)
-	execBld, bldOK := bState.getBuildingByID(BuildingID(cmd.ExecutorID))
+	execBld, bldOK := bState.getBuildingByID(buildingID(cmd.ExecutorID))
 	if !bldOK {
 		// Tutaj przydałoby się coś zwrócić
 		return
@@ -228,7 +228,7 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 // handleUnitCommand przetwarza rozkazy dotyczące jednostek.
 // Obsługuje np. ruch, atak, stop, magię.
 func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState) {
-	targetedUnit, ok := bState.getUnitByID(UnitID(cmd.ExecutorID))
+	targetedUnit, ok := bState.getUnitByID(unitID(cmd.ExecutorID))
 	if !ok || !targetedUnit.Exists {
 		log.Printf("handleUnitCommand: Nie znaleziono jednostki ID %d lub nie istnieje.", cmd.ExecutorID)
 
@@ -252,7 +252,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	case cmdUStop:
 		targetedUnit.addUnitCommand(cmd, bState)
 	case cmdUBuild:
-		targetedBuilding, ok2 := bState.getBuildingByID(BuildingID(cmd.Target.ID))
+		targetedBuilding, ok2 := bState.getBuildingByID(buildingID(cmd.Target.ID))
 
 		if !ok2 {
 			return
@@ -284,7 +284,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz BUDOWY budynku %d.",
 			targetedUnit.ID, cmd.Target.ID)
 	case cmdURepair:
-		targetedBuilding, ok3 := bState.getBuildingByID(BuildingID(cmd.Target.ID))
+		targetedBuilding, ok3 := bState.getBuildingByID(buildingID(cmd.Target.ID))
 		if !ok3 {
 			return
 		}

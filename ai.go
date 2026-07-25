@@ -99,7 +99,7 @@ func (econ *economyAI) produceCows(bState *battleState) bool {
 	// Wytwarzamy krowę
 	cmd := command{
 		ActionType: cmdBProduce,
-		Target:     TargetReference{Kind: targetBuilding, ID: uint(barn.ID)},
+		Target:     targetReference{Kind: targetBuilding, ID: uint(barn.ID)},
 		CreateType: uint8(unitCow),
 	}
 	bState.CurrentCommands[1] = cmd
@@ -521,18 +521,18 @@ func findGrass(xp, yp uint8, xe, ye *uint8, bState *battleState) {
 }
 */
 // who sprawdza do kogo przynależy dana jednostka
-func who(oID ObjectID, bState *battleState) PlayerID {
+func who(oID objectID, bState *battleState) PlayerID {
 	if oID == 0 {
 		return 0
 	}
 	// Ta funkcja iteruje po listach, więc jest niezależna od zmian w BoardData
 	for _, u := range bState.Units {
-		if u != nil && u.Exists && ObjectID(u.ID) == oID {
+		if u != nil && u.Exists && objectID(u.ID) == oID {
 			return u.Owner
 		}
 	}
 	for _, bld := range bState.Buildings {
-		if bld != nil && bld.Exists && ObjectID(bld.ID) == oID {
+		if bld != nil && bld.Exists && objectID(bld.ID) == oID {
 			return bld.Owner
 		}
 	}

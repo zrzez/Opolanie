@@ -61,7 +61,7 @@ func (bldType buildingType) isRegularBuilding() bool {
 // Sprawdzenie zostało wykonane w canProduceUnit,
 // pojemność za pomocą hasRoom
 // Zwracany bool jest całkowicie ignorowany.
-func (bld *building) registerUnit(uID UnitID) bool {
+func (bld *building) registerUnit(uID unitID) bool {
 	// Budynek poszerza listę zameldowanych jednostek
 	// To chyba powinny być wskaźniki
 	// @todo: sprawdź po cholerę mi w ogole ta lista
@@ -77,7 +77,7 @@ func (bld *building) registerUnit(uID UnitID) bool {
 
 // Wywoływana przez u.unregisterFromBuilding gdy jednostka zmarła.
 // @todo: co się dzieje z jednostkami, które sotajemy na początku bitwy?
-func (bld *building) unregisterUnit(unregisterUnitID UnitID) {
+func (bld *building) unregisterUnit(unregisterUnitID unitID) {
 	// Przechodzimy przez listę jednostek zamieszkujących
 	for index, registeredUnitID := range bld.AssignedUnits {
 		if registeredUnitID == unregisterUnitID {

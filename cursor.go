@@ -103,7 +103,7 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 	}
 
 	// Podpowiedź naprawy
-	selectedUnit, ok := bState.getUnitByID(UnitID(bState.CurrentSelection.Selection.ID))
+	selectedUnit, ok := bState.getUnitByID(unitID(bState.CurrentSelection.Selection.ID))
 	isAxeman := ok && selectedUnit.Type == unitAxeman
 
 	if isAxeman && targetBuilding != nil && targetBuilding.Exists {
@@ -178,7 +178,7 @@ func cursorForEnemy(bState *battleState, tileUnderCursor *tile) uint16 {
 
 	if targetedBuilding != nil && targetedBuilding.Exists {
 		// Mag nie może atakować żadnych budynków
-		selectedUnit, ok := bState.getUnitByID(UnitID(bState.CurrentSelection.Selection.ID))
+		selectedUnit, ok := bState.getUnitByID(unitID(bState.CurrentSelection.Selection.ID))
 
 		if ok && selectedUnit.Type == unitMage {
 			return spriteCursorStop

@@ -24,7 +24,7 @@ func (bState *battleState) createBuilding(bldType buildingType, topLeftX, topLef
 		Armor:         buildingArmor,
 		MaxHP:         stats.MaxHP,
 		MaxFood:       stats.MaxFood,
-		AssignedUnits: make([]UnitID, 0, stats.MaxFood),
+		AssignedUnits: make([]unitID, 0, stats.MaxFood),
 	}
 
 	bState.NextBuildingID++
@@ -146,7 +146,7 @@ func (bState *battleState) createFinishedBuilding(bldType buildingType, tileX, t
 }
 
 // szuka budynku w battleState.Buildings.
-func (bState *battleState) getBuildingByID(bldID BuildingID) (*building, bool) {
+func (bState *battleState) getBuildingByID(bldID buildingID) (*building, bool) {
 	for _, bld := range bState.Buildings {
 		if bld.ID == bldID {
 			return bld, true
@@ -157,7 +157,7 @@ func (bState *battleState) getBuildingByID(bldID BuildingID) (*building, bool) {
 }
 
 // szuka jednostki w battleState.Units.
-func (bState *battleState) getUnitByID(uID UnitID) (*unit, bool) {
+func (bState *battleState) getUnitByID(uID unitID) (*unit, bool) {
 	for _, currentUnit := range bState.Units {
 		if currentUnit.ID == uID {
 			return currentUnit, true
@@ -326,7 +326,7 @@ func (bState *battleState) createUnit(unitType unitType, coords point, bld *buil
 }
 
 // @reminder: to nie powinno przyjmować x,y uint8 a strukturę point
-func (bState *battleState) initUnit(unitType unitType, x, y uint8, newUnitID UnitID) *unit {
+func (bState *battleState) initUnit(unitType unitType, x, y uint8, newUnitID unitID) *unit {
 	newUnit := &unit{}
 
 	newUnit.ID = newUnitID
@@ -366,17 +366,17 @@ func (bState *battleState) initUnit(unitType unitType, x, y uint8, newUnitID Uni
 }
 
 // Jeszcze nie wiem, jak to opisać - 25.07.2026
-func (bState *battleState) resolveTarget(reference TargetReference) (*combatTarget, error) {
+func (bState *battleState) resolveTarget(reference targetReference) (*combatTarget, error) {
 	switch reference.Kind {
 	case targetUnit:
-		targetedUnit, ok := bState.getUnitByID(UnitID(reference.ID))
+		targetedUnit, ok := bState.getUnitByID(unitID(reference.ID))
 		if !ok || !targetedUnit.Exists {
 			return nil, fmt.Errorf("jednotka do zaatakowania nie istnieje", reference.ID)
 		}
 
 		return &combatTarget{Unit: targetedUnit}, nil
 	case targetBuilding:
-		targetedBld, ok := bState.getBuildingByID(BuildingID(reference.ID))
+		targetedBld, ok := bState.getBuildingByID(buildingID(reference.ID))
 		if !ok || !targetedBld.Exists {
 			return nil, fmt.Errorf("budynek do zaatakowania nie istnieje", reference.ID)
 		}

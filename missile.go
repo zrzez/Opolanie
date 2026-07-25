@@ -126,22 +126,22 @@ func (p *projectile) hit(bState *battleState) {
 		return
 	}
 
-	targetTile := &bState.Board.Tiles[p.TargetX][p.TargetY]
+	targetedTile := &bState.Board.Tiles[p.TargetX][p.TargetY]
 
 	// @reminder: if-else zapobiega „przeciekaniu” pocisków przez jednostki w budynki, np. krowa w oborze.
 	// Bez tego zaatakowanie dojonej spowodowałoby zaatakowanie i krowy i obory.
 	// 1. Trafienie jednostki
-	if targetTile.Unit != nil && targetTile.Unit.Exists {
-		hitUnit := targetTile.Unit
+	if targetedTile.Unit != nil && targetedTile.Unit.Exists {
+		hitUnit := targetedTile.Unit
 
 		isEnemy := hitUnit.Owner != p.Owner
 
 		if isEnemy || p.AllowFriendlyFire {
 			hitUnit.takeDamage(p.Damage)
 		}
-	} else if targetTile.Building != nil && targetTile.Building.Exists {
+	} else if targetedTile.Building != nil && targetedTile.Building.Exists {
 		// 2. Trafienie budynku
-		hitBuilding := targetTile.Building
+		hitBuilding := targetedTile.Building
 
 		isEnemy := hitBuilding.Owner != p.Owner
 		if isEnemy || p.AllowFriendlyFire {
@@ -153,7 +153,7 @@ func (p *projectile) hit(bState *battleState) {
 	// @todo: sprawdź, czy dobrze rozumiem, że wywołując efekt specjalny po zadaniu obrażeń
 	// uniemożliwiam prawidłowe zadanie obrażeń odpryskami ognia?
 	// @todo: dodaj przekazywanie obrażeń, jako argumentu ponieważ potrzebuję tego do ducha.
-	p.specialProjectiles(targetTile, bState)
+	p.specialProjectiles(targetedTile, bState)
 
 	// @reminder: to się gryzie z duchem, który musi przetrwać uderzenie i dusić cel
 	p.Exists = false
