@@ -104,13 +104,13 @@ func (u *unit) moveAlongPath(board *boardData) {
 	if u.canMoveTo(next.X, next.Y, board) {
 		u.executeSuccessfulMove(next.X, next.Y, board)
 	} else {
-		u.BlockedCounter++
 		u.State = stateWaiting
 		u.Delay = 1
 
-		if u.BlockedCounter >= 2 {
+		if u.NoMoveTicks >= 15 {
+			// ! chyba tutaj powinienem dodać coś co umożliwi jednostce
+			// sprawdzić czy jesteśmy blokowani ponieważ druh stoi bezczynnie
 			u.invalidatePathForRecalculation()
-			u.BlockedCounter = 0
 		}
 	}
 }

@@ -117,9 +117,11 @@ func (u *unit) handleDelay(currentTick uint16) bool {
 	if u.Delay <= 0 {
 		return false
 	}
+
 	if currentTick%logicSpeedDivisor != 0 {
 		return true
 	}
+
 	u.Delay--
 
 	return u.Delay > 0

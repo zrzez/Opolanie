@@ -623,6 +623,7 @@ func (u *unit) validateTargetExists(resolver objectResolver, board *boardData) (
 func (u *unit) executeActionByDistance(distance uint8) {
 	if distance > u.SightRange {
 		u.setIdleWithReason("cel poza zasięgiem widzenia")
+
 		return
 	}
 
@@ -638,7 +639,6 @@ func (u *unit) executeActionByDistance(distance uint8) {
 	} else {
 		// Cel poza zasięgiem, przechodzimy w stan ruchu do wyliczonego ApproachX/Y
 		u.State = stateMoving
-		u.AnimationType = "walk"
 		u.invalidatePathForRecalculation()
 	}
 }
