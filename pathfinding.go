@@ -68,15 +68,17 @@ var (
 
 // odnajduje ścieżkę do celu używając algo A*.
 // @todo: powinno przyjmować point zamiast uint8.
-func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) []point {
+func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8, buffer []point) []point {
 	currentGeneration++
 
 	if currentGeneration == 0 {
 		clear(sharedNodePool)
+
 		currentGeneration = 1
 	}
 
 	startIndex := int32(startY)<<8 | int32(startX)
+
 	sharedNodePool[startIndex] = pathNode{
 		parent:     -1,
 		generation: currentGeneration,
@@ -109,7 +111,7 @@ func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) [
 		if currentX == endX && currentY == endY {
 			sharedOpenIndices = open.indices
 
-			return reconstructPath(currentIndex)
+			return reconstructPath(currentIndex, buffer)
 		}
 
 		currentNode := &sharedNodePool[currentIndex]
@@ -260,13 +262,31 @@ func calcHeuristic(fromX, fromY, toX, toY int) float32 {
 	return float32(dy)
 }
 
-func reconstructPath(endIndex int32) []point {
-	path := make([]point, 0, 64)
+// W założeniu wykorzystujemy u.Path aby uniknać tworzenia wycinków.
+func reconstructPath(endIndex int32, buffer []point) []point {
+	// 0. Ustalamy jak długa jest droga
+	length := 0
 
 	for index := endIndex; index != -1; index = sharedNodePool[index].parent {
-		path = append(path, point{X: uint8(index & 0xFF), Y: uint8(index >> 8)})
+		length++
 	}
 
-	// @reminder: być może będę musiał odwrócić przed odesłaniem
-	return path
+	// 1. Oraz, czy zmeiści się w podręcznej liście
+	if cap(buffer) < length {
+		buffer = make([]point, length)
+	}
+
+	buffer = buffer[:length]
+
+	i := length - 1
+
+	// 2. A* zwraca drogę od celu do przemieszczającego się.
+	// Dlatego to zmieniam, aby przemieszczająca się jednostka
+	// miała gotową ścieżkę.
+	for index := endIndex; index != -1; index = sharedNodePool[index].parent {
+		buffer[i] = point{X: uint8(index & 0xFF), Y: uint8(index >> 8)}
+		i--
+	}
+
+	return buffer
 }

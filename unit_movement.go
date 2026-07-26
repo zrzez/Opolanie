@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
 
@@ -56,7 +57,14 @@ func (u *unit) ensureValidPath(pathfindingBudget *int, bState *battleState) bool
 }
 
 func (u *unit) calculateNewPath(board *boardData) bool {
-	newPath := findPath(board, u, u.X, u.Y, u.Approach.X, u.Approach.Y)
+	// 1. Jeśli jednostka nie ma u.Path to tworzymy
+	// @reminder: 100 to liczba, która wydaje mi się wystarczająca po kilku próbach.
+	//   Nie stoi za tym nic więcej niż kilka prób.
+	if cap(u.Path) < 100 {
+		fmt.Printf("calculateNewPath powiększa pojemność u.Path, bo 100 to zbyt mało. Potrzebowałem %v\n", cap(u.Path))
+		u.Path = make([]point, 0, 100)
+	}
+	newPath := findPath(board, u, u.X, u.Y, u.Approach.X, u.Approach.Y, u.Path)
 
 	if newPath == nil {
 		u.handlePathfindingFailure()
@@ -109,17 +117,15 @@ func (u *unit) moveAlongPath(board *boardData) {
 	}
 }
 
-// Funkcje pomocnicze dla zarządzania ścieżką
+// Funkcje pomocnicze dla zarządzania ścieżką.
 func (u *unit) setPath(path []point) {
-	u.Path = make([]point, len(path))
-	for i, node := range path {
-		u.Path[len(path)-1-i] = node
-	}
+	u.Path = path
+
 	u.PathIndex = 1
 }
 
 func (u *unit) clearPath() {
-	u.Path = nil
+	u.Path = u.Path[:0]
 	u.PathIndex = 0
 	u.NoMoveTicks = 0
 	u.LastX, u.LastY = 0, 0
@@ -196,7 +202,7 @@ func (u *unit) hasValidPath(bState *battleState) bool {
 }
 
 func (u *unit) invalidatePathForRecalculation() {
-	u.Path = nil
+	u.Path = u.Path[:0]
 	u.PathIndex = 0
 }
 

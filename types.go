@@ -123,8 +123,8 @@ type unit struct {
 	AttackCooldown uint      // Opóźnienie przy ataku
 
 	// Obieranie ścieżki
-	Path          []point      `json:"path"`      // Bieżąca ścieżka
-	PathIndex     int          `json:"pathIndex"` // Bieżący wskaźnik w ścieżce
+	Path          []point      // Bieżąca ścieżka
+	PathIndex     int          // Bieżący wskaźnik w ścieżce
 	RetryAttempts int          // Liczb prób obejścia przeszkody
 	History       []rl.Vector2 // ostatnie pozycje jednostki
 	LastX, LastY  uint8        // ostatnia pozycja

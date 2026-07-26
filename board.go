@@ -420,7 +420,7 @@ func findBestReachableTile(u *unit, validCoords []point, board *boardData) (*poi
 	found := false
 
 	for _, coord := range validCoords {
-		path := findPath(board, u, u.X, u.Y, coord.X, coord.Y)
+		path := findPath(board, u, u.X, u.Y, coord.X, coord.Y, u.Path)
 
 		if path != nil && len(path) < minPathLen {
 			minPathLen = len(path)

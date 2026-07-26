@@ -277,7 +277,7 @@ func (u *unit) returnToBarnArea(pathfindingBudget *int, bState *battleState) {
 
 		for _, coord := range coords {
 			if bState.Board.Tiles[coord.X][coord.Y].IsWalkable && bState.Board.Tiles[coord.X][coord.Y].Unit == nil {
-				tempPath := findPath(bState.Board, u, u.X, u.Y, coord.X, coord.Y)
+				tempPath := findPath(bState.Board, u, u.X, u.Y, coord.X, coord.Y, u.Path)
 
 				if tempPath != nil && len(tempPath) < minPathLen {
 					minPathLen = len(tempPath)
