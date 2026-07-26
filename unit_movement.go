@@ -80,10 +80,8 @@ func (u *unit) waitForPathfindingBudget() {
 	u.Delay = uint16(3 + rng.Intn(5))
 }
 
-func (u *unit) setPathAndState(path []*pathNode) {
+func (u *unit) setPathAndState(path []point) {
 	u.setPath(path)
-	u.LastTargetX = u.Target.Position.X
-	u.LastTargetY = u.Target.Position.Y
 	u.State = u.determineActiveStateFromCommand()
 	u.RetryAttempts = 0
 }
@@ -112,8 +110,8 @@ func (u *unit) moveAlongPath(board *boardData) {
 }
 
 // Funkcje pomocnicze dla zarządzania ścieżką
-func (u *unit) setPath(path []*pathNode) {
-	u.Path = make([]*pathNode, len(path))
+func (u *unit) setPath(path []point) {
+	u.Path = make([]point, len(path))
 	for i, node := range path {
 		u.Path[len(path)-1-i] = node
 	}
@@ -204,7 +202,6 @@ func (u *unit) invalidatePathForRecalculation() {
 
 func (u *unit) resetMovementCounters() {
 	u.NoMoveTicks = 0
-	u.BlockedCounter = 0
 	u.LastX, u.LastY = u.X, u.Y
 }
 

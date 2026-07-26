@@ -2,96 +2,117 @@ package main
 
 import (
 	"container/heap"
-	"math"
 )
 
 // pathfinding.go
 
+var currentGeneration uint32
+
 // pathNode jest węzłem tj. kafelkiem na planszy.
 type pathNode struct {
-	parent        *pathNode // Wskaźnik na rodzica do odtworzenia ścieżki
-	X, Y          uint8     // Współrzędne na mapie
-	goCost        float64   // Cena dotarcia od początku do tego węzła
-	heuristicCost float64   // Szacowana cena od tego węzła do celu
-	finalCost     float64   // Suma goCost i heuristicCost
-	index         int       // Wskaźnik miejsca węzła w stosie
-	closed        bool      // węzeł już przetworzony
+	goCost        float32 // Cena dotarcia od początku do tego węzła
+	heuristicCost float32 // Szacowana cena od tego węzła do celu
+	finalCost     float32 // Suma goCost i heuristicCost
+	parent        int32   // Rodzica do odtworzenia ścieżki
+	heapIndex     int32
+	generation    uint32 // Do śledzenia, czy węzeł jest z „tego szukania”, czy poprzednich
 }
 
-// pathNodeHeap wdraża heap.Interface i przechowuje węzły
-type pathNodeHeap []*pathNode
-
-func (h pathNodeHeap) Len() int           { return len(h) }
-func (h pathNodeHeap) Less(i, j int) bool { return h[i].finalCost < h[j].finalCost }
-func (h pathNodeHeap) Swap(i, j int) {
-	h[i], h[j] = h[j], h[i]
-	h[i].index = i
-	h[j].index = j
+type nodeHeap struct {
+	indices []int32
+	nodes   *[]pathNode
 }
 
-func (h *pathNodeHeap) Push(x any) {
-	n := len(*h)
-	node := x.(*pathNode)
-	node.index = n
-	*h = append(*h, node)
+func (h *nodeHeap) Len() int { return len(h.indices) }
+
+func (h *nodeHeap) Less(i, j int) bool {
+	ni, nj := h.indices[i], h.indices[j]
+
+	return (*h.nodes)[ni].finalCost < (*h.nodes)[nj].finalCost
 }
 
-func (h *pathNodeHeap) Pop() any {
-	old := *h
+func (h *nodeHeap) Swap(i, j int) {
+	h.indices[i], h.indices[j] = h.indices[j], h.indices[i]
+
+	(*h.nodes)[h.indices[i]].heapIndex = int32(i)
+	(*h.nodes)[h.indices[j]].heapIndex = int32(j)
+}
+
+func (h *nodeHeap) Push(x any) {
+	idx := x.(int32)
+	n := len(h.indices)
+
+	(*h.nodes)[idx].heapIndex = int32(n)
+	h.indices = append(h.indices, idx)
+}
+
+func (h *nodeHeap) Pop() any {
+	old := h.indices
 	n := len(old)
-	node := old[n-1]
-	old[n-1] = nil
-	node.index = -1
-	*h = old[0 : n-1]
+	idx := old[n-1]
+	(*h.nodes)[idx].heapIndex = -1
+	h.indices = old[:n-1]
 
-	return node
+	return idx
 }
 
-func (h *pathNodeHeap) update(node, parent *pathNode, goCost, heuristicCost float64) {
-	node.goCost = goCost
-	node.heuristicCost = heuristicCost
-	node.finalCost = goCost + heuristicCost
-	node.parent = parent
-	heap.Fix(h, node.index)
-}
+const (
+	maxPathfindingIterations = 10000
+	maxNodes                 = 256 * 256
+)
 
-// Ograniczenie prób.
-// @reminder: Nie widze żadnego wpływu na jakość, ale 1000 nie potrafi odnaleźć drogi.
-//    Coś tu chyba jest mocno popsute, bo plansza ma 66na66 kafelków i niewiele
-//    przeszkód. Czemu to tak słabo działa?!
-const maxPathfindingIterations = 10000
+var (
+	sharedNodePool    = make([]pathNode, maxNodes)
+	sharedOpenIndices = make([]int32, 0, 512)
+)
 
 // odnajduje ścieżkę do celu używając algo A*.
-// @todo: powinno przyjmować point zamiast uint8
-func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) []*pathNode {
-	startNode := &pathNode{parent: nil, X: startX, Y: startY}
-	openHeap := &pathNodeHeap{}
-	heap.Init(openHeap)
-	heap.Push(openHeap, startNode)
+// @todo: powinno przyjmować point zamiast uint8.
+func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) []point {
+	currentGeneration++
 
-	const maxNodes = 256 * 256
-	nodeMap := make([]*pathNode, maxNodes)
-
-	getIndex := func(x, y int) int {
-		return y<<8 | x
+	if currentGeneration == 0 {
+		clear(sharedNodePool)
+		currentGeneration = 1
 	}
 
-	startIdx := getIndex(int(startX), int(startY))
-	nodeMap[startIdx] = startNode
+	startIndex := int32(startY)<<8 | int32(startX)
+	sharedNodePool[startIndex] = pathNode{
+		parent:     -1,
+		generation: currentGeneration,
+		heapIndex:  -1,
+	}
+
+	sharedOpenIndices = sharedOpenIndices[:0]
+
+	open := &nodeHeap{
+		indices: sharedOpenIndices,
+		nodes:   &sharedNodePool,
+	}
+
+	heap.Init(open)
+	heap.Push(open, startIndex)
 
 	iterations := 0
-	for openHeap.Len() > 0 {
+	for open.Len() > 0 {
 		iterations++
 		if iterations >= maxPathfindingIterations {
+			sharedOpenIndices = open.indices
+
 			return nil
 		}
 
-		currentNode := heap.Pop(openHeap).(*pathNode)
-		currentNode.closed = true
+		currentIndex := heap.Pop(open).(int32)
+		currentX := uint8(currentIndex & 0xFF)
+		currentY := uint8(currentIndex >> 8)
 
-		if currentNode.X == endX && currentNode.Y == endY {
-			return reconstructPath(currentNode)
+		if currentX == endX && currentY == endY {
+			sharedOpenIndices = open.indices
+
+			return reconstructPath(currentIndex)
 		}
+
+		currentNode := &sharedNodePool[currentIndex]
 
 		for dy := -1; dy <= 1; dy++ {
 			for dx := -1; dx <= 1; dx++ {
@@ -99,9 +120,9 @@ func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) [
 					continue
 				}
 
-				checkX, checkY := int(currentNode.X)+dx, int(currentNode.Y)+dy
+				checkX, checkY := int(currentX)+dx, int(currentY)+dy
 
-				if checkX < 0 || checkX > 255 || checkY < 0 || checkY > 255 {
+				if checkX < 0 || checkX >= int(boardMaxX) || checkY < 0 || checkY >= int(boardMaxY) {
 					continue
 				}
 
@@ -109,34 +130,37 @@ func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8) [
 					continue
 				}
 
-				idx := getIndex(checkX, checkY)
-				existingNode := nodeMap[idx]
+				index := int32(checkY)<<8 | int32(checkX)
+				existingNode := &sharedNodePool[index]
 
-				newGoCost := currentNode.goCost + calculateMoveCost(currentNode, &pathNode{X: uint8(checkX), Y: uint8(checkY)}, board, mover)
+				newGoCost := currentNode.goCost + calculateMoveCost(checkX, checkY, board, mover)
 
-				if existingNode != nil {
-					if existingNode.closed {
-						continue
-					}
-
-					if newGoCost <= existingNode.goCost {
-						openHeap.update(existingNode, currentNode, newGoCost, calcHeuristic(existingNode, &pathNode{X: endX, Y: endY}))
+				if existingNode.generation == currentGeneration {
+					if newGoCost < existingNode.goCost {
+						// Znaleźliśmy lepszą ścieżkę – aktualizujemy
+						existingNode.parent = currentIndex
+						existingNode.goCost = newGoCost
+						existingNode.heuristicCost = calcHeuristic(checkX, checkY, int(endX), int(endY))
+						existingNode.finalCost = newGoCost + existingNode.heuristicCost
+						heap.Fix(open, int(existingNode.heapIndex))
 					}
 				} else {
-					newNode := &pathNode{
-						parent:        currentNode,
-						X:             uint8(checkX),
-						Y:             uint8(checkY),
+					hCost := calcHeuristic(checkX, checkY, int(endX), int(endY))
+					sharedNodePool[index] = pathNode{
+						parent:        currentIndex,
+						generation:    currentGeneration,
 						goCost:        newGoCost,
-						heuristicCost: calcHeuristic(&pathNode{X: uint8(checkX), Y: uint8(checkY)}, &pathNode{X: endX, Y: endY}),
+						heuristicCost: hCost,
+						finalCost:     newGoCost + hCost,
+						heapIndex:     -1, // Push ustawi właściwy indeks
 					}
-					newNode.finalCost = newNode.goCost + newNode.heuristicCost
-					heap.Push(openHeap, newNode)
-					nodeMap[idx] = newNode
+					heap.Push(open, index)
 				}
 			}
 		}
 	}
+
+	sharedOpenIndices = open.indices
 
 	return nil
 }
@@ -149,17 +173,11 @@ func isWalkable(board *boardData, x, y uint8) bool {
 // isWalkableUnit - Sprawdza czy dana jednostka może wejść na kafelek.
 // Obsługuje wyjątek: Krowa wchodzi do swojej Obory (punkt dojenia).
 func isWalkableUnit(board *boardData, x, y uint8, mover *unit) bool {
-	// @todo: sprawdź, czy to jest potrzebne, bo inne części kodu gwarantują
-	//        mieszczenie się w planszy.
-	if x >= boardMaxX || y >= boardMaxY {
-		return false
-	}
-
 	currentTile := &board.Tiles[x][y]
 
 	// 1. Sprawdź czy to budynek
 	if currentTile.Building != nil {
-		// 1. Krowa + obora (milking spot) - TYLKO jeden kafelek
+		// a. Krowa + obora (milking spot) - TYLKO jeden kafelek
 		// @reminder: w pierwowzorze lewy-dolny kafelek był przechodni w każdym budynku.
 		if mover != nil && mover.Type == unitCow &&
 			currentTile.Building.Type == buildingBarn &&
@@ -171,26 +189,14 @@ func isWalkableUnit(board *boardData, x, y uint8, mover *unit) bool {
 			}
 		}
 
-		// 2. Palisada w budowie - pozwala na naprawę (cała powierzchnia)
+		// b. Palisada w budowie - pozwala na naprawę
 		if currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction {
 			return true
 		}
 
-		// 3. Ukończony most - przechodni na CAŁEJ powierzchni
-		// @todo: o ile kojarzę, to most jest wywalany po ukończeniu więc, to wyrażenie wydaje się być
-		//        zbyteczne.
-		if currentTile.Building.Type == buildingBridge && !currentTile.Building.IsUnderConstruction {
-			return !isWaterOrObstacle(currentTile.TextureID)
-		}
-
-		// 4. Każdy inny budynek blokuje
+		// c. Każdy inny budynek blokuje, ukończony most nie jest budynkiem
 		return false
 	}
-
-	// 2. Standardowa weryfikacja terenu
-	// if isWaterOrObstacle(currentTile.TextureID) {
-	// 	return false
-	// }
 
 	// 3. Flaga z loadera mapy (jeśli loader oznaczył coś jako nieprzechodnie ręcznie)
 	if !currentTile.IsWalkable {
@@ -214,45 +220,19 @@ func isWaterOrObstacle(spriteID uint16) bool {
 		return true
 	}
 
-	// Gadżety blokujące (wybrane offsety)
-	// To wymaga doprecyzowania, które konkretnie gadżety blokują,
-	// ale na start zablokujmy cały zakres gadżetów, żeby sprawdzić czy działa,
-	// albo użyj switcha na konkretne ID.
-	// Stary kod blokował: 54, 58, 60... (wybiórczo).
-	// Nowy start gadżetów to 363. Stare 54 to teraz 363.
-	// Przykładowo: blokujemy wszystko co wygląda na duży kamień/płot.
-	//if spriteID >= spriteGadgetStart && spriteID <= spriteGadgetEnd {
-	//	// Tu można dodać wyjątki dla grzybków (przechodnich)
-	//	return false
-	//}
-
-	// Zgliszcza i palisady (jeśli nie mają obiektu building)
-	// UWAGA: Palisady (building) są obsługiwane przez tile.building != nil w isWalkableUnit.
-	// Ale jeśli została sama tekstura (bez Logic building), to blokujemy.
-	// if id >= spriteRuinStart && id <= spritePalisadeEnd {
-	//	return true
-	// }
-
 	return false
 }
 
-func calculateMoveCost(from, to *pathNode, board *boardData, mover *unit) float64 {
-	cost := 1.0
-	// koszt ruchu po przekątnej
-	if from.X != to.X && from.Y != to.Y {
-		cost = 1.414
-	}
-
-	terrainID := board.Tiles[to.X][to.Y].TextureID
+func calculateMoveCost(toX, toY int, board *boardData, mover *unit) float32 {
+	cost := float32(1.0)
+	currentTile := &board.Tiles[toX][toY]
 
 	// Drogi ułatwiają ruch
-	if terrainID >= spriteRoadStart && terrainID <= spriteRoadEnd {
+	if currentTile.TextureID >= spriteRoadStart && currentTile.TextureID <= spriteRoadEnd {
 		cost *= 0.5
 	}
 
-	// Unikanie tłoku (sztuczka A*):
-	// Inne jednostki nie są ścianą (isWalkableUnit puszcza), ale są bardzo drogie.
-	currentTile := &board.Tiles[to.X][to.Y]
+	// Druhowie nie są przeszkodą, ale zniechęcamy do próby wejścia w nich
 	if currentTile.Unit != nil && currentTile.Unit.Owner == mover.Owner {
 		cost *= 30
 	}
@@ -260,21 +240,33 @@ func calculateMoveCost(from, to *pathNode, board *boardData, mover *unit) float6
 	return cost
 }
 
-func calcHeuristic(from, to *pathNode) float64 {
-	dx := float64(int(to.X) - int(from.X))
-	dy := float64(int(to.Y) - int(from.Y))
+func calcHeuristic(fromX, fromY, toX, toY int) float32 {
+	dx := toX - fromX
 
-	return math.Sqrt(dx*dx + dy*dy)
-}
-
-func reconstructPath(node *pathNode) []*pathNode {
-	var path []*pathNode
-
-	current := node
-	for current != nil {
-		path = append(path, current)
-		current = current.parent
+	if dx < 0 {
+		dx = -dx
 	}
 
+	dy := toY - fromY
+
+	if dy < 0 {
+		dy = -dy
+	}
+
+	if dx > dy {
+		return float32(dx)
+	}
+
+	return float32(dy)
+}
+
+func reconstructPath(endIndex int32) []point {
+	path := make([]point, 0, 64)
+
+	for index := endIndex; index != -1; index = sharedNodePool[index].parent {
+		path = append(path, point{X: uint8(index & 0xFF), Y: uint8(index >> 8)})
+	}
+
+	// @reminder: być może będę musiał odwrócić przed odesłaniem
 	return path
 }

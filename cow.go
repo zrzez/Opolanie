@@ -23,10 +23,6 @@ func (u *unit) handleCowBehavior(pathfindingBudget *int, bState *battleState) {
 		return
 	}
 
-	if u.BlockedCounter > 0 {
-		return
-	}
-
 	// 0. Ucieczka
 	if u.Command == cmdUFlee {
 		bState.handleCowFlee(u)
@@ -237,7 +233,7 @@ func (u *unit) joinMilkingQueue(pathfindingBudget *int, bState *battleState, bar
 	distToWaitingSpot := int(math.Abs(float64(u.X-waitX)) + math.Abs(float64(u.Y-waitY)))
 	isAtWaitingSpot := u.X == waitX && u.Y == waitY
 
-	if isAtWaitingSpot || (distToWaitingSpot <= 1 && (u.BlockedCounter > 0 || u.Command == cmdUIdle)) {
+	if isAtWaitingSpot || (distToWaitingSpot <= 1 && u.Command == cmdUIdle) {
 		// Stoi grzecznie i czeka
 		u.State = stateIdle
 		u.IsInQueue = true

@@ -56,7 +56,6 @@ func (u *unit) setIdleWithReason(reason string) {
 	u.AnimationType = "idle"
 	u.Command = cmdUIdle
 	u.clearPath()
-	u.BlockedCounter = 0
 	u.AllowFriendlyFire = false
 
 	// 25.04.2026 dodaję czyszczenie celu, bo powoduje niespójność w stanie
@@ -578,10 +577,6 @@ func (u *unit) executeActionBasedOnDistance(bState *battleState) {
 // @reminder: dla bezczynnych jednostek. Nie powinna się sama zadaniować.
 func (u *unit) actOnIdle(bState *battleState) {
 	if !u.canActOnIdle() {
-		return
-	}
-
-	if u.BlockedCounter > 0 {
 		return
 	}
 

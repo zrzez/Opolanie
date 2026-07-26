@@ -127,20 +127,6 @@ func (u *unit) handleDelay(currentTick uint16) bool {
 }
 
 // @todo: ogarnij co to robi, bo zupełnie nie pamiętam.
-func (u *unit) handleBlockedCounter() bool {
-	if u.BlockedCounter > 0 {
-		u.BlockedCounter--
-		u.AnimationType = "idle"
-		u.AnimationFrame = 0
-		u.Delay = u.MaxDelay
-
-		return true
-	}
-
-	return false
-}
-
-// @todo: ogarnij co to robi, bo zupełnie nie pamiętam.
 func (u *unit) handleWaitingToActiveTransition() {
 	if u.State == stateWaiting {
 		u.State = u.determineActiveStateFromCommand()
@@ -211,10 +197,6 @@ func (u *unit) canDamageTree(treeTile *tile) bool {
 func (u *unit) prepareForNewCommand(cmdType commandType, target targetReference, approach point) {
 	u.clearPath()
 	u.History = nil
-	u.LoopCount = 0
-	u.TicksNoProgress = 0
-	u.LastPathIndex = 0
-
 	u.Command = cmdType
 	u.Target = target
 	u.Approach = approach
@@ -227,9 +209,7 @@ func (u *unit) setIdle() {
 	u.AnimationType = "idle"
 	u.Command = cmdUIdle
 	u.clearPath()
-	u.BlockedCounter = 0
 	u.RetryAttempts = 0
-	u.PathfindingCooldown = 0
 	u.AllowFriendlyFire = false
 
 	if u.State != stateWaiting {

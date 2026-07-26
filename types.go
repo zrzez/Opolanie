@@ -123,22 +123,12 @@ type unit struct {
 	AttackCooldown uint      // Opóźnienie przy ataku
 
 	// Obieranie ścieżki
-	Path                  []*pathNode  `json:"path"`        // Bieżąca ścieżka
-	PathIndex             int          `json:"pathIndex"`   // Bieżący wskaźnik w ścieżce
-	LastTargetX           uint8        `json:"lastTargetX"` // Ostatnia współrzędna X celu
-	LastTargetY           uint8        `json:"lastTargetY"` // Ostatnia współrzędna Y celu
-	PathfindingCooldown   int          // Opóźnienie dla ponownego obierania
-	RetryAttempts         int          // Liczb prób obejścia przeszkody
-	LastPathfindTime      int          // Ostatni czas kiedy przeliczono ścieżkę
-	BlockedCounter        int          // Na ile zatkano jednostkę
-	History               []rl.Vector2 // ostatnie pozycje jednostki
-	LoopCount             int
-	PathfindingRetryCount int
-	LastPathIndex         int
-	TicksNoProgress       int
-	TicksNearTarget       int
-	LastX, LastY          uint8 // ostatnia pozycja
-	NoMoveTicks           int   // liczymy ticki bez zmiany pozycji
+	Path          []point      `json:"path"`      // Bieżąca ścieżka
+	PathIndex     int          `json:"pathIndex"` // Bieżący wskaźnik w ścieżce
+	RetryAttempts int          // Liczb prób obejścia przeszkody
+	History       []rl.Vector2 // ostatnie pozycje jednostki
+	LastX, LastY  uint8        // ostatnia pozycja
+	NoMoveTicks   int          // liczymy ticki bez zmiany pozycji
 }
 
 // Do trzymania wiedzy o odniesionych ranach.
@@ -153,12 +143,12 @@ type wound struct {
 
 // Do trzymania wiedzy o zwłokach.
 type corpse struct {
+	DecayTimer   uint     // do mierzenia kiedy podmienić teksturę
+	Rotation     float32  // kąd pod którym narysujemy zwłoki
 	X, Y         uint8    // gdzie poległa jednostka
 	UnitType     unitType // jaka to jednostka, ważne dla 2 pierwszych faz rozkładu
-	DecayTimer   uint     // do mierzenia kiedy podmienić teksturę
 	Phase        uint8    // faza rozkładu
 	SkeletonType uint8    // wskazuje na rodzaj szkieletu w ostatniej fazie rozkładu
-	Rotation     float32  // kąd pod którym narysujemy zwłoki
 	Alpha        uint8    // do zanikania kości
 	Owner        PlayerID
 }

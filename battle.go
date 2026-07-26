@@ -577,10 +577,6 @@ func (bState *battleState) updateUnit(u *unit) {
 		return
 	}
 
-	if u.handleBlockedCounter() {
-		return
-	}
-
 	u.handleWaitingToActiveTransition()
 	u.handleMovementTargetReached(bState)
 

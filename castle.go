@@ -67,17 +67,17 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 	// ↓↓↓↓↓↓↓↓↓ kod z validations.go!
 
 	// 2. Wytwarzanie jednostek
-	targetBuilding, ok := bState.getBuildingByID(buildingID(cmd.ExecutorID))
+	targetedBuilding, ok := bState.getBuildingByID(buildingID(cmd.ExecutorID))
 
-	if !ok || !targetBuilding.Exists || targetBuilding.IsUnderConstruction {
+	if !ok || !targetedBuilding.Exists || targetedBuilding.IsUnderConstruction {
 		log.Printf("handleBuildingCommand: Nie znaleziono ID %d, nie istnieje lub w budowie.", cmd.Target.ID)
 
 		return
 	}
 
-	if targetBuilding.Owner != playerS.PlayerID {
+	if targetedBuilding.Owner != playerS.PlayerID {
 		log.Printf("handleBuildingCommand: Próba wydania komendy dla budynku %d, który nie należy do frakcji %d.",
-			targetBuilding.ID, playerS.PlayerID)
+			targetedBuilding.ID, playerS.PlayerID)
 
 		return
 	}
@@ -88,7 +88,7 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 
 	default:
 		log.Printf("handleBuildingCommand: Niezaimplementowany ActionType %d dla budynku %d.",
-			cmd.ActionType, targetBuilding.ID)
+			cmd.ActionType, targetedBuilding.ID)
 	}
 }
 
@@ -322,6 +322,7 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 	}
 }
 
+/*
 // handleMoveCommandde obsługuje logikę rozkazu ruchu dla jednostki.
 // Sprawdza dostępność celu i wyznacza ścieżkę.
 func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *battleState) {
@@ -372,3 +373,4 @@ func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *bat
 		cmd.Target.Position.Y,
 	)
 }
+*/
