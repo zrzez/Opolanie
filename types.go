@@ -123,12 +123,11 @@ type unit struct {
 	AttackCooldown uint      // Opóźnienie przy ataku
 
 	// Obieranie ścieżki
-	Path          []point      // Bieżąca ścieżka
-	PathIndex     int          // Bieżący wskaźnik w ścieżce
-	RetryAttempts int          // Liczb prób obejścia przeszkody
-	History       []rl.Vector2 // ostatnie pozycje jednostki
-	LastX, LastY  uint8        // ostatnia pozycja
-	NoMoveTicks   int          // liczymy ticki bez zmiany pozycji
+	Path          []point // Bieżąca ścieżka
+	PathIndex     int     // Bieżący wskaźnik w ścieżce
+	RetryAttempts int     // Liczb prób obejścia przeszkody
+	LastX, LastY  uint8   // ostatnia pozycja
+	NoMoveTicks   int     // liczymy ticki bez zmiany pozycji
 }
 
 // Do trzymania wiedzy o odniesionych ranach.

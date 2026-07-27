@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-
-	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 const (
@@ -13,7 +11,6 @@ const (
 	maxBlockedTicks       = 50
 	maxPathfindingBudget  = 40
 	maxPathfindingRetries = 3
-	maxMovementHistory    = 6
 )
 
 func (u *unit) executeAStarMovement(pathfindingBudget *int, bState *battleState) {
@@ -80,7 +77,6 @@ func (u *unit) calculateNewPath(board *boardData) bool {
 func (u *unit) executeSuccessfulMove(x, y uint8, board *boardData) {
 	u.executeMove(x, y, board)
 	u.resetMovementCounters()
-	u.updateMovementHistory()
 }
 
 func (u *unit) waitForPathfindingBudget() {
@@ -109,6 +105,9 @@ func (u *unit) moveAlongPath(board *boardData) {
 		u.State = stateWaiting
 		u.Delay = 1
 
+		// ! Wydaje mi się, iż pozwolenie na czyszczenie drogi co tyknięcie
+		// tylko dlatego, że czekał już piętnaście, jest zbyt obciążające.
+		// Może jakieś dodatkowe odsiewanie? Nieparzyste albo coś innego?
 		if u.NoMoveTicks >= 15 {
 			// ! chyba tutaj powinienem dodać coś co umożliwi jednostce
 			// sprawdzić czy jesteśmy blokowani ponieważ druh stoi bezczynnie
@@ -150,25 +149,7 @@ func (u *unit) shouldAbortMovement() bool {
 		return true
 	}
 
-	if u.detectSimpleOscillation() {
-		return true
-	}
-
 	return false
-}
-
-func (u *unit) detectSimpleOscillation() bool {
-	if len(u.History) < 4 {
-		return false
-	}
-
-	n := len(u.History)
-	a := u.History[n-1]
-	b := u.History[n-2]
-	c := u.History[n-3]
-	d := u.History[n-4]
-
-	return a.X == c.X && a.Y == c.Y && b.X == d.X && b.Y == d.Y
 }
 
 func (u *unit) hasValidPath(bState *battleState) bool {
@@ -209,14 +190,6 @@ func (u *unit) invalidatePathForRecalculation() {
 func (u *unit) resetMovementCounters() {
 	u.NoMoveTicks = 0
 	u.LastX, u.LastY = u.X, u.Y
-}
-
-func (u *unit) updateMovementHistory() {
-	u.History = append(u.History, rl.NewVector2(float32(u.X), float32(u.Y)))
-
-	if len(u.History) > maxMovementHistory {
-		u.History = u.History[1:]
-	}
 }
 
 func (u *unit) handleNoMovementDetection() bool {

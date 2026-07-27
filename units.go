@@ -196,7 +196,6 @@ func (u *unit) canDamageTree(treeTile *tile) bool {
 
 func (u *unit) prepareForNewCommand(cmdType commandType, target targetReference, approach point) {
 	u.clearPath()
-	u.History = nil
 	u.Command = cmdType
 	u.Target = target
 	u.Approach = approach

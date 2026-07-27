@@ -4,55 +4,6 @@ import rl "github.com/gen2brain/raylib-go/raylib"
 
 // constants.go
 
-// ============================================================================
-// STAŁE I KONFIGURACJA
-// ============================================================================
-
-/*## 1. Odchudzanie struktur danych (Data Locality & Cache Friendliness)
-**Cel:** Zmniejszenie rozmiaru pojedynczych obiektów, aby więcej mieściło się w Cache L1 procesora (64 bajty).
-	Mniej skakania po RAM = szybsza gra.
-
-### A. Struktura `Tile` (Obecnie: ~56 bajtów)
-* **Problem:** Używamy `int` (8 bajtów) i wskaźników tam, gdzie wystarczą małe liczby. Każdy odczyt mapy zapycha cache.
-* **Rozwiązanie:**
-    * `TextureID`, `EffectID`: Zmień `int` -> `uint16` (0-65535 wystarczy).
-    * `MovementCost`: Zmień `float64` -> `uint8` (koszt 1-255, np. 10=droga, 20=trawa).
-    * `Flags`: Zamiast wielu `bool` (każdy bierze 1 bajt + padding), użyj jednego `uint8` i masek bitowych
-	(np. bit 1: Walkable, bit 2: Water).
-* **Zysk:** Rozmiar spadnie do ~12-16 bajtów. Mapa będzie ładowana 4x szybciej.
-
-### B. Struktura `unit` (Obecnie: God Object)
-* **Problem:** Struktura jest ogromna. Zawiera dane potrzebne co klatkę (HP, x, y) obok danych rzadkich
-	(Inventory, History, Wymiona).
-* **Rozwiązanie:** Podział na dane "Gorące" i "Zimne".
-    * Wyrzuć `string` (np. `AnimationType`) -> zamień na `enum` (stałe `int`/`byte`). Porównywanie liczb jest 100x
-	szybsze niż napisów.
-    * Wyrzuć wskaźniki `*pathNode` (slice wskaźników) -> użyj płaskiej tablicy punktów.
-
-## 2. Zarządzanie Pamięcią i Garbage Collector (GC)
-**Cel:** Przestać męczyć GC skanowaniem tysięcy małych obiektów.
-
-* **Problem:** `Tile` trzyma wskaźniki `*unit` i `*building`. GC musi skanować całą planszę (4356 pól), żeby sprawdzić,
-	czy coś nie zniknęło.
-* **Rozwiązanie (Index-based approach):**
-    * Zamiast wskaźników (`*unit`), trzymaj w `Tile` numer ID (`UnitID int`).
-    * Trzymaj wszystkie jednostki w jednej, wielkiej, alokowanej na starcie tablicy `[]unit`.
-    * Dostęp: `GlobalUnits[tile.UnitID]`.
-* **Efekt:** Mapa staje się "niewidzialna" dla GC (jeśli nie ma wskaźników), a procesor kocha iterować po ciągłych
-	tablicach.
-
-## 3. Logika "Raz a dobrze" (Lekcja z trawy)
-**Cel:** Nie liczyć w kółko tego, co się nie zmienia.
-
-* **Zasada:** Jeśli coś jest obliczane w pętli `Draw` lub `updateProjectile` (60 razy na sekundę), zadaj pytanie:
-	"Czy wynik zmienił się od ostatniej klatki?".
-   * Przykład (Twój sukces): Generowanie wariantów trawy przeniesione z pętli rysowania do inicjalizacji mapy.
-   * Kandydaci: Pathfinding (nie szukaj ścieżki co klatkę, jeśli cel się nie ruszył), sortowanie obiektów do rysowania
-	(Z-index).
-## 4. Typy danych
-* Unikaj `int` (64-bit) dla małych wartości w dużych tablicach. w pętlach i obliczeniach `int` jest OK
-	(rejestry CPU są duże), ale w **pamięci** (struktury) każdy bajt się liczy.*/
-
 const (
 	// @todo: @reminder: Będę musiał tutaj jeszcze wrócić i się ogarnąć prędkość gry. Obecnie jest ona zbyt szybka.
 	logicSpeedDivisor   = 1

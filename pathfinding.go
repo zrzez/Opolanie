@@ -178,9 +178,15 @@ func isWalkableUnit(board *boardData, x, y uint8, mover *unit) bool {
 	currentTile := &board.Tiles[x][y]
 
 	// 1. Sprawdź czy to budynek
+	// ! handlePalisadeDestruction gwarantuje, że zniszczona palisada jest przechodnia.
+	// Oznacza to, eż mogę pozbyć się sprawdzenia „czy palisada w budowie”.
+	// @reminder: Po ogarnięciu obory będę mógł w ogóle pozbyć się zewnętrznego wyrażenia ponieważ
+	// każdy budynek prawidłowo ustawia currentTile.IsWalkable.
 	if currentTile.Building != nil {
 		// a. Krowa + obora (milking spot) - TYLKO jeden kafelek
 		// @reminder: w pierwowzorze lewy-dolny kafelek był przechodni w każdym budynku.
+		// Zgaduję, że to się wywali niedługo ponieważ lewy dolny róg budynków będzie
+		// normalnie przechodni.
 		if mover != nil && mover.Type == unitCow &&
 			currentTile.Building.Type == buildingBarn &&
 			currentTile.Building.Owner == mover.Owner {
@@ -190,12 +196,12 @@ func isWalkableUnit(board *boardData, x, y uint8, mover *unit) bool {
 				return !isWaterOrObstacle(currentTile.TextureID)
 			}
 		}
-
-		// b. Palisada w budowie - pozwala na naprawę
-		if currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction {
-			return true
-		}
-
+		/*
+			// b. Palisada w budowie - pozwala na naprawę
+			if currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction {
+				return true
+			}
+		*/
 		// c. Każdy inny budynek blokuje, ukończony most nie jest budynkiem
 		return false
 	}
@@ -234,8 +240,8 @@ func calculateMoveCost(toX, toY int, board *boardData, mover *unit) float32 {
 		cost *= 0.5
 	}
 
-	// Druhowie nie są przeszkodą, ale zniechęcamy do próby wejścia w nich
-	if currentTile.Unit != nil && currentTile.Unit.Owner == mover.Owner {
+	// Jednostki nie są przeszkodą, ale zniechęcamy do próby wejścia w nich
+	if currentTile.Unit != nil {
 		cost *= 30
 	}
 
