@@ -18,7 +18,7 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	u.CurrentSpell = cmd.Spell
 	u.AllowFriendlyFire = cmd.FriendlyFire
 
-	var approach *point
+	var approach point
 
 	if cmd.ActionType.isInteraction() {
 		var err error
@@ -31,7 +31,7 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 		}
 	} else {
 		// Nie wymaga interakcji, np. cmdMove, to cel jest miejscem w które się udajemy
-		approach = &cmd.Target.Position
+		approach = cmd.Target.Position
 	}
 
 	// ! tutaj się zastanawiam, co zrobić
@@ -47,11 +47,12 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 	}
 
 	// Przekazujemy cel oraz podejście
-	u.prepareForNewCommand(cmd.ActionType, cmd.Target, *approach)
+	u.prepareForNewCommand(cmd.ActionType, cmd.Target, approach)
 	u.applyCommandState(cmd.ActionType)
 }
 
 func (u *unit) setIdleWithReason(reason string) {
+	fmt.Println(reason)
 	u.State = stateIdle
 	u.AnimationType = "idle"
 	u.Command = cmdUIdle
@@ -222,11 +223,11 @@ func (u *unit) calculateDistanceToTarget(target *combatTarget) uint8 {
 	))
 }
 
-func (u *unit) calculateApproachTile(targetRef targetReference, bState *battleState) (*point, error) {
+func (u *unit) calculateApproachTile(targetRef targetReference, bState *battleState) (point, error) {
 	if u.CurrentSpell != spellNone {
 		approachTile, err := u.findApproachTileForSpell(targetRef.Position, bState.Board)
 		if err != nil {
-			return nil, err
+			return point{}, err
 		}
 
 		return approachTile, nil
@@ -236,13 +237,13 @@ func (u *unit) calculateApproachTile(targetRef targetReference, bState *battleSt
 	return u.findApproachTileForTarget(targetRef, bState)
 }
 
-func (u *unit) findApproachTileForSpell(targetPosition point, board *boardData) (*point, error) {
+func (u *unit) findApproachTileForSpell(targetPosition point, board *boardData) (point, error) {
 	switch u.CurrentSpell {
 	case spellMagicShower:
 
 		validCoords, ok := findTileForAttacking(u, nil, nil, &targetPosition, board)
 		if !ok {
-			return nil, fmt.Errorf("nie ma podejścia do celu")
+			return point{}, fmt.Errorf("nie ma podejścia do celu")
 		}
 
 		return findBestReachableTile(u, validCoords, board)
@@ -250,22 +251,21 @@ func (u *unit) findApproachTileForSpell(targetPosition point, board *boardData) 
 	// ↓↓↓↓↓ Poniższe przypadki nie muszą korzystać z A*
 	case spellMagicShield, spellMagicSight:
 		// Czary, które przyjmują rzucającego jako swój cel.
-		return &point{X: u.X, Y: u.Y}, nil
+		return point{X: u.X, Y: u.Y}, nil
 	case spellNone:
 		// To nigdy nie powinno mieć miejsca, bo warunkiem wywołania
 		// jest u.CurrentSpell != spellNone.
-		return &point{X: u.X, Y: u.Y}, fmt.Errorf("próba rzucenia spellNone")
+		return point{X: u.X, Y: u.Y}, fmt.Errorf("próba rzucenia spellNone")
 	default:
 		// To nigdy nie powinno mieć miejsca, bo wszystkie czary są obsłużone
-		return &point{X: u.X, Y: u.Y}, fmt.Errorf("nieznany rodzaj czaru")
+		return point{X: u.X, Y: u.Y}, fmt.Errorf("nieznany rodzaj czaru")
 	}
 }
 
-// @reminder: nazwa dla kafelka z drzewem „intention” jest bardzo kiepska, ale nie mam teraz do tego głowy.
-func (u *unit) findApproachTileForTarget(targetRef targetReference, bState *battleState) (*point, error) {
+func (u *unit) findApproachTileForTarget(targetRef targetReference, bState *battleState) (point, error) {
 	target, err := bState.resolveTarget(targetRef)
 	if err != nil {
-		return nil, err
+		return point{}, err
 	}
 
 	var targetU *unit
@@ -285,7 +285,7 @@ func (u *unit) findApproachTileForTarget(targetRef targetReference, bState *batt
 
 	validCoords, ok := findTileForAttacking(u, targetU, targetBld, targetTree, bState.Board)
 	if !ok {
-		return nil, fmt.Errorf("nie ma podejścia do celu: %t", ok)
+		return point{}, fmt.Errorf("nie ma podejścia do celu: %t", ok)
 	}
 
 	return findBestReachableTile(u, validCoords, bState.Board)
@@ -625,8 +625,8 @@ func (u *unit) handleUnitTarget(targetedUnit *unit, bState *battleState) {
 		return
 	}
 
-	u.Approach = *coords
-	u.Target.Position = *coords
+	u.Approach = coords
+	u.Target.Position = coords
 
 	u.executeActionBasedOnDistance(bState)
 }
@@ -654,8 +654,8 @@ func (u *unit) handleBuildingTarget(targetedBuilding *building, bState *battleSt
 	}
 
 	// @reminder: wygląda to bardzo podejrzanie, że „podejście” do budynku jest tym samym, co cel ataku!
-	u.Approach = *coords
-	u.Target.Position = *coords
+	u.Approach = coords
+	u.Target.Position = coords
 
 	u.executeActionBasedOnDistance(bState)
 }

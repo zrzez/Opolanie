@@ -56,7 +56,7 @@ func (u *unit) attack(bState *battleState) {
 
 	u.State = stateMoving
 	u.AnimationType = "walk"
-	u.Approach = *whereToGo
+	u.Approach = whereToGo
 }
 
 func (u *unit) performAttack(target *combatTarget, hPID, aiPID PlayerID, projs *[]*projectile, fallingTrees *[]*tile) {

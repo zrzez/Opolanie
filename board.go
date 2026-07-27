@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math"
-	"slices"
 )
 
 // registerBuilding zapisuje na planszy, które kafelki są zajmowane przez budynek.
@@ -208,6 +207,8 @@ func (board *boardData) isValidWalkableTile(x, y int8) bool {
 	return currentTile.IsWalkable && currentTile.Unit == nil && currentTile.Building == nil
 }
 
+var bldNeighboorBuffer = make([]point, 16)
+
 func (board *boardData) bldNeighborCoords(bld *building) []point {
 	// 1. Bierzemy lewy górny róg budynku
 	occupiedTileX := int(bld.OccupiedTiles[0].X)
@@ -236,8 +237,8 @@ func (board *boardData) bldNeighborCoords(bld *building) []point {
 
 	// 3. Tworzymy listę współrzędnych mieszczących się
 	//    w planszy
-	var electedCoords []point
-
+	// var electedCoords []point
+	var coordsIndex uint8
 	// 4. Sprawdzamy, czy potencjalne wspołrzędne w rzeczywistości
 	//    mieszczą się w planszy
 	for _, offset := range offsets {
@@ -251,15 +252,17 @@ func (board *boardData) bldNeighborCoords(bld *building) []point {
 			electedTileY >= 0 && electedTileY < int(boardMaxY) {
 			// Obie współrzędne są poprawnymi współrzędnymi kafelków więc
 			// dodajemy do listy prawidłowych współrzędnych
-			electedCoords = append(electedCoords, point{
+			bldNeighboorBuffer[coordsIndex] = point{
 				X: uint8(electedTileX),
 				Y: uint8(electedTileY),
-			})
+			}
+
+			coordsIndex++
 		}
 	}
 
 	// Stworzyliśmy listę wszystkich sąsiadów budynku
-	return electedCoords
+	return bldNeighboorBuffer[:coordsIndex]
 }
 
 func (board *boardData) hasFreeTileInList(electedTiles []point) bool {
@@ -347,15 +350,20 @@ func getDistanceToUnit(bldType buildingType, bldTopLeft point, unitX, unitY uint
 	return differenceY
 }
 
+var validCoordsBuffer = make([]point, 256)
+
 // @reminder: funkcja przyjmuje aż 5 argumentów, więc można by przekazać strukturę z celami zamiast każdy osobno.
 //    Nie wiem, czy tak byłoby lepiej dlatego tak nie robię. Może w przyszłości się zdecyduję na zmianę.
 // @reminder: mogę użyć combatTarget i odchudzić sygnaturę.
 func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, targetTile *point, board *boardData) ([]point, bool) {
-	var validCoords []point // wykaz prawidłowych kafelków, które można odwiedzić.
-
 	var rangeAdjustment uint8
 
 	var targetX, targetY uint8
+
+	// Przy ścinaniu drzewa odrzucamy kafelek na które ma spaść drzewo
+	var forbiddenX, forbiddenY int8
+
+	var isTreeTarget bool
 
 	// W zależności od tego co jest celem musimy się inaczej przygotować.
 	switch {
@@ -375,6 +383,12 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 		targetX, targetY = targetU.X, targetU.Y
 	case targetTile != nil:
 		targetX, targetY = targetTile.X, targetTile.Y
+		isTreeTarget = isTree(board.Tiles[targetTile.X][targetTile.Y].TextureID) && targetTile.X > 0
+
+		if isTreeTarget {
+			forbiddenX = int8(targetTile.X - 1)
+			forbiddenY = int8(targetTile.Y)
+		}
 
 	default:
 		// To nigdy nie powinno mieć miejsca!
@@ -382,35 +396,32 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 	}
 
 	attackRange := attacker.AttackRange + rangeAdjustment
+	var coordIndex int // wskazuje miejsce dla odnalezionych współrzędnych
 
 	// Wszelkie możliwe X. Nigdy nie przekroczymy +-120 więc zmiana na int8 jest bezpieczna.
 	for coordX := int8(targetX - attackRange); coordX <= int8(targetX+attackRange); coordX++ { //nolint:gosec
 		// Wszelkie możliwe Y
 		for coordY := int8(targetY - attackRange); coordY <= int8(targetY+attackRange); coordY++ { //nolint:gosec
+			// Jeśli to kafelek na które ma spaść drzewo, to je pomijamy
+			if isTreeTarget && coordX == forbiddenX && coordY == forbiddenY {
+				continue
+			}
 			// Tutaj sprawdzamy, czy to prawidłowe współrzędne kafelka.
 			if board.isValidWalkableTile(coordX, coordY) {
 				// board.isValidWalkableTile gwarantuje, że 0 <= attackX/Y <= 65. Dlatego zmiana na uint8 jest
 				// bezpieczna.                             ↓↓↓↓↓             ↓↓↓↓↓
-				validCoords = append(validCoords, point{X: uint8(coordX), Y: uint8(coordY)}) //nolint:gosec
+				validCoordsBuffer[coordIndex] = point{X: uint8(coordX), Y: uint8(coordY)}
+				// @reminder: mógłbym użyć zwykłego append, ale chcę „wbić do głowy”, że tutaj nie ma żadnej alokacji!
+				coordIndex++
 			}
 		}
 	}
 
-	// Jeśli targetTree != nil to musimy wywalić kafelek na lewo od drzewa, inaczej jednostka zginie.
-	if targetTile != nil && isTree(board.Tiles[targetTile.X][targetTile.Y].TextureID) && targetTile.X > 0 {
-		toRemove := point{X: targetTile.X - 1, Y: targetTile.Y}
-
-		indexToRemove := slices.Index(validCoords, toRemove)
-		if indexToRemove != -1 {
-			validCoords = slices.Delete(validCoords, indexToRemove, indexToRemove+1)
-		}
-	}
-
-	return validCoords, true
+	return validCoordsBuffer[:coordIndex], true
 }
 
 // Odpowiada za wybranie kafelka o najkrótszej drodze.
-func findBestReachableTile(u *unit, validCoords []point, board *boardData) (*point, error) {
+func findBestReachableTile(u *unit, validCoords []point, board *boardData) (point, error) {
 	var bestX, bestY uint8
 
 	minPathLen := math.MaxInt32
@@ -427,10 +438,10 @@ func findBestReachableTile(u *unit, validCoords []point, board *boardData) (*poi
 	}
 
 	if found {
-		return &point{X: bestX, Y: bestY}, nil
+		return point{X: bestX, Y: bestY}, nil
 	}
 
-	return nil, fmt.Errorf("nie ma prawidłowego kafelka")
+	return point{}, fmt.Errorf("nie ma prawidłowego kafelka")
 }
 
 func getClosestOccupiedTile(attackerTile *point, occupiedTiles *[]point) (*point, bool) {

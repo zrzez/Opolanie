@@ -8,7 +8,6 @@ import (
 
 const (
 	maxNoMoveTicks        = 100
-	maxBlockedTicks       = 50
 	maxPathfindingBudget  = 40
 	maxPathfindingRetries = 3
 )
@@ -28,7 +27,7 @@ func (u *unit) ensureValidPath(pathfindingBudget *int, bState *battleState) bool
 		if approachTile.Unit != nil && approachTile.Unit.ID != u.ID {
 			newApproach, err := u.calculateApproachTile(u.Target, bState)
 			if err == nil {
-				u.Approach = *newApproach
+				u.Approach = newApproach
 				u.invalidatePathForRecalculation()
 			} else {
 				u.setIdleWithReason("brak wolnego miejsca do podejścia")
