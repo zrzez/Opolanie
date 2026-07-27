@@ -76,6 +76,7 @@ func fillBuildingActions(bState *battleState, buildingID buildingID) {
 				action.State = mouseStatePlaceConstruction
 				action.Cmd = command{
 					ActionType: cmdBPlaceConstruction,
+					ExecutorID: objectID(buildingID),
 					CreateType: uint8(recipe.BuildingType),
 				}
 			} else {

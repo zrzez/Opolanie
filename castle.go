@@ -16,7 +16,6 @@ func (playerS *playerState) init(factionID PlayerID, maxMilk uint16) {
 	playerS.PlayerID = factionID
 	playerS.MaxMilk = maxMilk
 	playerS.Milk = maxMilk // Początkowe mleko ustawione na MaxMilk
-	log.Printf("playerState (FactionID %d) zaczął z MaxMilk: %d", playerS.PlayerID, playerS.MaxMilk)
 }
 
 // setCommand przetwarza rozkaz (np. wytwarzania, ruchu, ataku) dla gracza.
@@ -61,6 +60,8 @@ func (playerS *playerState) handleBuildingCommand(cmd *command, bState *battleSt
 	// rozkazów - 08.07.2026
 	if cmd.ActionType == cmdBPlaceConstruction {
 		playerS.handleConstructionCommand(cmd, bState)
+
+		return
 	}
 
 	// ↓↓↓↓↓↓↓↓↓ Poniżej tej linii trzeba posprzątać. Rozkazy mają wychodzić do wykonu już sprawdzone przez
@@ -220,7 +221,6 @@ func (playerS *playerState) handleConstructionCommand(cmd *command, bState *batt
 	}
 
 	// 2. Zakończenie, czyścimy
-	log.Printf("[castle.go] Przyjęto rozkaz budowy: %d (%d,%d)", bType, cmd.Target.Position.X, cmd.Target.Position.Y)
 	bState.PendingCommand = nil
 	bState.MouseState = mouseStateNormal
 }
@@ -244,10 +244,8 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 
 	switch cmd.ActionType {
 	case cmdUMove:
-		log.Printf("INFO: castle.go wydano cmdMove.")
 		targetedUnit.addUnitCommand(cmd, bState)
 	case cmdUAttack:
-		log.Printf("INFO: castle.go wydano cmdAttack.")
 		targetedUnit.addUnitCommand(cmd, bState)
 	case cmdUStop:
 		targetedUnit.addUnitCommand(cmd, bState)
@@ -281,8 +279,6 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 		}
 
 		targetedUnit.addUnitCommand(cmd, bState)
-		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz BUDOWY budynku %d.",
-			targetedUnit.ID, cmd.Target.ID)
 	case cmdURepair:
 		targetedBuilding, ok3 := bState.getBuildingByID(buildingID(cmd.Target.ID))
 		if !ok3 {
@@ -312,8 +308,6 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 		}
 
 		targetedUnit.addUnitCommand(cmd, bState)
-		log.Printf("handleUnitCommand: Jednostka %d otrzymała rozkaz NAPRAWY budynku %d.",
-			targetedUnit.ID, cmd.Target.ID)
 	case cmdUCastSpell:
 		targetedUnit.addUnitCommand(cmd, bState)
 	default:
@@ -321,56 +315,3 @@ func (playerS *playerState) handleUnitCommand(cmd *command, bState *battleState)
 			cmd.ActionType, targetedUnit.ID)
 	}
 }
-
-/*
-// handleMoveCommandde obsługuje logikę rozkazu ruchu dla jednostki.
-// Sprawdza dostępność celu i wyznacza ścieżkę.
-func (playerS *playerState) handleMoveCommand(cmd *command, u *unit, bState *battleState) {
-	log.Printf("DEBUG: handleMoveCommand: Rozkaz ruchu dla jednostki ID %d do (%d,%d).",
-		u.ID, cmd.Target.Position.X, cmd.Target.Position.Y)
-
-	// 1. Sprawdzenie czy kafelek jest przechodni (używamy isWalkable)
-	if !isWalkable(bState.Board, cmd.Target.Position.X, cmd.Target.Position.Y) {
-		// Pobieramy ID tekstury z nowej struktury Tiles
-		var terrainID uint16
-		if cmd.Target.Position.X < boardMaxX && cmd.Target.Position.Y < boardMaxY {
-			terrainID = bState.Board.Tiles[cmd.Target.Position.X][cmd.Target.Position.Y].TextureID
-		}
-
-		log.Printf(
-			"handleMoveCommand: ODRZUCONO ROZKAZ: Cel (%d,%d) jest nieprzechodni (TextureID: %d). Jednostka ID %d.",
-			cmd.Target.Position.X, cmd.Target.Position.Y, terrainID, u.ID,
-		)
-
-		return
-	}
-
-	path := findPath(
-		bState.Board,
-		u,
-		u.X,
-		u.Y,
-		cmd.Target.Position.X,
-		cmd.Target.Position.Y,
-	)
-
-	if len(path) == 0 {
-		log.Printf(
-			"DEBUG: handleMoveCommand: Pathfinding nie znalazł ścieżki dla jednostki %d do (%d,%d). Komenda odrzucona.",
-			u.ID, cmd.Target.Position.X, cmd.Target.Position.Y,
-		)
-
-		return
-	}
-
-	u.Path = path
-	u.PathIndex = 0
-	log.Printf(
-		"handleMoveCommand: Ścieżka znaleziona, ustawiona dla jednostki %d. Długość: %d. Rozkaz MOVE do (%d,%d).",
-		u.ID,
-		len(path),
-		cmd.Target.Position.X,
-		cmd.Target.Position.Y,
-	)
-}
-*/

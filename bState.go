@@ -68,8 +68,6 @@ func (bState *battleState) placeConstructionSite(bldType buildingType, tileX, ti
 	bState.CurrentMessage.Text = fmt.Sprintf("Wznoszenie: %s", stats.Name)
 	bState.CurrentMessage.Duration = 60
 
-	log.Printf("BUDOWA: Rozpoczęto %s (ID: %d) na (%d,%d).", stats.Name, newBld.ID, tileX, tileY)
-
 	return newBld
 }
 
@@ -265,8 +263,6 @@ func (bState *battleState) cleanupDestroyedBuildings() {
 		return
 	}
 
-	log.Println("INFO: Rozpoczynam czyszczenie pamięci z budynków...")
-
 	newBuildingsList := make([]*building, 0, len(bState.Buildings))
 	for _, bld := range bState.Buildings {
 		if bld.Exists {
@@ -274,10 +270,7 @@ func (bState *battleState) cleanupDestroyedBuildings() {
 		}
 	}
 
-	removedCount := len(bState.Buildings) - len(newBuildingsList)
 	bState.Buildings = newBuildingsList
-
-	log.Printf("INFO: Wyczyszczono %d zniszczonych budynków.", removedCount)
 }
 
 // tryProduceUnit odpowiada za próbę wytworzenia jednostki.
@@ -325,7 +318,7 @@ func (bState *battleState) createUnit(unitType unitType, coords point, bld *buil
 	}
 }
 
-// @reminder: to nie powinno przyjmować x,y uint8 a strukturę point
+// @reminder: to nie powinno przyjmować x,y uint8 a strukturę point.
 func (bState *battleState) initUnit(unitType unitType, x, y uint8, newUnitID unitID) *unit {
 	newUnit := &unit{}
 

@@ -471,7 +471,6 @@ func (ps *programState) changeState(newState screenState, bState *battleState) {
 	switch newState {
 	case gameScreen:
 		// Logika wejścia do gry
-		log.Println("SYSTEM: Transition to GAME_SCREEN → Recalculating View.")
 		ps.recalculateVirtualResolution() // Naprawia UI i skalowanie
 		setupGameCamera(bState, ps)       // Centruje kamerę na nowym wymiarze
 
@@ -829,7 +828,6 @@ func main() {
 	executableDir := filepath.Dir(executablePath)
 
 	pState.BaseAssetsPath = filepath.Join(executableDir, "assets")
-	log.Printf("Bazowa ścieżka zasobów ustawiona na: %s", pState.BaseAssetsPath)
 
 	// 3. Okno
 	rl.SetConfigFlags(rl.FlagWindowResizable | rl.FlagWindowAlwaysRun)
@@ -854,16 +852,12 @@ func main() {
 	if err != nil {
 		log.Printf("BŁĄD KRYTYCZNY: Nie udało się otworzyć .dat: %v", err)
 	} else {
-		log.Println("INFO: assetLoader załadowany pomyślnie.")
-
 		defer loader.close()
 	}
 
 	// 6. Inicjalizacja AssetManagera
 	if loader != nil {
 		pState.Assets = newAssetManager(loader)
-
-		log.Println("INFO: AssetManager utworzony i gotowy do pracy.")
 	}
 
 	if err = pState.Assets.loadGlobalAssets(pState.BaseAssetsPath); err != nil {
@@ -931,7 +925,7 @@ func main() {
 		}
 
 		rl.BeginDrawing()
-		logVirtualMouseCoordinates(pState)
+		// logVirtualMouseCoordinates(pState)
 		drawSceneToVirtualScreen(bState, pState, iState)
 		drawSceneToActualScreen(bState, pState, iState)
 		rl.EndDrawing()

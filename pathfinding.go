@@ -5,6 +5,9 @@ import (
 )
 
 // pathfinding.go
+// @todo:
+// 1) Wywal wyjątek dla krów po poprawieniu przechodności budynków
+// 2) Zastanów się, czy posiadanie gotowej mapy „kosztowności terenu” będzie w praktyce usprawnieniem
 
 var currentGeneration uint32
 

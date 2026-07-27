@@ -448,6 +448,10 @@ const dragThresholdPixels float32 = 3.0
 func handleMouseStatePlacingConstruction(tileX, tileY uint8, bState *battleState) {
 	cmd := bState.PendingCommand
 
+	if cmd == nil {
+		return
+	}
+
 	// Uzupełniamy rozkaz danymi z planszy wskazanymi przez kursor
 	cmd.Target.Position.X, cmd.Target.Position.Y = tileX, tileY
 

@@ -43,8 +43,6 @@ func handleMenuInput(ps *programState) {
 	if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		for _, btn := range ps.ActiveMenuButtons {
 			if rl.CheckCollisionPointRec(virtualMouse, btn.Rectangle) {
-				log.Printf("MENU: Kliknięto przycisk: %s", btn.DebugLabel)
-
 				if btn.OnClick != nil {
 					btn.OnClick()
 				}
@@ -99,13 +97,9 @@ func setupCampaignMenuButtons(ps *programState, bState *battleState) {
 
 // Działanie przycisków w menu
 func startFirstCampaign(ps *programState, bState *battleState) {
-	log.Println("Naciśnięto pierwszą kampanię. Rozpoczynam sekwencję startową.")
-
 	// KROK 1: Ustalenie parametrów (Sztywno dla 1. kampanii)
 	startLevel := firstCampaignFirstLevel // (15)
 	enemyColor := getEnemyColor(startLevel)
-
-	log.Printf("START KAMPANII: Poziom %d. Przeciwnik: %d", startLevel, enemyColor)
 
 	// KROK 2: Reset Stanu Bitwy
 	bState.IsSinglePlayerGame = true
@@ -164,6 +158,5 @@ func startFirstCampaign(ps *programState, bState *battleState) {
 	// playIntroSegment(ps, "s003_frames", "i003.wav")
 
 	// KROK 6: Start
-	log.Println("Stan programu zmieniony na GameScreen. Rozpoczyna się bitwa.")
 	ps.changeState(gameScreen, bState)
 }

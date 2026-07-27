@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -25,8 +24,6 @@ func newAssetManager(loader *assetLoader) *assetManager {
 }
 
 func (am *assetManager) loadGlobalAssets(basePath string) error {
-	log.Println("Zasoby: Ładowanie zasobów globalnych (nakładka)...")
-
 	// 1. Atlas UI
 	// Pobieramy definicję kawałków z mapy w assets_db.go
 	uiDef, ok := atlasDefinitions[atlasUI]
@@ -118,8 +115,6 @@ func (am *assetManager) loadRawAssetScaled(specialID int, def rawAssetDef) error
 }
 
 func (am *assetManager) loadBattleAssets(activePlayers []PlayerID) error {
-	log.Println("Zasoby: Ładowanie zasobów (jednostki, budynki)...")
-
 	// Wykaz atlasów do przetworzenia dla każdego gracza
 	gameplayAtlases := []battleAtlasID{atlasUnits1, atlasUnits2, atlasBuildings}
 
@@ -237,7 +232,6 @@ func (am *assetManager) unloadBattleAssets() {
 			}
 		}
 	}
-	log.Println("Zasoby: Wyczyszczono zasoby bitewne (VRAM zwolniony).")
 }
 
 func (am *assetManager) unload() {

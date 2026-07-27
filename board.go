@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"slices"
 )
@@ -68,8 +67,6 @@ func (board *boardData) placeRoad(tileX, tileY uint8) {
 	refreshRoadTile(cx-1, cy, board) // lewo
 	refreshRoadTile(cx, cy+1, board) // góra
 	refreshRoadTile(cx, cy-1, board) // dół
-
-	log.Printf("BUDOWA: Postawiono drogę na (%d,%d).", tileX, tileY)
 }
 
 // applyFinishedGraphics nakłada tekstury na kafelki zajmowane przez ukończone budynki.

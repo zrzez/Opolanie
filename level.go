@@ -5,7 +5,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -46,8 +45,6 @@ func initBoard(bState *battleState) {
 
 	bState.NextUnitID = 1
 	bState.NextBuildingID = 1
-
-	log.Println("INFO: Zaczyn planszy zrobiony.")
 }
 
 // Stosuje dane z JSON do stanu gry.

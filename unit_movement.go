@@ -273,10 +273,7 @@ func (u *unit) isAtTarget() bool {
 
 func (u *unit) move(pathfindingBudget *int, bState *battleState) {
 	if u.Command == cmdUAttack {
-		log.Printf("INFO: units.go move rozkaz to cmdAttack")
-
 		if u.canAttackTargetFromCurrentPosition(bState) {
-			log.Printf("INFO: units.go move cel osiągalny z tego miejsca")
 			u.clearPath()
 			u.State = stateAttacking
 
@@ -295,16 +292,12 @@ func (u *unit) move(pathfindingBudget *int, bState *battleState) {
 	}
 
 	if u.isAtTarget() {
-		log.Printf("INFO: units.go move u celu")
-
 		u.handleTargetReached(bState)
 
 		return
 	}
 
 	if u.shouldAbortMovement() {
-		u.setIdleWithReason("przerwano ruch")
-
 		return
 	}
 
