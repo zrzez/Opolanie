@@ -194,6 +194,12 @@ func (u *unit) handleWorkCommand(pathfindingBudget int, bState *battleState) {
 }
 
 func (u *unit) canAttackTargetFromCurrentPosition(bState *battleState) bool {
+	// @reminder: dzięki temu sprawdzeniu jednostki idące ściąć drzewo nie ładują się w
+	//   miejsce, na które zaraz spadnie. Bez tego ignorowałyby bezpieczne podejście.
+	if u.Target.Kind == targetTile && bState.Board.Tiles[u.Target.Position.X][u.Target.Position.Y].isTree() {
+		return false
+	}
+
 	target, err := bState.resolveTarget(u.Target)
 	if err != nil {
 		return false
@@ -204,7 +210,7 @@ func (u *unit) canAttackTargetFromCurrentPosition(bState *battleState) bool {
 	return distance <= u.AttackRange
 }
 
-// @reminder: o ile kojarzęto tutaj korzystam ze złego sposobu obliczania odległości.
+// @reminder: o ile kojarzę to tutaj korzystam ze złego sposobu obliczania odległości.
 //    Powinna być odległość Czebyszewa.
 func (u *unit) calculateDistanceToTarget(target *combatTarget) uint8 {
 	if target.Unit != nil {

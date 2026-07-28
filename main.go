@@ -681,7 +681,7 @@ func renderCurrentScene(bState *battleState, ps *programState) {
 
 // Dobiera logikę obsługi wejścia na postawie programState.CurrentState.
 func handleCurrentScreenInput(bState *battleState, pState *programState, iState inputState) {
-	// logVirtualMouseCoordinates(ps) // @todo: zakomentuj później, bo zapycha konsolę niepotrzebnie
+	// logVirtualMouseCoordinates(pState) // @todo: zakomentuj później, bo zapycha konsolę niepotrzebnie
 	switch pState.CurrentState {
 	case mainMenuScreen:
 		handleMenuInput(pState)

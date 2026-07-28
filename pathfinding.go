@@ -138,7 +138,7 @@ func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8, b
 				index := int32(checkY)<<8 | int32(checkX)
 				existingNode := &sharedNodePool[index]
 
-				newGoCost := currentNode.goCost + calculateMoveCost(checkX, checkY, board, mover)
+				newGoCost := currentNode.goCost + calculateMoveCost(checkX, checkY, board)
 
 				if existingNode.generation == currentGeneration {
 					if newGoCost < existingNode.goCost {
@@ -229,7 +229,7 @@ func isWaterOrObstacle(spriteID uint16) bool {
 	return false
 }
 
-func calculateMoveCost(toX, toY int, board *boardData, mover *unit) float32 {
+func calculateMoveCost(toX, toY int, board *boardData) float32 {
 	cost := float32(1.0)
 	currentTile := &board.Tiles[toX][toY]
 
@@ -240,7 +240,7 @@ func calculateMoveCost(toX, toY int, board *boardData, mover *unit) float32 {
 
 	// Jednostki nie są przeszkodą, ale zniechęcamy do próby wejścia w nich
 	if currentTile.Unit != nil {
-		cost *= 30
+		cost *= 100
 	}
 
 	return cost

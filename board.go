@@ -383,7 +383,7 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 		targetX, targetY = targetU.X, targetU.Y
 	case targetTile != nil:
 		targetX, targetY = targetTile.X, targetTile.Y
-		isTreeTarget = isTree(board.Tiles[targetTile.X][targetTile.Y].TextureID) && targetTile.X > 0
+		isTreeTarget = targetTile.X > 0 // && board.Tiles[targetTile.X][targetTile.Y].isTree()
 
 		if isTreeTarget {
 			forbiddenX = int8(targetTile.X - 1)
@@ -396,6 +396,7 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 	}
 
 	attackRange := attacker.AttackRange + rangeAdjustment
+
 	var coordIndex int // wskazuje miejsce dla odnalezionych współrzędnych
 
 	// Wszelkie możliwe X. Nigdy nie przekroczymy +-120 więc zmiana na int8 jest bezpieczna.

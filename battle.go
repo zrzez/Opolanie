@@ -532,7 +532,6 @@ func (bState *battleState) updateUnits() {
 
 			bState.createCorpses(currentUnit)
 			currentUnit.unregisterFromBuilding()
-			log.Printf("Jednostka %d została zabita!", currentUnit.ID)
 		}
 	}
 }
@@ -568,10 +567,6 @@ func (bState *battleState) updateUnit(u *unit) {
 	pathfindingBudget := bState.PathfindingBudget
 
 	u.handleAttackCooldown(bState.GlobalFrameCounter)
-
-	if u.handleNoMovementDetection() {
-		return
-	}
 
 	if u.handleDelay(bState.GlobalFrameCounter) {
 		return
