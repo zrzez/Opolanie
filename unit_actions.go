@@ -29,10 +29,7 @@ func (u *unit) attack(bState *battleState) {
 
 		// Obracamy jednostkę w stronę celu, żeby nie stała bokiem/tyłem
 		u.faceTarget(target)
-
-		// Ustawiamy minimalny Delay (1), aby w następnej klatce
-		// znów wejść do tej funkcji i sprawdzić, czy cooldown już minął.
-		u.Delay = 1
+		u.Delay = u.MaxDelay
 
 		return
 	}

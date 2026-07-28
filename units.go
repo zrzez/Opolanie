@@ -3,6 +3,8 @@ package main
 // units.go
 
 import (
+	"fmt"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -138,11 +140,10 @@ func (u *unit) handleWaitingToActiveTransition() {
 	}
 }
 
-func (u *unit) resetDelayIfActive() {
-	if u.State != stateWaiting {
-		if u.Delay < u.MaxDelay {
-			u.Delay = u.MaxDelay
-		}
+func (u *unit) ensureDelayIsSet() {
+	if u.State != stateWaiting && u.State != stateIdle && u.Delay == 0 {
+		fmt.Print("DUPA ZAPOMŁES USTAWIĆ DELAY!!!!\n")
+		u.Delay = u.MaxDelay
 	}
 }
 

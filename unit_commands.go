@@ -189,6 +189,8 @@ func (u *unit) handleWorkCommand(pathfindingBudget int, bState *battleState) {
 	} else {
 		u.repair(target.Building, amount)
 	}
+
+	u.Delay = u.MaxDelay
 }
 
 func (u *unit) canAttackTargetFromCurrentPosition(bState *battleState) bool {

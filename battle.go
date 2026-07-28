@@ -586,7 +586,7 @@ func (bState *battleState) updateUnit(u *unit) {
 	}
 
 	u.executeCommandAction(pathfindingBudget, bState)
-	u.resetDelayIfActive()
+	u.ensureDelayIsSet()
 }
 
 func updateWounds(u *unit) {

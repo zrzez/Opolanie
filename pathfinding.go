@@ -180,6 +180,11 @@ func isWalkable(board *boardData, x, y uint8) bool {
 func isWalkableUnit(board *boardData, x, y uint8, mover *unit) bool {
 	currentTile := &board.Tiles[x][y]
 
+	// 3. Flaga z loadera mapy (jeśli loader oznaczył coś jako nieprzechodnie ręcznie)
+	if currentTile.IsWalkable {
+		return true
+	}
+
 	// 1. Sprawdź czy to budynek
 	// ! handlePalisadeDestruction gwarantuje, że zniszczona palisada jest przechodnia.
 	// Oznacza to, eż mogę pozbyć się sprawdzenia „czy palisada w budowie”.
@@ -199,22 +204,12 @@ func isWalkableUnit(board *boardData, x, y uint8, mover *unit) bool {
 				return !isWaterOrObstacle(currentTile.TextureID)
 			}
 		}
-		/*
-			// b. Palisada w budowie - pozwala na naprawę
-			if currentTile.Building.Type == buildingPalisade && currentTile.Building.IsUnderConstruction {
-				return true
-			}
-		*/
-		// c. Każdy inny budynek blokuje, ukończony most nie jest budynkiem
+
+		// b. Każdy inny budynek blokuje, ukończony most nie jest budynkiem
 		return false
 	}
 
-	// 3. Flaga z loadera mapy (jeśli loader oznaczył coś jako nieprzechodnie ręcznie)
-	if !currentTile.IsWalkable {
-		return false
-	}
-
-	return true
+	return false
 }
 
 func isWaterOrObstacle(spriteID uint16) bool {

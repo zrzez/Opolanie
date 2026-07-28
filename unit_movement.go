@@ -76,6 +76,7 @@ func (u *unit) calculateNewPath(board *boardData) bool {
 func (u *unit) executeSuccessfulMove(x, y uint8, board *boardData) {
 	u.executeMove(x, y, board)
 	u.resetMovementCounters()
+	u.Delay = u.MaxDelay
 }
 
 func (u *unit) waitForPathfindingBudget() {
