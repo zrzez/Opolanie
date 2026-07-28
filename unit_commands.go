@@ -102,7 +102,7 @@ func (u *unit) applyCommandState(command commandType) {
 	}
 }
 
-func (u *unit) executeCommandAction(pathfindingBudget *int, bState *battleState) {
+func (u *unit) executeCommandAction(pathfindingBudget int, bState *battleState) {
 	switch u.Type {
 	case unitCow:
 		u.handleCowBehavior(pathfindingBudget, bState)
@@ -111,7 +111,7 @@ func (u *unit) executeCommandAction(pathfindingBudget *int, bState *battleState)
 	}
 }
 
-func (u *unit) executeStandardUnitCommand(pathfindingBudget *int, bState *battleState) {
+func (u *unit) executeStandardUnitCommand(pathfindingBudget int, bState *battleState) {
 	switch u.Command {
 	case cmdUMove:
 		u.move(pathfindingBudget, bState)
@@ -137,7 +137,7 @@ func (u *unit) executeStandardUnitCommand(pathfindingBudget *int, bState *battle
 	}
 }
 
-func (u *unit) handleWorkCommand(pathfindingBudget *int, bState *battleState) {
+func (u *unit) handleWorkCommand(pathfindingBudget int, bState *battleState) {
 	// 1. Zasięg
 	if !u.canAttackTargetFromCurrentPosition(bState) {
 		u.State = stateMoving
@@ -291,48 +291,37 @@ func (u *unit) findApproachTileForTarget(targetRef targetReference, bState *batt
 	return findBestReachableTile(u, validCoords, bState.Board)
 }
 
-// @todo: nie powinna to być metoda jednostki, bo to sprawdzanie poprawności
-// ! albo przekazuję objectResolver albo combattarget? coś mi tutaj nie pasuje.
+// Sprawdza, czy jednostka może zaatakować wybrany cel.
 func (u *unit) canAttack(target *combatTarget) bool {
 	switch {
 	case target.Tile != nil:
-		// Jeśli pole nie zawiera drzewa
-		if !target.Tile.isTree() {
-			return false
-		}
-
 		// Pole z drzewem, sprawdzamy, czy możemy je niszczyć
-		return u.canDamageTree(target.Tile)
+		return target.Tile.isTree() && u.canDamageTree(target.Tile)
 
 	case target.Unit != nil:
 		// Nie możemy okaleczyć samego siebie
 		return target.Unit.Exists && target.Unit.ID != u.ID
 	case target.Building != nil:
-		// Tylko istniejące budynki
-		if !target.Building.Exists {
-			return false
-		}
+		return canAttackBuilding(u.Type, target.Building)
+	default:
+		// Wydaje się, że cel nie istnieje
+		return false
+	}
+}
 
-		// Magowie nie mogą atakować budynków
-		if u.Type == unitMage {
-			return false
-		}
-
-		// Tylko niektóre jednostki mogą niszczyć palisady
-		if target.Building.Type == buildingPalisade && !u.Type.canDamagePalisades() {
-			return false
-		}
-
-		// Wybudowany most jest nietykalny
-		if target.Building.Type == buildingBridge {
-			return false
-		}
-
+// Sprawdza, czy jednostka może zaatakować wybrany budynek.
+func canAttackBuilding(attackerType unitType, targetBuilding *building) bool {
+	switch {
+	// @reminder: ten przypadek obsługuje ukończone mosty.
+	case !targetBuilding.Exists:
+		return false
+	case attackerType == unitMage:
+		return false
+	case targetBuilding.Type == buildingPalisade && !attackerType.canDamagePalisades():
+		return false
+	default:
 		return true
 	}
-
-	// Wydaje się, że cel nie istnieje
-	return false
 }
 
 func (u *unit) validateAttackTarget(target *combatTarget) error {

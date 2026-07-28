@@ -12,7 +12,7 @@ const (
 	maxPathfindingRetries = 3
 )
 
-func (u *unit) executeAStarMovement(pathfindingBudget *int, bState *battleState) {
+func (u *unit) executeAStarMovement(pathfindingBudget int, bState *battleState) {
 	if !u.ensureValidPath(pathfindingBudget, bState) {
 		return
 	}
@@ -20,7 +20,7 @@ func (u *unit) executeAStarMovement(pathfindingBudget *int, bState *battleState)
 	u.moveAlongPath(bState.Board)
 }
 
-func (u *unit) ensureValidPath(pathfindingBudget *int, bState *battleState) bool {
+func (u *unit) ensureValidPath(pathfindingBudget int, bState *battleState) bool {
 	if u.Command.isInteraction() {
 		approachTile := &bState.Board.Tiles[u.Approach.X][u.Approach.Y]
 
@@ -41,13 +41,13 @@ func (u *unit) ensureValidPath(pathfindingBudget *int, bState *battleState) bool
 		return true
 	}
 
-	if *pathfindingBudget >= maxPathfindingBudget {
+	if pathfindingBudget >= maxPathfindingBudget {
 		u.waitForPathfindingBudget()
 
 		return false
 	}
 
-	*pathfindingBudget++
+	pathfindingBudget++
 
 	return u.calculateNewPath(bState.Board)
 }
@@ -270,7 +270,7 @@ func (u *unit) isAtTarget() bool {
 	return u.X == u.Approach.X && u.Y == u.Approach.Y
 }
 
-func (u *unit) move(pathfindingBudget *int, bState *battleState) {
+func (u *unit) move(pathfindingBudget int, bState *battleState) {
 	if u.Command == cmdUAttack {
 		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.clearPath()

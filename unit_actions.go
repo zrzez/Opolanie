@@ -133,7 +133,7 @@ func (u *unit) build(targetBuilding *building, amount uint16) {
 // @reminder: najprawdopodobniej objectResolver nie jest prawidłowo użyty i będzie wyrzucony.
 // @reminder: wydaje mi się, że każde „idle” ustawiane wewnątrz tej metody jest zbyteczne.
 // @todo: brakuje ustawienia uruchomienia (animacji) ataku przy rzucaniu czarów.
-func (u *unit) castSpell(pathfindingBudget *int, bState *battleState) {
+func (u *unit) castSpell(pathfindingBudget int, bState *battleState) {
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
 		u.AnimationType = "idle"

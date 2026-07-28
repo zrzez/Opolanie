@@ -565,7 +565,7 @@ func (bState *battleState) updateUnit(u *unit) {
 		u.wasAttacked = false
 	}
 
-	pathfindingBudget := &bState.PathfindingBudget
+	pathfindingBudget := bState.PathfindingBudget
 
 	u.handleAttackCooldown(bState.GlobalFrameCounter)
 
