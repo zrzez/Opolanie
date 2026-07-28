@@ -196,7 +196,8 @@ func (u *unit) handleWorkCommand(pathfindingBudget int, bState *battleState) {
 func (u *unit) canAttackTargetFromCurrentPosition(bState *battleState) bool {
 	// @reminder: dzięki temu sprawdzeniu jednostki idące ściąć drzewo nie ładują się w
 	//   miejsce, na które zaraz spadnie. Bez tego ignorowałyby bezpieczne podejście.
-	if u.Target.Kind == targetTile && bState.Board.Tiles[u.Target.Position.X][u.Target.Position.Y].isTree() {
+	// bez u.Command == cmdUAttack lub sprawdzenia czy cel jest drzewem psuje się rzucanie czarów.
+	if u.Target.Kind == targetTile && u.Command == cmdUAttack {
 		return false
 	}
 
