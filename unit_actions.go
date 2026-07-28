@@ -46,6 +46,9 @@ func (u *unit) attack(bState *battleState) {
 			bState.Projectiles = append(bState.Projectiles, proj)
 		}
 
+		u.setAttackTimings()
+		u.handleTargetPostAttack(target)
+
 		return
 	}
 
@@ -69,8 +72,6 @@ func (u *unit) performAttack(target *combatTarget, hPID, aiPID PlayerID, bState 
 	}
 
 	u.performMeleeAttack(target, u.Damage, hPID, aiPID, bState)
-	u.setAttackTimings()
-	u.handleTargetPostAttack(target)
 
 	return nil
 }
