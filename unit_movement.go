@@ -192,25 +192,6 @@ func (u *unit) resetMovementCounters() {
 	u.LastX, u.LastY = u.X, u.Y
 }
 
-func (u *unit) handleNoMovementDetection() bool {
-	if (u.X == u.LastX && u.Y == u.LastY) && u.State != stateMilking && u.State != stateRepairing {
-		u.NoMoveTicks++
-		if u.NoMoveTicks > maxNoMoveTicks {
-			// u.clearPath()
-			u.invalidatePathForRecalculation()
-			u.setIdleWithReason("zbyt długi bezruch")
-
-			return true
-		}
-	} else {
-		u.NoMoveTicks = 0
-	}
-
-	u.LastX, u.LastY = u.X, u.Y
-
-	return false
-}
-
 func (u *unit) canMoveTo(x, y uint8, board *boardData) bool {
 	if x >= boardMaxX || y >= boardMaxY {
 		return false
