@@ -209,7 +209,7 @@ func fallingTreeEffect(bState *battleState) {
 
 					// Obalamy sąsiednie suche drzewo
 					if adjacentTile.TextureID == spriteDryTreeStump00 {
-						adjacentTile.treeFall(&bState.FallingTreesList)
+						adjacentTile.treeFall(bState)
 					} else {
 						// Lub zadajemy obrażenia
 						adjacentTile.applyFallingTreeDamage()

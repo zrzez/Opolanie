@@ -39,8 +39,12 @@ func (u *unit) attack(bState *battleState) {
 
 	// 4. Sprawdzanie zasięgu
 	if u.canAttackTarget(target) {
-		u.performAttack(target, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID,
-			&bState.Projectiles, &bState.FallingTreesList)
+		proj := u.performAttack(target, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID,
+			bState)
+
+		if proj != nil {
+			bState.Projectiles = append(bState.Projectiles, proj)
+		}
 
 		return
 	}
@@ -59,26 +63,27 @@ func (u *unit) attack(bState *battleState) {
 	u.Approach = whereToGo
 }
 
-func (u *unit) performAttack(target *combatTarget, hPID, aiPID PlayerID, projs *[]*projectile, fallingTrees *[]*tile) {
+func (u *unit) performAttack(target *combatTarget, hPID, aiPID PlayerID, bState *battleState) *projectile {
 	if u.AttackRange > 1 {
-		u.performRangedAttack(target, u.Damage, hPID, aiPID, projs)
-	} else {
-		u.performMeleeAttack(target, u.Damage, hPID, aiPID, fallingTrees)
+		return u.performRangedAttack(target, u.Damage, hPID, aiPID)
 	}
 
+	u.performMeleeAttack(target, u.Damage, hPID, aiPID, bState)
 	u.setAttackTimings()
 	u.handleTargetPostAttack(target)
+
+	return nil
 }
 
-func (u *unit) performRangedAttack(target *combatTarget, damage uint16, hPID, aiPID PlayerID, projs *[]*projectile) {
+func (u *unit) performRangedAttack(target *combatTarget, damage uint16, hPID, aiPID PlayerID) *projectile {
 	targetCoords, ok := u.getRangedTargetCoords(target)
 	if !ok {
-		return
+		return nil
 	}
 
 	// Mechanizm odejmowania many za rzucenie magicznego pocisku
 	if u.Type.isCaster() && !u.tryToDecreaseMana(u.getProjectileManaCost()) {
-		return
+		return nil
 	}
 
 	projParams := projectileParameters{
@@ -94,16 +99,16 @@ func (u *unit) performRangedAttack(target *combatTarget, damage uint16, hPID, ai
 
 	proj := spawnProjectile(projParams)
 
-	*projs = append(*projs, proj)
-
 	// Za stworzenie jakiegokolwiek pocisku jest przyznawane doświadczenie.
 	// Muszę dodać logikę rozdziało pomięcy celem jednostką a celem budynkiem.
 	// u.gainExperience tutaj!
 	handleGainExperience(u, target.Unit, hPID, aiPID)
+
+	return proj
 }
 
 // @reminder: zdobywanie doświadczenia jest niezależne od wyniku ataku. Wykonał atak→gainExperience().
-func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, hPID, aiPID PlayerID, fallingTrees *[]*tile) {
+func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, hPID, aiPID PlayerID, bState *battleState) {
 	switch {
 	case target.Unit != nil && target.Unit.Exists:
 		target.Unit.takeDamage(damage)
@@ -112,7 +117,7 @@ func (u *unit) performMeleeAttack(target *combatTarget, damage uint16, hPID, aiP
 		target.Building.takeDamage(damage)
 		handleGainExperience(u, nil, hPID, aiPID)
 	case target.Tile.isTree():
-		target.Tile.accumulateTreeCuts(fallingTrees)
+		target.Tile.accumulateTreeCuts(bState)
 	default:
 		// @reminder: jak coś to można dodać logi tutaj
 	}
@@ -154,7 +159,7 @@ func (u *unit) castSpell(pathfindingBudget int, bState *battleState) {
 			u.State = stateCastingSpell
 			u.AnimationType = "fight"
 			u.clearPath()
-			u.castMagicShower(bState.Board, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID, &bState.Projectiles)
+			u.castMagicShower(bState.Board, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID, bState)
 		} else {
 			u.State = stateMoving
 			u.AnimationType = "walk"
@@ -189,16 +194,16 @@ func (u *unit) castMagicShield() {
 }
 
 // Metoda odpowiedzialna za gromobicie i deszcz ognia.
-func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID PlayerID, projs *[]*projectile) bool {
+func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID PlayerID) []*projectile {
 	// 0. Koszt czaru
 	if u.Mana < spellBufferMagicShower || !u.tryToDecreaseMana(spellCostMagicShower) {
-		return false
+		return nil
 	}
 
 	// 1. Tworzymy czarodziejski deszcz
 	damage, missileKind, ok := u.resolveMagicShowerStats()
 	if !ok {
-		return false
+		return nil
 	}
 
 	// 2. Bezpiecznik pozycji początkowej tworzonych pocisków
@@ -209,6 +214,8 @@ func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID Play
 	} else {
 		spawnY = 0
 	}
+
+	var newProjs []*projectile
 
 	// 3. Tworzenie opadów
 	for offset := -1; offset <= 1; offset++ {
@@ -230,7 +237,7 @@ func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID Play
 		proj := spawnMagicShowerProjectile(projParameters)
 
 		if proj != nil {
-			*projs = append(*projs, proj)
+			newProjs = append(newProjs, proj)
 		}
 
 		// 4. Przyzanie doświadczenia za zaatakowanie
@@ -246,11 +253,11 @@ func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID Play
 		}
 	}
 
-	return true
+	return newProjs
 }
 
 // @reminder: przechodzenie w idle powinno być inaczej załatwione.
-func (u *unit) castMagicShower(board *boardData, humanPID, aiPID PlayerID, projs *[]*projectile) {
+func (u *unit) castMagicShower(board *boardData, humanPID, aiPID PlayerID, bState *battleState) {
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
 		u.AnimationType = "idle"
@@ -260,10 +267,12 @@ func (u *unit) castMagicShower(board *boardData, humanPID, aiPID PlayerID, projs
 	}
 
 	target := &u.Target.Position
+	newProjs := u.magicShower(target, board, humanPID, aiPID)
 
-	if u.magicShower(target, board, humanPID, aiPID, projs) {
+	if len(newProjs) > 0 {
 		u.setRangedTimings()
 		u.setIdleWithReason("czar rzucony")
+		bState.Projectiles = append(bState.Projectiles, newProjs...)
 	} else {
 		u.State = stateIdle
 		u.AnimationType = "idle"
