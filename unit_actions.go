@@ -159,7 +159,7 @@ func (u *unit) castSpell(pathfindingBudget int, bState *battleState) {
 			u.State = stateCastingSpell
 			u.AnimationType = "fight"
 			u.clearPath()
-			u.castMagicShower(bState.Board, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID, bState)
+			u.castMagicShower(bState)
 		} else {
 			u.State = stateMoving
 			u.AnimationType = "walk"
@@ -193,8 +193,10 @@ func (u *unit) castMagicShield() {
 	}
 }
 
+var magicShowerProjsBuffer = make([]*projectile, 3)
+
 // Metoda odpowiedzialna za gromobicie i deszcz ognia.
-func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID PlayerID) []*projectile {
+func (u *unit) magicShower(target *point, bState *battleState) []*projectile {
 	// 0. Koszt czaru
 	if u.Mana < spellBufferMagicShower || !u.tryToDecreaseMana(spellCostMagicShower) {
 		return nil
@@ -215,7 +217,7 @@ func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID Play
 		spawnY = 0
 	}
 
-	var newProjs []*projectile
+	projIndex := 0
 
 	// 3. Tworzenie opadów
 	for offset := -1; offset <= 1; offset++ {
@@ -237,27 +239,28 @@ func (u *unit) magicShower(target *point, board *boardData, humanPID, aiPID Play
 		proj := spawnMagicShowerProjectile(projParameters)
 
 		if proj != nil {
-			newProjs = append(newProjs, proj)
+			magicShowerProjsBuffer[projIndex] = proj
+			projIndex++
 		}
 
 		// 4. Przyzanie doświadczenia za zaatakowanie
-		targetedTile := &board.Tiles[spawnX][target.Y]
+		targetedTile := &bState.Board.Tiles[spawnX][target.Y]
 
 		switch {
 		case targetedTile.Unit != nil && targetedTile.Unit.Exists:
-			handleGainExperience(u, targetedTile.Unit, humanPID, aiPID)
+			handleGainExperience(u, targetedTile.Unit, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
 		case targetedTile.Building != nil && targetedTile.Building.Exists:
-			handleGainExperience(u, nil, humanPID, aiPID)
+			handleGainExperience(u, nil, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID)
 		default:
 			// Nie przyznajemy nic doświadczenia za napaść na otoczenie
 		}
 	}
 
-	return newProjs
+	return magicShowerProjsBuffer[:projIndex]
 }
 
 // @reminder: przechodzenie w idle powinno być inaczej załatwione.
-func (u *unit) castMagicShower(board *boardData, humanPID, aiPID PlayerID, bState *battleState) {
+func (u *unit) castMagicShower(bState *battleState) {
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
 		u.AnimationType = "idle"
@@ -267,11 +270,12 @@ func (u *unit) castMagicShower(board *boardData, humanPID, aiPID PlayerID, bStat
 	}
 
 	target := &u.Target.Position
-	newProjs := u.magicShower(target, board, humanPID, aiPID)
+	newProjs := u.magicShower(target, bState)
 
 	if len(newProjs) > 0 {
 		u.setRangedTimings()
 		u.setIdleWithReason("czar rzucony")
+
 		bState.Projectiles = append(bState.Projectiles, newProjs...)
 	} else {
 		u.State = stateIdle
