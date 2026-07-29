@@ -201,6 +201,17 @@ func (u *unit) canAttackTargetFromCurrentPosition(bState *battleState) bool {
 		return false
 	}
 
+	if bState.Board.Tiles[u.X][u.Y].IsBurning {
+		u.invalidatePathForRecalculation()
+
+		newApproach, err := u.calculateApproachTile(u.Target, bState)
+		if err == nil {
+			u.Approach = newApproach
+		}
+
+		return false
+	}
+
 	target, err := bState.resolveTarget(u.Target)
 	if err != nil {
 		return false
@@ -288,7 +299,7 @@ func (u *unit) findApproachTileForTarget(targetRef targetReference, bState *batt
 		targetBld = target.Building
 	case target.Unit != nil && target.Unit.Exists:
 		targetU = target.Unit
-	case target.Tile != nil && target.Tile.isTree():
+	case target.Tile != nil: //&& target.Tile.isTree():
 		targetTree = &targetRef.Position
 	}
 
@@ -582,7 +593,49 @@ func (u *unit) actOnIdle(bState *battleState) {
 		return
 	}
 
+	if bState.Board.Tiles[u.X][u.Y].IsBurning {
+		u.fleeBurningTile(bState)
+
+		return
+	}
+
 	u.handleTargetSearch(bState)
+}
+
+func (u *unit) fleeBurningTile(bState *battleState) {
+	var safeTiles []point
+
+	for dy := -5; dy <= 4; dy++ {
+		for dx := -5; dx <= 4; dx++ {
+			// obecne miejsce nie jest brane pod uwagę
+			if dx == 0 && dy == 0 {
+				continue
+			}
+
+			checkX, checkY := int(u.X)+dx, int(u.Y)+dy
+
+			// współrzędne muszą się mieścić w planszy
+			if checkX < 0 || checkX >= int(boardMaxX) || checkY < 0 || checkY >= int(boardMaxY) {
+				continue
+			}
+
+			electedTile := &bState.Board.Tiles[checkX][checkY]
+
+			if !electedTile.IsBurning && electedTile.Unit == nil &&
+				isWalkableUnit(bState.Board, uint8(checkX), uint8(checkY), u) {
+				safeTiles = append(safeTiles, point{X: uint8(checkX), Y: uint8(checkY)})
+			}
+		}
+	}
+
+	if len(safeTiles) > 0 {
+		target := safeTiles[rng.Intn(len(safeTiles))]
+		u.Command = cmdUMove
+		u.Approach = target
+		u.State = stateMoving
+		u.invalidatePathForRecalculation()
+		u.Delay = 1
+	}
 }
 
 func (u *unit) canActOnIdle() bool {

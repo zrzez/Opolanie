@@ -383,7 +383,7 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 		targetX, targetY = targetU.X, targetU.Y
 	case targetTile != nil:
 		targetX, targetY = targetTile.X, targetTile.Y
-		isTreeTarget = targetTile.X > 0 // && board.Tiles[targetTile.X][targetTile.Y].isTree()
+		isTreeTarget = targetTile.X > 0 && board.Tiles[targetTile.X][targetTile.Y].isTree()
 
 		if isTreeTarget {
 			forbiddenX = int8(targetTile.X - 1)
@@ -407,8 +407,15 @@ func findTileForAttacking(attacker *unit, targetU *unit, targetBld *building, ta
 			if isTreeTarget && coordX == forbiddenX && coordY == forbiddenY {
 				continue
 			}
+
 			// Tutaj sprawdzamy, czy to prawidłowe współrzędne kafelka.
 			if board.isValidWalkableTile(coordX, coordY) {
+				// Unikamy płonących kafelków.
+				// @reminder: być może trzeba będzie unikać też nawiedzonych.
+				if board.Tiles[coordX][coordY].IsBurning {
+					continue
+				}
+
 				// board.isValidWalkableTile gwarantuje, że 0 <= attackX/Y <= 65. Dlatego zmiana na uint8 jest
 				// bezpieczna.                             ↓↓↓↓↓             ↓↓↓↓↓
 				validCoordsBuffer[coordIndex] = point{X: uint8(coordX), Y: uint8(coordY)}
