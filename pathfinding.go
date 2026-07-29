@@ -243,6 +243,16 @@ func calculateMoveCost(toX, toY int, board *boardData) float32 {
 		cost *= 100
 	}
 
+	// Płonące kafelki powinny być unikane
+	if currentTile.IsBurning {
+		cost *= 100
+	}
+
+	// Jeśli kafelek jest nawiedzony, to unikamy
+	if currentTile.GhostEffect {
+		cost *= 100
+	}
+
 	return cost
 }
 

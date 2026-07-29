@@ -126,7 +126,7 @@ func (bState *battleState) createFinishedPalisade(tileX, tileY uint8) *building 
 	return newBld
 }
 
-// Zakładamy, że każdy budynek jest prawidłowo umiejscowiony
+// Zakładamy, że każdy budynek jest prawidłowo umiejscowiony.
 func (bState *battleState) createFinishedBuilding(bldType buildingType, tileX, tileY uint8, owner PlayerID) *building {
 	// 1. Tworzymy obiekt
 	newBld := bState.createBuilding(bldType, tileX, tileY, owner)
