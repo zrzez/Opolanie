@@ -144,14 +144,6 @@ func (u *unit) handlePathfindingFailure() {
 	}
 }
 
-func (u *unit) shouldAbortMovement() bool {
-	if u.NoMoveTicks > maxNoMoveTicks {
-		return true
-	}
-
-	return false
-}
-
 func (u *unit) hasValidPath(bState *battleState) bool {
 	if len(u.Path) == 0 || u.PathIndex >= len(u.Path) {
 		return false
@@ -278,7 +270,8 @@ func (u *unit) move(pathfindingBudget int, bState *battleState) {
 		return
 	}
 
-	if u.shouldAbortMovement() {
+	// Jeśli utknęliśmy, to zarzucamy ruch
+	if u.NoMoveTicks > maxNoMoveTicks {
 		return
 	}
 

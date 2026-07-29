@@ -408,6 +408,7 @@ func (u *unit) handleTargetPostAttack(target *combatTarget) {
 	}
 }
 
+// @todo: o ile pamiętam, to jest do poprawy
 func (u *unit) findNearestPalisade(bState *battleState, radius uint8,
 ) *building {
 	var best *building
@@ -443,8 +444,6 @@ func (u *unit) isImportantPalisade(palisade *building, bState *battleState) bool
 		return false
 	}
 
-	const prox = palisadeStrategicBuildingProximity
-
 	palCenterX, palCenterY, _ := palisade.getCenter()
 
 	for _, bld := range bState.Buildings {
@@ -452,19 +451,20 @@ func (u *unit) isImportantPalisade(palisade *building, bState *battleState) bool
 			continue
 		}
 
-		bldCenterX, bldCenterY, ok := bld.getCenter()
-		if !ok {
+		bldCenterX, bldCenterY, bldHasCenter := bld.getCenter()
+
+		if !bldHasCenter {
 			continue
 		}
 
 		distToPalisadeCenter := math.Max(math.Abs(float64(palCenterX-bldCenterX)), math.Abs(float64(palCenterY-bldCenterY)))
-		if distToPalisadeCenter > float64(prox) {
+		if distToPalisadeCenter > float64(palisadeStrategicBuildingProximity) {
 			continue
 		}
 
-		ok = bState.Board.hasSpaceAroundBuilding(bld)
+		bldHasCenter = bState.Board.hasSpaceAroundBuilding(bld)
 
-		if !ok {
+		if !bldHasCenter {
 			return true
 		}
 	}
@@ -668,31 +668,34 @@ func (u *unit) handleTargetReached(bState *battleState) {
 	case cmdUCastSpell:
 		u.State = stateCastingSpell
 	case cmdUBuild, cmdURepair:
-		target, err := bState.resolveTarget(u.Target)
-		if err != nil || target.Building == nil {
-			u.setIdleWithReason("cel budywy/naprawy przepadł")
-
-			return
-		}
-
-		var amount uint16
-
-		switch u.Owner {
-		case bState.PlayerID:
-			amount = repairAmountPlayer
-		case bState.AIPlayerID:
-			amount = repairAmountAI
-		}
-
-		if u.Command == cmdUBuild {
-			u.State = stateBuilding
-			u.build(target.Building, amount)
-		} else {
-			u.State = stateRepairing
-			u.repair(target.Building, amount)
-		}
-
+		u.work(bState)
 	default:
 		u.setIdle()
+	}
+}
+
+func (u *unit) work(bState *battleState) {
+	target, err := bState.resolveTarget(u.Target)
+	if err != nil || target.Building == nil {
+		u.setIdleWithReason("cel budywy/naprawy przepadł")
+
+		return
+	}
+
+	var amount uint16
+
+	switch u.Owner {
+	case bState.PlayerID:
+		amount = repairAmountPlayer
+	case bState.AIPlayerID:
+		amount = repairAmountAI
+	}
+
+	if u.Command == cmdUBuild {
+		u.State = stateBuilding
+		u.build(target.Building, amount)
+	} else {
+		u.State = stateRepairing
+		u.repair(target.Building, amount)
 	}
 }
