@@ -672,13 +672,18 @@ func (bld *building) processBuildingDamage() {
 func (bState *battleState) resolveBuildingDestruction(bld *building) {
 	// Wydaje mi się, że najczęściej atakowane będą inne rodzaje budynków
 	// dlatego jest to pierwsze wyrażenie
-	if bld.Type != buildingPalisade {
-		bState.handleBuildingDestruction(bld)
-	} else {
+	switch bld.Type {
+	case buildingPalisade:
 		occupiedTile := &bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y]
 		bState.Board.handlePalisadeDestruction(occupiedTile)
 
 		bld.IsUnderConstruction = true
+	case buildingBridge:
+		bld.Exists = false
+		bState.Board.Tiles[bld.OccupiedTiles[0].X][bld.OccupiedTiles[0].Y].TextureID = spriteWaterMiddle
+		processMapTiles(bState)
+	default:
+		bState.handleBuildingDestruction(bld)
 	}
 }
 

@@ -89,7 +89,7 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 	// Naprawa
 	if bState.MouseState == mouseStateWorking {
 		// @todo: sprawdź, czy to działa dla wszystkich playerState, a nie tylko gracza czerwonego
-		if isValidWorkTarget(targetBuilding, bState.PlayerID) {
+		if isValidWorkTarget(targetBuilding, bState.PlayerID) && !iState.IsCtrlKeyDown {
 			return spriteBtnRepair
 		}
 
@@ -110,11 +110,11 @@ func cursorForSelection(bState *battleState, tileUnderCursor *tile, targetOwner 
 		isMyBuilding := targetOwner == int(bState.PlayerID)
 		isBridge := targetBuilding.Type == buildingBridge
 
-		if (isMyBuilding || isBridge) && targetBuilding.IsUnderConstruction {
+		if (isMyBuilding || isBridge) && targetBuilding.IsUnderConstruction && !iState.IsCtrlKeyDown {
 			return spriteBtnRepair
 		}
 
-		if isMyBuilding && targetBuilding.HP < targetBuilding.MaxHP {
+		if isMyBuilding && targetBuilding.HP < targetBuilding.MaxHP && !iState.IsCtrlKeyDown {
 			return spriteBtnRepair
 		}
 	}

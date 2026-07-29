@@ -63,6 +63,7 @@ func (bState *battleState) placeConstructionSite(bldType buildingType, tileX, ti
 
 	// 3. Wygląd
 	bState.Board.applyConstructionGraphics(newBld)
+	processMapTiles(bState)
 
 	// 4. Informacja dla gracza
 	bState.CurrentMessage.Text = fmt.Sprintf("Wznoszenie: %s", stats.Name)

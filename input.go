@@ -366,6 +366,7 @@ func handleBoardRightClick(iState inputState, bState *battleState, tileX, tileY 
 }
 
 // Odpowiada za dopasowanie rozkazu dla jednostki do sytuacji na planszy.
+// @reminder: @todo: wykorzystaj combatTarget, czy inną taką sturkture, bo ostatnio dodałem.
 func resolveRightClickCommandType(
 	targetTile *tile, targetID objectID, targetOwner PlayerID,
 	selectedUnits []*unit, bState *battleState, iState inputState,
@@ -374,31 +375,23 @@ func resolveRightClickCommandType(
 	isCommandValid = true
 
 	var hasAxeman bool
+
 	for _, u := range selectedUnits {
 		if u.Type == unitAxeman {
 			hasAxeman = true
+
 			break
 		}
 	}
 
-	isNeutralBuilding := targetTile.Building != nil &&
-		(targetTile.Building.Type == buildingPalisade || targetTile.Building.Type == buildingBridge)
+	// isNeutralBuilding := targetTile.Building != nil &&
+	//	(targetTile.Building.Type == buildingPalisade || targetTile.Building.Type == buildingBridge)
 
 	switch {
 	// 0. Chodzenie po zniszczonej palisadzie
 	case targetTile.Building != nil && targetTile.Building.Type == buildingPalisade &&
 		targetTile.Building.IsUnderConstruction:
 		cmdType = cmdUMove
-
-	// 1. Drwal buduje/naprawia niczyje budynki
-	case hasAxeman && isNeutralBuilding && targetTile.Building.Exists:
-		if targetTile.Building.IsUnderConstruction {
-			cmdType = cmdUBuild
-		} else if targetTile.Building.isRepairable(bState.PlayerID) {
-			cmdType = cmdURepair
-		} else {
-			cmdType = cmdUAttack
-		}
 
 	// 2. Atak na wrogie jednostki/budynki
 	case targetID != 0 && (targetOwner != bState.PlayerID || iState.IsCtrlKeyDown):
