@@ -404,6 +404,7 @@ func resolveRightClickCommandType(
 		for _, u := range selectedUnits {
 			if u.canDamageTree(targetTile) {
 				canAttackTree = true
+
 				break
 			}
 		}

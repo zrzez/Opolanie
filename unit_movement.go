@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand"
 )
 
 const (
@@ -37,6 +38,26 @@ func (u *unit) ensureValidPath(pathfindingBudget int, bState *battleState) bool 
 		}
 	}
 
+	if u.NoMoveTicks >= 15 && u.NoMoveTicks%15 == 0 {
+		newApproach, err := u.calculateApproachTile(u.Target, bState)
+		if err == nil {
+			u.Approach = newApproach
+			u.invalidatePathForRecalculation()
+			u.NoMoveTicks = 0
+			u.Delay = u.MaxDelay
+		} else {
+			x := int(u.Target.Position.X) + rand.Intn(6) - 3
+			y := int(u.Target.Position.Y) + rand.Intn(6) - 3
+
+			if bState.Board.isValidWalkableTile(int8(x), int8(y)) {
+				u.Approach = point{X: uint8(x), Y: uint8(y)}
+				u.invalidatePathForRecalculation()
+				u.NoMoveTicks = 0
+				u.Delay = u.MaxDelay
+			}
+		}
+	}
+
 	if u.hasValidPath(bState) {
 		return true
 	}
@@ -46,8 +67,6 @@ func (u *unit) ensureValidPath(pathfindingBudget int, bState *battleState) bool 
 
 		return false
 	}
-
-	pathfindingBudget++
 
 	return u.calculateNewPath(bState.Board)
 }
@@ -102,17 +121,9 @@ func (u *unit) moveAlongPath(board *boardData) {
 	if u.canMoveTo(next.X, next.Y, board) {
 		u.executeSuccessfulMove(next.X, next.Y, board)
 	} else {
+		u.NoMoveTicks++
 		u.State = stateWaiting
 		u.Delay = 1
-
-		// ! Wydaje mi się, iż pozwolenie na czyszczenie drogi co tyknięcie
-		// tylko dlatego, że czekał już piętnaście, jest zbyt obciążające.
-		// Może jakieś dodatkowe odsiewanie? Nieparzyste albo coś innego?
-		if u.NoMoveTicks >= 15 {
-			// ! chyba tutaj powinienem dodać coś co umożliwi jednostce
-			// sprawdzić czy jesteśmy blokowani ponieważ druh stoi bezczynnie
-			u.invalidatePathForRecalculation()
-		}
 	}
 }
 
@@ -272,6 +283,7 @@ func (u *unit) move(pathfindingBudget int, bState *battleState) {
 
 	// Jeśli utknęliśmy, to zarzucamy ruch
 	if u.NoMoveTicks > maxNoMoveTicks {
+		u.setIdleWithReason("przyblokowana")
 		return
 	}
 

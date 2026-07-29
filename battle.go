@@ -564,6 +564,10 @@ func (bState *battleState) updateUnit(u *unit) {
 		u.wasAttacked = false
 	}
 
+	// @reminder: podejrzewam, że tutaj powinienem wsadzić sprawdzenie, czy
+	//   stoimy na płonącym kafelku i się przesunąć.
+	// Druga możliwość, którą widzę, to canAttackFromCurrentTile i actOnIdle
+
 	pathfindingBudget := bState.PathfindingBudget
 
 	u.handleAttackCooldown(bState.GlobalFrameCounter)
