@@ -2,6 +2,7 @@ package main
 
 // @todo: czy importuję różne wersje math dla liczb losowych w swoim projekcie?!
 import (
+	"fmt"
 	"math"
 	"math/rand/v2"
 )
@@ -145,6 +146,7 @@ func (p *projectile) hit(bState *battleState) {
 
 		isEnemy := hitBuilding.Owner != p.Owner
 		if isEnemy || p.AllowFriendlyFire {
+			fmt.Println(p.AllowFriendlyFire)
 			hitBuilding.takeDamage(p.Damage)
 		}
 	}
@@ -377,7 +379,7 @@ func spawnMagicShowerProjectile(magicProjParams projectileParameters) *projectil
 }
 
 func spawnProjectile(projParam projectileParameters) *projectile {
-	proj := &projectile{}
+	proj := &projectile{AllowFriendlyFire: projParam.friendlyfire}
 	proj.initProjectile(
 		projParam.missileKind, projParam.owner,
 		projParam.spawnX, projParam.spawnY,
