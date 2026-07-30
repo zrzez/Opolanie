@@ -874,6 +874,9 @@ func main() {
 	pState.ActualScreenWidth = int32(rl.GetScreenWidth())
 	pState.ActualScreenHeight = int32(rl.GetScreenHeight())
 	pState.recalculateVirtualResolution()
+	// @reminder: dla mapy, być może później to poprzesuwam
+	mapTerrain = rl.LoadRenderTexture(int32(mapDisplayWidth), int32(mapDisplayHeight))
+	mapTerrainReady = true
 
 	if pState.ScreenTarget.ID == 0 {
 		rl.CloseWindow()

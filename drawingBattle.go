@@ -326,7 +326,11 @@ func calculateWaterTileID(x, y uint8, board *boardData) uint16 {
 }
 
 // @reminder: być może to w czymś pomoże.
-var newVectorForDrawSprite = rl.NewVector2(0, 0)
+var (
+	sharedOrigin   = rl.NewVector2(0, 0)
+	sharedSrcRect  rl.Rectangle
+	sharedDestRect rl.Rectangle
+)
 
 func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColor PlayerID) {
 	// 1. Walidacja ID
@@ -353,17 +357,24 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 		srcW = -srcW // Raylib obsługuje zwierciadlane odbicie przez ujemną szerokość
 	}
 
-	srcRect := rl.NewRectangle(float32(def.cropX), float32(def.cropY), srcW, float32(def.cropHeight))
+	sharedSrcRect.X = float32(def.cropX)
+	sharedSrcRect.Y = float32(def.cropY)
+	sharedSrcRect.Height = float32(def.cropHeight)
+	if def.flipX {
+		sharedSrcRect.Width = -float32(def.cropWidth)
+	} else {
+		sharedSrcRect.Width = float32(def.cropWidth)
+	}
 
 	// 5. Obliczenie Pozycji Docelowej z uwzględnieniem offsetów
-	finalX := destX + float32(def.offX)
-	finalY := destY + float32(def.offY)
-
-	destRect := rl.NewRectangle(finalX, finalY, float32(def.cropWidth), float32(def.cropHeight))
+	sharedDestRect.X = destX + float32(def.offX)
+	sharedDestRect.Y = destY + float32(def.offY)
+	sharedDestRect.Width = float32(def.cropWidth)
+	sharedDestRect.Height = float32(def.cropHeight)
 
 	// 6. Rysowanie
 	// @todo: tutaj kod spędza większość czasu, może coś da się z tym zrobić?
-	rl.DrawTexturePro(tex, srcRect, destRect, newVectorForDrawSprite, 0, rl.White)
+	rl.DrawTexturePro(tex, sharedSrcRect, sharedDestRect, sharedOrigin, 0, rl.White)
 }
 
 func drawSpriteEx(id uint16, destX, destY float32, ownerColor PlayerID, tint rl.Color, ps *programState) {
@@ -387,15 +398,22 @@ func drawSpriteEx(id uint16, destX, destY float32, ownerColor PlayerID, tint rl.
 		srcW = -srcW
 	}
 
-	srcRect := rl.NewRectangle(float32(def.cropX), float32(def.cropY), srcW, float32(def.cropHeight))
+	sharedSrcRect.X = float32(def.cropX)
+	sharedSrcRect.Y = float32(def.cropY)
+	sharedSrcRect.Height = float32(def.cropHeight)
+	if def.flipX {
+		sharedSrcRect.Width = -float32(def.cropWidth)
+	} else {
+		sharedSrcRect.Width = float32(def.cropWidth)
+	}
 
 	// Stosujemy offsety z SpriteDef
-	finalX := destX + float32(def.offX)
-	finalY := destY + float32(def.offY)
+	sharedDestRect.X = destX + float32(def.offX)
+	sharedDestRect.Y = destY + float32(def.offY)
+	sharedDestRect.Width = float32(def.cropWidth)
+	sharedDestRect.Height = float32(def.cropHeight)
 
-	destRect := rl.NewRectangle(finalX, finalY, float32(def.cropWidth), float32(def.cropHeight))
-
-	rl.DrawTexturePro(tex, srcRect, destRect, rl.NewVector2(0, 0), 0, tint)
+	rl.DrawTexturePro(tex, sharedSrcRect, sharedDestRect, rl.NewVector2(0, 0), 0, tint)
 }
 
 func drawFrameCorners(x, y, width, height, cLen float32, frameColor rl.Color) {
@@ -632,13 +650,11 @@ func drawGhostlySprite(spriteID uint16, x, y float32, phase1, phase2 float64, fr
 	}
 
 	def := spriteRegistry[spriteID]
-
 	if def.cropWidth == 0 {
 		return
 	}
 
 	texture := ps.Assets.getAtlas(def.atlasID, colorNone)
-
 	if texture.ID == 0 {
 		return
 	}
@@ -652,29 +668,35 @@ func drawGhostlySprite(spriteID uint16, x, y float32, phase1, phase2 float64, fr
 	alpha := 0.6 + 0.4*float32(math.Sin(t*0.35+(phase1+phase2)*0.5))
 	tint := rl.Fade(rl.White, alpha)
 
-	// 3. Zwierciadlane odbicie jeśli potrzeba
-	srcW := float32(def.cropWidth)
+	// 3. Wycięcie duszka z atlasu (w tym zwierciadlane odbicie)
+	sharedSrcRect.X = float32(def.cropX)
+	sharedSrcRect.Y = float32(def.cropY)
+	sharedSrcRect.Height = float32(def.cropHeight)
 	if def.flipX {
-		srcW = -srcW
+		sharedSrcRect.Width = -float32(def.cropWidth)
+	} else {
+		sharedSrcRect.Width = float32(def.cropWidth)
 	}
 
-	// 4. Wycięcie duszka z atlasu
-	srcRect := rl.NewRectangle(float32(def.cropX), float32(def.cropY), srcW, float32(def.cropHeight))
-
-	// 5. Pozycjonowanie
+	// 4. Pozycjonowanie
 	centerX := x + float32(def.offX) + wobbleX + float32(def.cropWidth)
 	centerY := y + float32(def.offY) + wobbleY + float32(def.cropHeight)
 
-	// 6, Umiejscowienie
+	// 5. Umiejscowienie i skalowanie
 	destW := float32(def.cropWidth) * pulse
 	destH := float32(def.cropHeight) * pulse
 
-	destRect := rl.NewRectangle(centerX-destW*0.5, centerY-destH*0.5, destW, destH)
+	sharedDestRect.X = centerX - destW*0.5
+	sharedDestRect.Y = centerY - destH*0.5
+	sharedDestRect.Width = destW
+	sharedDestRect.Height = destH
 
-	origin := rl.NewVector2(destW*0.5, destH*0.5)
+	// 6. Ustawienie punktu obrotu/skalowania
+	sharedOrigin.X = destW * 0.5
+	sharedOrigin.Y = destH * 0.5
 
 	// 7. Rysujemy
-	rl.DrawTexturePro(texture, srcRect, destRect, origin, 0, tint)
+	rl.DrawTexturePro(texture, sharedSrcRect, sharedDestRect, sharedOrigin, 0, tint)
 }
 
 func drawSingleProjectile(p *projectile, frameCounter uint16, ps *programState) {
@@ -1637,31 +1659,31 @@ func drawMilkBarVisualizer(bState *battleState, ps *programState) {
 	)
 }
 
-func drawGameUI(bState *battleState, ps *programState) {
-	anchorX := ps.GameViewWidth
+func drawGameUI(bState *battleState, pState *programState) {
+	anchorX := pState.GameViewWidth
 
 	// 1. Rysowanie TŁA (Drewniany panel)
-	if ps.Assets.WoodPanel.ID != 0 {
-		ps.RenderDestRect = rl.NewRectangle(
+	if pState.Assets.WoodPanel.ID != 0 {
+		pState.RenderDestRect = rl.NewRectangle(
 			anchorX,
 			0,
 			float32(uiPanelVirtualWidth),
 			float32(virtualScreenHeight),
 		)
 		// Źródło tekstury
-		ps.RenderSrcRect = rl.NewRectangle(0, 0, float32(ps.Assets.WoodPanel.Width), float32(ps.Assets.WoodPanel.Height))
+		pState.RenderSrcRect = rl.NewRectangle(0, 0, float32(pState.Assets.WoodPanel.Width), float32(pState.Assets.WoodPanel.Height))
 
-		rl.DrawTexturePro(ps.Assets.WoodPanel, ps.RenderSrcRect, ps.RenderDestRect, rl.NewVector2(0, 0), 0, rl.White)
+		rl.DrawTexturePro(pState.Assets.WoodPanel, pState.RenderSrcRect, pState.RenderDestRect, rl.NewVector2(0, 0), 0, rl.White)
 	}
 
 	// 2. Przyciski, pasek z mlekiem
-	drawMilkBarVisualizer(bState, ps)
-	drawButtons(bState, ps)
+	drawMilkBarVisualizer(bState, pState)
+	drawButtons(bState, pState)
 
 	// 3. Mapa
 	minimapX := anchorX + minimapOffsetX
 	minimapY := float32(0) + minimapOffsetY
-	drawMinimapUnits(bState, minimapX, minimapY, minimapDisplayWidth, minimapDisplayHeight, ps.GameViewWidth)
+	drawMinimapUnits(minimapX, minimapY, mapDisplayWidth, mapDisplayHeight, pState.GameViewWidth, bState, pState)
 }
 
 // @todo: funkcja łamie zasadę rozdzielenia Dane-Logika-Rysowanie!
@@ -1822,121 +1844,4 @@ func drawTripleIcon(tex rl.Texture2D, def spriteDef, btnRect rl.Rectangle) {
 	rl.DrawTexturePro(tex, sourceRect,
 		rl.NewRectangle(groupStartX+(2*iconOffsetX), yHigh, destW, destH),
 		textureOrigin, 0, rl.White)
-}
-
-func drawMinimapUnits(bState *battleState, minimapX, minimapY, minimapWidth, minimapHeight, actualGameViewWidth float32) {
-	const tileWidthF = float32(tileWidth)
-
-	const tileHeightF = float32(tileHeight)
-
-	const worldMapFullPixelWidth = float32(boardMaxX) * tileWidthF
-
-	const worldMapFullPixelHeight = float32(boardMaxY) * tileHeightF
-
-	pxStart := int(math.Round(float64(minimapX)))
-	pyStart := int(math.Round(float64(minimapY)))
-	totalDisplayWidthPx := int(math.Round(float64(minimapWidth)))
-	totalDisplayHeightPx := int(math.Round(float64(minimapHeight)))
-
-	xGridLines := make([]int, boardMaxX+1)
-	yGridLines := make([]int, boardMaxY+1)
-
-	for i := uint8(0); i <= boardMaxX; i++ {
-		currentXFloat := float64(i) / float64(boardMaxX) * float64(totalDisplayWidthPx)
-		xGridLines[i] = pxStart + int(math.Round(currentXFloat))
-	}
-	for i := uint8(0); i <= boardMaxY; i++ {
-		currentYFloat := float64(i) / float64(boardMaxY) * float64(totalDisplayHeightPx)
-		yGridLines[i] = pyStart + int(math.Round(currentYFloat))
-	}
-	xGridLines[boardMaxX] = pxStart + totalDisplayWidthPx
-	yGridLines[boardMaxY] = pyStart + totalDisplayHeightPx
-
-	// 1. Kafelki Terenu
-	for x := range boardMaxX {
-		for y := range boardMaxY {
-			tileID := bState.Board.Tiles[x][y].TextureID
-			col := getMapColor(tileID)
-			w := xGridLines[x+1] - xGridLines[x]
-			h := yGridLines[y+1] - yGridLines[y]
-			rl.DrawRectangle(int32(xGridLines[x]), int32(yGridLines[y]), int32(w), int32(h), col)
-		}
-	}
-
-	// 2. Budynki
-	for _, bld := range bState.Buildings {
-		if !bld.Exists {
-			continue
-		}
-
-		// pomijamy palisady
-		if bld.Type == buildingPalisade {
-			continue
-		}
-
-		var bldColor rl.Color
-
-		if bld.Owner == bState.PlayerID {
-			bldColor = rl.White
-		} else {
-			bldColor = rl.Red
-		}
-
-		for _, currentTile := range bld.OccupiedTiles {
-			if currentTile.X < 0 || currentTile.X >= boardMaxX || currentTile.Y < 0 || currentTile.Y >= boardMaxY {
-				continue
-			}
-			w := xGridLines[currentTile.X+1] - xGridLines[currentTile.X]
-			h := yGridLines[currentTile.Y+1] - yGridLines[currentTile.Y]
-			rl.DrawRectangle(int32(xGridLines[currentTile.X]), int32(yGridLines[currentTile.Y]), int32(w), int32(h), bldColor)
-		}
-	}
-
-	// 3. Jednostki
-	for _, currentUnit := range bState.Units {
-		if !currentUnit.Exists {
-			continue
-		}
-		var unitColor rl.Color
-		if currentUnit.Owner == bState.PlayerID {
-			unitColor = rl.White
-		} else {
-			unitColor = rl.Red
-		}
-
-		if currentUnit.X < 0 || currentUnit.X >= boardMaxX || currentUnit.Y < 0 || currentUnit.Y >= boardMaxY {
-			continue
-		}
-
-		w := xGridLines[currentUnit.X+1] - xGridLines[currentUnit.X]
-		h := yGridLines[currentUnit.Y+1] - yGridLines[currentUnit.Y]
-		rl.DrawRectangle(int32(xGridLines[currentUnit.X]), int32(yGridLines[currentUnit.Y]), int32(w), int32(h), unitColor)
-	}
-
-	// 4. Ramka Kamery
-	camWorldView := getCameraWorldViewRect(bState.GameCamera, actualGameViewWidth, float32(virtualScreenHeight))
-	scaleFactorX := minimapWidth / worldMapFullPixelWidth
-	scaleFactorY := minimapHeight / worldMapFullPixelHeight
-
-	// Jaki powinien być prostokąt pokazujący
-	rawCameraRect := rl.NewRectangle(
-		minimapX+(camWorldView.X*scaleFactorX),
-		minimapY+(camWorldView.Y*scaleFactorY),
-		camWorldView.Width*scaleFactorX,
-		camWorldView.Height*scaleFactorY,
-	)
-
-	minimapBounds := rl.NewRectangle(
-		minimapX,
-		minimapY,
-		minimapWidth,
-		minimapHeight,
-	)
-
-	// Obliczamy część wspólną dla rawCameraRect oraz minimapBounds
-	// dzięki temu nawet jeżeli widzimy czarny ekran po bokach planszy, to żółty prostokąt
-	// nie wyjdzie poza mapę
-	clampedRect := rl.GetCollisionRec(minimapBounds, rawCameraRect)
-
-	rl.DrawRectangleLinesEx(clampedRect, 1.0, rl.Yellow)
 }

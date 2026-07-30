@@ -72,8 +72,8 @@ const (
 	// Minimapa.
 	minimapOffsetX            float32 = 5
 	minimapOffsetY            float32 = 5
-	minimapDisplayWidth       float32 = 110
-	minimapDisplayHeight      float32 = 100
+	mapDisplayWidth           float32 = 110
+	mapDisplayHeight          float32 = 100
 	minimapClickDragThreshold float32 = 5.0
 )
 

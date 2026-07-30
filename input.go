@@ -863,8 +863,8 @@ func handleMinimapInteraction(iState inputState, bState *battleState, pState *pr
 	minimapRect := rl.NewRectangle(
 		pState.GameViewWidth+minimapOffsetX,
 		float32(0)+minimapOffsetY,
-		minimapDisplayWidth,
-		minimapDisplayHeight,
+		mapDisplayWidth,
+		mapDisplayHeight,
 	)
 
 	isMouseOverMinimap := rl.CheckCollisionPointRec(
@@ -901,8 +901,8 @@ func handleMinimapInteraction(iState inputState, bState *battleState, pState *pr
 func handleMinimapLeftMouse(iState inputState, bState *battleState, minimapRect rl.Rectangle, pState *programState) bool {
 	fullMapPixelWidth := float32(uint16(boardMaxX) * uint16(tileWidth))
 	fullMapPixelHeight := float32(uint16(boardMaxY) * uint16(tileHeight))
-	scaleX := fullMapPixelWidth / minimapDisplayWidth
-	scaleY := fullMapPixelHeight / minimapDisplayHeight
+	scaleX := fullMapPixelWidth / mapDisplayWidth
+	scaleY := fullMapPixelHeight / mapDisplayHeight
 
 	if iState.IsLeftMouseButtonPressed {
 		clickedX := (iState.MousePosition.X - minimapRect.X) * scaleX
@@ -956,8 +956,8 @@ func handleMinimapRightMouse(
 		return true
 	}
 
-	scaleX := float32(uint16(boardMaxX)*uint16(tileWidth)) / minimapDisplayWidth
-	scaleY := float32(uint16(boardMaxY)*uint16(tileHeight)) / minimapDisplayHeight
+	scaleX := float32(uint16(boardMaxX)*uint16(tileWidth)) / mapDisplayWidth
+	scaleY := float32(uint16(boardMaxY)*uint16(tileHeight)) / mapDisplayHeight
 
 	worldX := float64(iState.MousePosition.X-minimapRect.X) * float64(scaleX)
 	worldY := float64(iState.MousePosition.Y-minimapRect.Y) * float64(scaleY)

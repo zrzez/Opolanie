@@ -195,20 +195,20 @@ type constructionProgress uint8
 */
 // building określa pojedynczy budynek podczas bitwy.
 type building struct {
+	AssignedUnits []unitID // Identyfikatory jednostek przypisanych do budynku @todo: sprawdź, czy potrzebne
+	// czemu nie wskaźnik?↑↑↑
+	OccupiedTiles     []point      // Współrzędne budynku
+	MilkingQueue      []unitID     // Wycinek z ID krowami będącymi w kolejce do dojenia w danej oborze
 	ID                buildingID   // Unikatowy numer budynku
+	HP                uint16       // Bieżący wskaźnik wytrzymałości
+	AccumulatedDamage uint16       // Obrażenia przyjęte w jednej turze
+	MaxHP             uint16       // Górna granica wskaźnika wytrzymałości
 	Exists            bool         // Czy budynek nie został jeszcze zniszczony
 	Owner             PlayerID     // Kto jest właścicielem. colorRed gracz, inne SI
 	Type              buildingType // Rodzaj budynku (obora = buildingBarn itd.)
-	HP                uint16       // Bieżący wskaźnik wytrzymałości
 	Armor             uint8        // Obrona budynku, zawsze równa 10
-	AccumulatedDamage uint16       // Obrażenia przyjęte w jednej turze
-	MaxHP             uint16       // Górna granica wskaźnika wytrzymałości
 	Food              uint8        // Bieżący wskaźnik liczby jednostek w budynku
 	MaxFood           uint8        // Górna granica wskaźnika liczby jednostek w budynku;
-	AssignedUnits     []unitID     // Identyfikatory jednostek przypisanych do budynku @todo: sprawdź, czy potrzebne
-	// czemu nie wskaźnik?↑↑↑
-	OccupiedTiles []point  // Współrzędne budynku
-	MilkingQueue  []unitID // Wycinek z ID krowami będącymi w kolejce do dojenia w danej oborze
 	// Budowa
 	IsUnderConstruction bool                 // Wskazuje, czy budowla jest w trakcie wznoszenia
 	ConstructionPhase   constructionProgress // Wskaźnik zaawansowania 0 - początek budowy, 1 - połowa budowy, 2 - zakończona
@@ -274,9 +274,9 @@ type aiState struct {
 }
 
 type aiGoal struct {
+	Target   any // budynek, jednostka, pozycja
 	Type     aiGoalType
 	Priority float32
-	Target   any // budynek, jednostka, pozycja
 	Progress float32
 }
 
@@ -327,24 +327,30 @@ const (
 
 // przechowuje kompletną wiedzę o polu (x,y).
 type tile struct {
-	X, Y      uint8  // współrznędne kafelka
-	TextureID uint16 // ID grafiki np. trawa, droga
-
+	// --- ZAWARTOŚĆ ---
+	Unit         *unit
+	Building     *building
+	MovementCost float64 // drożność kafelka. Dla A*.
+	// --- MGŁA WOJNY ---
+	Visibility      visibilityState
+	AshIntensity    float32
+	CurrentAshAlpha float32
+	TextureID       uint16 // ID grafiki np. trawa, droga
+	BurnElapsed     uint16
+	BurnOverlayID   uint16
+	AshAge          uint16
+	GhostDamage     uint16
+	X, Y            uint8 // współrznędne kafelka
 	// Trawa
 	IsGrazed        bool
 	GrazedCounter   uint8
 	GrazedOverlayID uint8
-
 	// Płomień
-	IsBurning     bool
-	BurnElapsed   uint16
-	BurnOverlayID uint16
-	IsBurnt       bool
-
+	IsBurning bool
+	IsBurnt   bool
 	// Ścinanie drzew
 	// @reminder: być może będzie trzeba przerobić treeCuts z liczby uderzeń na sumę obrażeń.
 	treeCuts uint8 // Ile uderzeń drwala do ścięcia drzewa.
-
 	/*
 		Śledzimy stan drzewa
 
@@ -361,29 +367,14 @@ type tile struct {
 		treeFell - drzewo leży i nie zagradza już drogi
 	*/
 	treeState treeState
-
 	// Popiół
 	hasAsh          bool
-	AshIntensity    float32
-	AshAge          uint16
 	AshProcessState uint8
-	CurrentAshAlpha float32
-
 	// duszenie przez pocisk unitMage
 	GhostEffect        bool  // do rysowania efektu ducha po trafieniu
 	GhostEffectCounter uint8 // do odliczania czasu od pojawienia się efektu`
-	GhostDamage        uint16
-
 	// --- WŁAŚCIWOŚCI FIZYCZNE ---
-	IsWalkable   bool    // przechodniość kafelka
-	MovementCost float64 // drożność kafelka. Dla A*.
-
-	// --- ZAWARTOŚĆ ---
-	Unit     *unit
-	Building *building
-
-	// --- MGŁA WOJNY ---
-	Visibility visibilityState
+	IsWalkable bool // przechodniość kafelka
 }
 
 type boardData struct {
@@ -473,39 +464,39 @@ type enemyCacheEntry struct {
 // campaignData przechowuje przymioty bieżącej wyprawy
 // TODO: czemu nazywamy to „campaign” skoro dotyczy tylko bitwy?
 type campaignData struct {
-	DecisionType uint8 // NIE JESTEM PEWIEN: chyba rodzaj strategii SI (boardVillage, boardBattleDyn itd.)
+	Name               string // Imię postaci lub nazwa poziomu
+	TransformationType int    // Rodzaj przemiany TODO: Ogarnij, czy to nie powinno być w battleState
+	GeneratorTimer     int    // Licznik wytwarzacza (jednostek?)
+	Password           int    // Hasło TODO: powinno się to usunąć, bo nikt już nie zabezpiecza gry hasłem z instrukcji!
+	PasswordNumber     int    // Numer hasła
+	CurrentEventID     int    // Licznik zdarzeń (co to w ogóle jest?)
+	LevelsMilkLimit    uint16 // Wskaźnik Górnej granicy mleka dla wybranej misji
+	DecisionType       uint8  // NIE JESTEM PEWIEN: chyba rodzaj strategii SI (boardVillage, boardBattleDyn itd.)
 	//  TODO: Ogarnij, czy to nie powinno być w battleState
 	GeneratorActive bool // Wskaźnik, czy wytwórstwo jednostek działa
 	//  TODO: Ogarnij, czy to nie powinno być w battleState
-	EndCondition        uint8  // Rodzaj zadania (endKillAll itd.) TODO: Ogarnij, czy to nie powinno być w battleState
-	TargetType          uint8  // Rodzaj celu do uratowania TODO: Ogarnij, czy to nie powinno być w battleState
-	VictoryPointX       uint8  // Współrzędna x miejsca zbornego  TODO: Ogarnij, czy to nie powinno być w battleState
-	VictoryPointY       uint8  // Współrzędna y miejsca zbornego TODO: Ogarnij, czy to nie powinno być w battleState
-	RescueTargetX       uint8  // Współrzędna x jednostki do uratowania TODO: Ogarnij, czy to nie powinno być w battleState
-	RescueTargetY       uint8  // Współrzędna y jednostki do uratowania TODO: Ogarnij, czy to nie powinno być w battleState
-	TransformationSiteX uint8  // Współrzędna x miejsca przemiany TODO: Ogarnij, czy to nie powinno być w battleState
-	TransformationSiteY uint8  // Współrzędna y miejsca przemiany TODO: Ogarnij, czy to nie powinno być w battleState
-	TransformationType  int    // Rodzaj przemiany TODO: Ogarnij, czy to nie powinno być w battleState
-	GeneratorTimer      int    // Licznik wytwarzacza (jednostek?)
-	LevelsMilkLimit     uint16 // Wskaźnik Górnej granicy mleka dla wybranej misji
-	Name                string // Imię postaci lub nazwa poziomu
-	Password            int    // Hasło TODO: powinno się to usunąć, bo nikt już nie zabezpiecza gry hasłem z instrukcji!
-	PasswordNumber      int    // Numer hasła
+	EndCondition        uint8 // Rodzaj zadania (endKillAll itd.) TODO: Ogarnij, czy to nie powinno być w battleState
+	TargetType          uint8 // Rodzaj celu do uratowania TODO: Ogarnij, czy to nie powinno być w battleState
+	VictoryPointX       uint8 // Współrzędna x miejsca zbornego  TODO: Ogarnij, czy to nie powinno być w battleState
+	VictoryPointY       uint8 // Współrzędna y miejsca zbornego TODO: Ogarnij, czy to nie powinno być w battleState
+	RescueTargetX       uint8 // Współrzędna x jednostki do uratowania TODO: Ogarnij, czy to nie powinno być w battleState
+	RescueTargetY       uint8 // Współrzędna y jednostki do uratowania TODO: Ogarnij, czy to nie powinno być w battleState
+	TransformationSiteX uint8 // Współrzędna x miejsca przemiany TODO: Ogarnij, czy to nie powinno być w battleState
+	TransformationSiteY uint8 // Współrzędna y miejsca przemiany TODO: Ogarnij, czy to nie powinno być w battleState
 	//  TODO: powinno się to usunąć, bo nikt już nie zabezpiecza gry hasłem z instrukcji!
-	LevelNumber    uint8 // Numer poziomu
-	CurrentEventID int   // Licznik zdarzeń (co to w ogóle jest?)
-	NextLevel      uint8 // Numer następnego poziomu (czemu tak, skoro niektóre udrażniają wiele poziomów)
+	LevelNumber uint8 // Numer poziomu
+	NextLevel   uint8 // Numer następnego poziomu (czemu tak, skoro niektóre udrażniają wiele poziomów)
 }
 
 // === UI, PRZYCISKI I INNE TAKIE
 
 // Pozwala opisać każdy przycisk wytwórczy.
 type buildingAction struct {
+	Label        string // @todo: TYMCZASOWE ZAMIAST TEKSTURY; być może zostawimy dla dymków
+	IconID       uint16
 	UnitType     unitType     // jaki rodzaj jednostki można stworzyć unitCow
 	BuildingType buildingType // Jaki rodzaj budynku zamierzamy wybudować
-	Label        string       // @todo: TYMCZASOWE ZAMIAST TEKSTURY; być może zostawimy dla dymków
 	MinLevel     uint8
-	IconID       uint16
 }
 
 // === RZECZY ZWIĄZANE Z ŁADOWANIEM MAP ===
@@ -612,7 +603,7 @@ const (
 )
 
 type targetReference struct {
-	Kind     targetKind
 	ID       uint
 	Position point
+	Kind     targetKind
 }

@@ -21,33 +21,25 @@ const (
 )
 
 type projectile struct {
-	ID     uint
-	Kind   uint8
-	Sprite uint16
-	Owner  PlayerID
-
-	// Pozycja
-	X, Y float32
-
-	// Wektor ruchu na jedną klatkę (20 TPS)
-	DX, DY float32
-
-	// Cel
-	TargetX, TargetY uint16
-
+	ID uint
 	// Licznik czasu lotu
 	Lifetime uint
-
+	// Faza uruchomienia (animacji) pocisku ducha
+	Phase1, Phase2 float64
+	// Pozycja
+	X, Y float32
+	// Wektor ruchu na jedną klatkę (20 TPS)
+	DX, DY float32
+	Sprite uint16
+	// Cel
+	TargetX, TargetY uint16
 	// Obrażenia
 	Damage uint16 // @reminder: to nie jest używane przez pociski unitPriest, uniteMage. Nie wiem, jak kapłanka.
-	// @reminder: zarówno unitPriest, jak i unitPriestess używają tego przy czarach!
-
+	Kind   uint8
+	Owner  PlayerID
 	// Stan
 	Exists            bool
 	AllowFriendlyFire bool
-
-	// Faza uruchomienia (animacji) pocisku ducha
-	Phase1, Phase2 float64
 }
 
 func (p *projectile) initProjectile(kind uint8, owner PlayerID, startX, startY, targetX, targetY uint16, damage uint16) {
