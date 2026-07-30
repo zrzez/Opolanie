@@ -11,8 +11,9 @@ package main
 // zamiast tworzyć je w każdej klatce.
 
 import (
+	"cmp"
 	"math"
-	"sort"
+	"slices"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -159,7 +160,7 @@ func processMapTiles(bState *battleState) {
 				applyPalisadeProcessing(x, y, bState.Board)
 			case isWater(id):
 				applyWaterProcessing(x, y, bState.Board, snapshot)
-			case isHealingShire(id):
+			case isHealingShrine(id):
 				bState.HealingShrines = append(bState.HealingShrines, point{X: x, Y: y})
 			}
 		}
@@ -324,6 +325,9 @@ func calculateWaterTileID(x, y uint8, board *boardData) uint16 {
 	return newID
 }
 
+// @reminder: być może to w czymś pomoże.
+var newVectorForDrawSprite = rl.NewVector2(0, 0)
+
 func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColor PlayerID) {
 	// 1. Walidacja ID
 	if id >= maxSpriteID {
@@ -358,7 +362,8 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 	destRect := rl.NewRectangle(finalX, finalY, float32(def.cropWidth), float32(def.cropHeight))
 
 	// 6. Rysowanie
-	rl.DrawTexturePro(tex, srcRect, destRect, rl.NewVector2(0, 0), 0, rl.White)
+	// @todo: tutaj kod spędza większość czasu, może coś da się z tym zrobić?
+	rl.DrawTexturePro(tex, srcRect, destRect, newVectorForDrawSprite, 0, rl.White)
 }
 
 func drawSpriteEx(id uint16, destX, destY float32, ownerColor PlayerID, tint rl.Color, ps *programState) {
@@ -897,7 +902,8 @@ func drawSoil(startX, startY, endX, endY uint8, bState *battleState, ps *program
 				drawSprite(ps.Assets, texID+animationOffset, xPos, yPos, colorNone)
 			}
 
-			if isLandOrOther(texID) && !currentTile.isTree() {
+			// @todo: tutaj funkcja spędza większość czasu, może coś da się z tym zrobić?
+			if isLandOrOther(texID) && !currentTile.isTree() && !isHealingShrine(texID) {
 				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
 			}
 		}
@@ -970,7 +976,7 @@ func drawUnits(boardRow uint8, bState *battleState, ps *programState) {
 		// @todo: ogarnij, bo za dużo sortowania.
 		// ↓↓↓↓↓↓↓ co tyknięcie sortujemy listę jednostek. Niby nic wielkiego, ale
 		// ↓↓↓↓↓↓↓ to jest kompletnie bez sensu, człowiek nie zauważy różnicy.
-		sort.Slice(rowUnits, func(i, j int) bool { return rowUnits[i].X < rowUnits[j].X })
+		slices.SortFunc(rowUnits, func(i, j *unit) int { return cmp.Compare(i.X, j.X) })
 
 		for _, currentUnit := range rowUnits {
 			if currentUnit.Owner == bState.PlayerID {
@@ -1449,7 +1455,10 @@ func drawEffectsAndInterfaces(startY, endY uint8, bState *battleState, ps *progr
 // niewydajny! Powinienem mieć jakąś podręczną listę na stałe efekty, jak święte miejsce oraz
 // na tymczasowe. Coś, jak ze zwłokami, poręczne szybkie i w ogóle.
 // @todo: zmień tak, żeby nie sprawdzać każdego kafelka. Efekty nie są niewiadomą.
-func drawEffects(bState *battleState, ps *programState) {
+func drawEffects(bState *battleState, pState *programState) {
+	// @reminder: ponieważ już mam listę z kapliczkami, to z niej korzystam.
+	drawHealingShrines(bState, pState)
+
 	// Czemu y jest zewnętrzną pętlą?!
 	for y := range boardMaxY {
 		for x := range boardMaxX {
@@ -1459,66 +1468,75 @@ func drawEffects(bState *battleState, ps *programState) {
 			yPos := float32(y) * float32(tileHeight)
 
 			// Stałe, u dołu
-			permanentEffects(affectedTile, x, y, xPos, yPos, bState, ps)
+			permanentEffects(affectedTile, x, y, xPos, yPos, bState, pState)
 
 			// Tymczasowe, na wierzchu
-			temporaryEffects(affectedTile, x, y, xPos, yPos, bState, ps)
+			temporaryEffects(affectedTile, x, y, xPos, yPos, bState, pState)
 		}
 	}
 }
 
-func permanentEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bState *battleState, ps *programState) {
-	textureID := affectedTile.TextureID
-
-	switch {
-	// A. Kapliczka leczenia (stare 282/283)
-	case textureID == spriteEffectHeal00 || textureID == spriteEffectHeal01:
-		frame := (bState.WaterAnimationFrame + uint16(x+y)) % 2
+func drawHealingShrines(bState *battleState, pState *programState) {
+	// Kapliczka leczenia (stare 282/283)
+	for _, shrine := range bState.HealingShrines {
+		currentTile := &bState.Board.Tiles[shrine.X][shrine.Y]
+		xPos := float32(shrine.X) * float32(tileWidth)
+		yPos := float32(shrine.Y) * float32(tileHeight)
+		frame := (bState.WaterAnimationFrame + uint16(shrine.X+shrine.Y)) % 2 //nolint:mnd
 		animID := spriteEffectHeal00 + frame
 
-		// Logika przeźroczystości (Duch)
 		var tint rl.Color
-		if affectedTile.Unit != nil {
-			tint = rl.White // Pełna widoczność, gdy ktoś stoi
-		} else {
-			tint = rl.Fade(rl.White, 0.4) // Duch, gdy pusto
-		}
-		drawSpriteEx(animID, xPos, yPos, colorNone, tint, ps)
 
+		if currentTile.Unit != nil && currentTile.Unit.HP < currentTile.Unit.MaxHP {
+			tint = rl.White
+		} else {
+			tint = rl.Fade(rl.White, 0.7)
+		}
+
+		drawSpriteEx(animID, xPos, yPos, colorNone, tint, pState)
+	}
+}
+
+func permanentEffects(currentTile *tile, x, y uint8, xPos, yPos float32, bState *battleState, pState *programState) {
+	textureID := currentTile.TextureID
+
+	switch textureID {
 	// B. Małe ognisko (stare 68 -> SPRITE_GADGET_14)
-	case textureID == spriteGadget14:
+	case spriteGadget14:
 		frame := (bState.FireAnimationFrame + uint16(x+y)) % 4
-		drawSprite(ps.Assets, spriteGadget14, xPos, yPos, colorNone)
-		drawSprite(ps.Assets, spriteFire08+frame, xPos, yPos, colorNone)
+
+		drawSprite(pState.Assets, spriteGadget14, xPos, yPos, colorNone)
+		drawSprite(pState.Assets, spriteFire08+frame, xPos, yPos, colorNone)
 
 	// C. Duże ognisko (stare 69 -> SPRITE_GADGET_15)
-	case textureID == spriteGadget15:
+	case spriteGadget15:
 		frame := (bState.FireAnimationFrame + uint16(x+y)) % 4
-		drawSprite(ps.Assets, spriteGadget14, xPos, yPos, colorNone)
-		drawSprite(ps.Assets, spriteFire04+frame, xPos, yPos, colorNone)
+
+		drawSprite(pState.Assets, spriteGadget15, xPos, yPos, colorNone)
+		drawSprite(pState.Assets, spriteFire04+frame, xPos, yPos, colorNone)
 
 	// D. Punkt Zwycięstwa (stare 301)
 	// @reminder: tekstura spriteVictoryPoint się nie rysuje 22.04.202
-	case textureID == spriteVictoryPoint:
+	case spriteVictoryPoint:
 		// Animacja punktu zwycięstwa (zakładamy 4 klatki animacji w atlasie)
 		frame := (bState.FireAnimationFrame) % 4
-		drawSprite(ps.Assets, spriteVictoryPoint+frame, xPos, yPos, colorNone)
+		drawSprite(pState.Assets, spriteVictoryPoint+frame, xPos, yPos, colorNone)
 	}
 }
 
-func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bState *battleState, ps *programState) {
+func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bState *battleState, pState *programState) {
 	// 1. Popiół
 	if affectedTile.hasAsh && affectedTile.AshIntensity > 0.01 {
 		alphaFactor := affectedTile.AshIntensity
 		tint := rl.Fade(rl.White, alphaFactor)
 
-		drawSpriteEx(spriteAsh00, xPos, yPos, colorNone, tint, ps)
+		drawSpriteEx(spriteAsh00, xPos, yPos, colorNone, tint, pState)
 	}
 
 	// 2. Płonące kafelki
 	if affectedTile.IsBurning {
 		frame := (bState.FireAnimationFrame + uint16(x+y)) % 4
-		drawSprite(ps.Assets, affectedTile.BurnOverlayID+frame, xPos, yPos, colorNone)
+		drawSprite(pState.Assets, affectedTile.BurnOverlayID+frame, xPos, yPos, colorNone)
 	}
 
 	// 3. Duch
@@ -1526,7 +1544,7 @@ func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bState
 		phase1 := float64(x)*31 + float64(y)*17
 		phase2 := float64(x)*43 + float64(y)*59
 
-		drawGhostlySprite(spriteMissileGhostAttack, xPos, yPos, phase1, phase2, bState.GlobalFrameCounter, ps)
+		drawGhostlySprite(spriteMissileGhostAttack, xPos, yPos, phase1, phase2, bState.GlobalFrameCounter, pState)
 	}
 }
 

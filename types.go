@@ -430,7 +430,6 @@ type battleState struct {
 	ControlGroups           [10]controlGroup // Zarządzane zespoły
 	MouseState              mouseState       // Tryb kursora
 	DragContext             dragContext      // Przeciąganie
-	Map                     bool             // Czy mapa jest widoczna @todo: czy w ogóle tego używam?!
 	IsMapDragging           bool
 	MapInitialClickPos      rl.Vector2
 	CameraTargetOnDragStart rl.Vector2

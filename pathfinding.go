@@ -159,6 +159,8 @@ func findPath(board *boardData, mover *unit, startX, startY, endX, endY uint8, b
 						finalCost:     newGoCost + hCost,
 						heapIndex:     -1, // Push ustawi właściwy indeks
 					}
+
+					// @todo: tutaj spędzam większość pamięci. Może uda się coś wykombinować?
 					heap.Push(open, index)
 				}
 			}

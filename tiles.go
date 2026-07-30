@@ -28,7 +28,7 @@ func isObstacle(texID uint16) bool {
 }
 
 // Sprawdza, czy tekstura jest kapliczką leczącą (świętym miejscem).
-func isHealingShire(tileTexID uint16) bool {
+func isHealingShrine(tileTexID uint16) bool {
 	return tileTexID == spriteEffectHeal00 || tileTexID == spriteEffectHeal01
 }
 

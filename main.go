@@ -751,7 +751,6 @@ func newBattleState(pState *programState) *battleState {
 		CurrentSelection: selectionState{},
 		MouseState:       mouseStateNormal,
 		DragContext:      dragContext{},
-		Map:              false,
 
 		CurrentLevel:          0,
 		DifficultyLevel:       pState.SelectedDifficulty,
