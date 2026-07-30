@@ -644,7 +644,7 @@ func handleGameInput(bState *battleState, pState *programState, iState inputStat
 	}
 
 	// Obsługa UI
-	if isMouseOverUI(pState, virtualMouse) {
+	if isMouseOverUI(virtualMouse, pState) {
 		if iState.IsLeftMouseButtonPressed || iState.IsRightMouseButtonPressed ||
 			iState.IsLeftMouseButtonDown || iState.IsLeftMouseButtonReleased {
 			if handleGameUIClicks(iState, bState, pState) {

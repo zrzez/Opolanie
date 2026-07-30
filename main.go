@@ -495,7 +495,10 @@ func drawSceneToVirtualScreen(bState *battleState, ps *programState, iState inpu
 			rl.BeginScissorMode(0, 0, int32(ps.GameViewWidth), int32(ps.VirtualHeight))
 			rl.BeginMode2D(bState.GameCamera)
 			drawWorldAndUnits(bState, ps)
+			// ↓↓↓ Można połączyć w jedną funkcję jeśli będzie tego więcej
 			drawConstructionValidationBox(bState, ps)
+			drawMagicShowerBox(bState, ps)
+			// ↑↑↑ Można połączyć w jedną funkcję jeśli będzie tego więcej
 			rl.EndMode2D()
 			rl.EndScissorMode()
 		}

@@ -243,6 +243,99 @@ func hasRoadAccess(x, y, size uint8, bState *battleState) bool {
 	return false
 }
 
+// Rysowanie prostokątów, które podpowiadające gdzie uderzą czarodziejskie opady.
+func drawMagicShowerBox(bState *battleState, pState *programState) {
+	// 1. Czy rysujemy?
+	if bState.MouseState != mouseStateCasting {
+		return
+	}
+
+	screenMouse := rl.GetMousePosition()
+	virtualMouse := screenToVirtualCoords(pState, screenMouse)
+
+	if isMouseOverUI(virtualMouse, pState) {
+		return
+	}
+
+	// 2. Gdzie?
+	worldMousePos := rl.GetScreenToWorld2D(virtualMouse, bState.GameCamera)
+	positionX := int8(worldMousePos.X / float32(tileWidth))
+	positionY := int8(worldMousePos.Y / float32(tileHeight))
+
+	// 3. Jakiej barwy?
+	inRange := magicShowerInRangeBox(positionX, positionY, bState)
+	leftColor, centerColor, rightColor := magicShowerBoxColor(positionX, inRange)
+
+	// 4. Rysujemy
+	baseY := int32(float32(positionY) * float32(tileHeight))
+	width := int32(tileWidth)
+	height := int32(tileHeight)
+
+	rl.DrawRectangle(int32(float32(positionX-1)*float32(tileWidth)), baseY, width, height, leftColor)
+	rl.DrawRectangle(int32(float32(positionX)*float32(tileWidth)), baseY, width, height, centerColor)
+	rl.DrawRectangle(int32(float32(positionX+1)*float32(tileWidth)), baseY, width, height, rightColor)
+}
+
+func magicShowerBoxColor(positionX int8, inRange bool) (leftColor, centerColor, rightColor rl.Color) {
+	allGood := rl.Fade(rl.Green, 0.6)
+	notInRange := rl.Fade(rl.Orange, 0.6)
+	cannotCast := rl.Fade(rl.Red, 0.6)
+
+	// Środek
+	switch {
+	case positionX < 0 || positionX >= int8(boardMaxX):
+		return cannotCast, cannotCast, cannotCast
+	case inRange:
+		centerColor = allGood
+	default:
+		centerColor = notInRange
+	}
+
+	// Lewa
+	left := positionX - 1
+	switch {
+	case left < 0 || left >= int8(boardMaxX):
+		leftColor = cannotCast
+	case inRange:
+		leftColor = allGood
+	default:
+		leftColor = notInRange
+	}
+
+	// Prawa
+	right := positionX + 1
+	switch {
+	case right < 0 || right >= int8(boardMaxX):
+		rightColor = cannotCast
+	case inRange:
+		rightColor = allGood
+	default:
+		rightColor = notInRange
+	}
+
+	return leftColor, centerColor, rightColor
+}
+
+func magicShowerInRangeBox(positionX, positionY int8, bState *battleState) bool {
+	inRange := false
+	casterID := bState.PendingCommand.ExecutorID
+
+	isCursorOnBoard := positionX >= 0 && positionX < int8(boardMaxX) && positionY >= 0 && positionY < int8(boardMaxY)
+
+	caster, found := bState.getUnitByID(unitID(casterID))
+	if found && isCursorOnBoard {
+		target := &combatTarget{
+			Unit:     nil,
+			Building: nil,
+			Tile:     &bState.Board.Tiles[positionX][positionY],
+		}
+
+		inRange = caster.calculateDistanceToTarget(target) <= caster.AttackRange
+	}
+
+	return inRange
+}
+
 // ====
 // GRAFICZNA ZWROTKA WALIDACJI ZASADZANIA BUDOWY.
 func drawConstructionValidationBox(bState *battleState, pState *programState) {
@@ -253,7 +346,7 @@ func drawConstructionValidationBox(bState *battleState, pState *programState) {
 	screenMouse := rl.GetMousePosition()
 	virtualMouse := screenToVirtualCoords(pState, screenMouse)
 
-	if isMouseOverUI(pState, virtualMouse) {
+	if isMouseOverUI(virtualMouse, pState) {
 		return
 	}
 

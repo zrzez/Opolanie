@@ -809,8 +809,8 @@ func drawBattleScene(bState *battleState) {
 	rl.EndScissorMode()
 }
 
-func isMouseOverUI(ps *programState, virtualPos rl.Vector2) bool {
-	return virtualPos.X >= ps.GameViewWidth
+func isMouseOverUI(virtualPos rl.Vector2, pState *programState) bool {
+	return virtualPos.X >= pState.GameViewWidth
 }
 
 // Dobiera barwy dla mapy na podstawie zawartości kafelka.
@@ -967,6 +967,9 @@ func drawCorpsesUnitsTrees(startX, startY, endX, endY uint8, bState *battleState
 func drawUnits(boardRow uint8, bState *battleState, ps *programState) {
 	rowUnits := bState.RenderUnitRows[boardRow]
 	if len(rowUnits) > 0 {
+		// @todo: ogarnij, bo za dużo sortowania.
+		// ↓↓↓↓↓↓↓ co tyknięcie sortujemy listę jednostek. Niby nic wielkiego, ale
+		// ↓↓↓↓↓↓↓ to jest kompletnie bez sensu, człowiek nie zauważy różnicy.
 		sort.Slice(rowUnits, func(i, j int) bool { return rowUnits[i].X < rowUnits[j].X })
 
 		for _, currentUnit := range rowUnits {
