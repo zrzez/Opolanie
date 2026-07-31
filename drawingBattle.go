@@ -359,6 +359,7 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 
 	sharedSrcRect.X = float32(def.cropX)
 	sharedSrcRect.Y = float32(def.cropY)
+
 	sharedSrcRect.Height = float32(def.cropHeight)
 	if def.flipX {
 		sharedSrcRect.Width = -float32(def.cropWidth)
@@ -981,34 +982,73 @@ func drawBuildings(startX, startY, endX, endY uint8, bState *battleState, ps *pr
 	drawDryEarth(startX, startY, endX, endY, bState, ps)
 }
 
-func drawCorpsesUnitsTrees(startX, startY, endX, endY uint8, bState *battleState, ps *programState) {
+func drawCorpsesUnitsTrees(startX, startY, endX, endY uint8, bState *battleState, pState *programState) {
 	for boardRow := startY; boardRow < endY; boardRow++ {
-		drawCorpses(boardRow, startX, endX, bState, ps)
+		drawCorpses(boardRow, startX, endX, bState, pState)
 	}
 
 	for boardRow := startY; boardRow < endY; boardRow++ {
-		drawUnits(boardRow, bState, ps)
-		drawTrees(boardRow, startX, endX, bState, ps)
+		// Popiół
+		yPos := float32(boardRow) * float32(tileHeight)
+
+		for x := startX; x < endX; x++ {
+			currentTile := &bState.Board.Tiles[x][boardRow]
+			xPos := float32(x) * float32(tileWidth)
+
+			if currentTile.hasAsh && currentTile.AshIntensity > 0.01 {
+				alphaFactor := currentTile.AshIntensity
+				tint := rl.Fade(rl.White, alphaFactor)
+
+				drawSpriteEx(spriteAsh00, xPos, yPos, colorNone, tint, pState)
+			}
+		}
+
+		drawUnits(boardRow, bState, pState)
+
+		for x := startX; x < endX; x++ {
+			currentTile := &bState.Board.Tiles[x][boardRow]
+			xPos := float32(x) * float32(tileWidth)
+
+			// Płonące kafelki
+			if currentTile.IsBurning {
+				frame := (bState.FireAnimationFrame + uint16(x+boardRow)) % 4
+				drawSprite(pState.Assets, currentTile.BurnOverlayID+frame, xPos, yPos, colorNone)
+
+			}
+			// Duchy
+			if currentTile.GhostEffect {
+				phase1 := float64(x)*31 + float64(boardRow)*17
+				phase2 := float64(x)*43 + float64(boardRow)*59
+
+				drawGhostlySprite(spriteMissileGhostAttack, xPos, yPos, phase1, phase2, bState.GlobalFrameCounter, pState)
+			}
+		}
+		// Drzewa
+		drawTrees(boardRow, startX, endX, bState, pState)
 	}
 }
 
-func drawUnits(boardRow uint8, bState *battleState, ps *programState) {
+func drawUnits(boardRow uint8, bState *battleState, pState *programState) {
 	rowUnits := bState.RenderUnitRows[boardRow]
 	if len(rowUnits) > 0 {
 		// @todo: ogarnij, bo za dużo sortowania.
 		// ↓↓↓↓↓↓↓ co tyknięcie sortujemy listę jednostek. Niby nic wielkiego, ale
 		// ↓↓↓↓↓↓↓ to jest kompletnie bez sensu, człowiek nie zauważy różnicy.
-		slices.SortFunc(rowUnits, func(i, j *unit) int { return cmp.Compare(i.X, j.X) })
+		if bState.GlobalFrameCounter%3 == 0 {
+			// @reminder: mój przypadek jest bardzo prosty, muszę sprawdzić, czy
+			//   „naiwne” podejście do układania jednostek nie będzie lepsze.
+			slices.SortFunc(rowUnits, func(i, j *unit) int { return cmp.Compare(i.X, j.X) })
+		}
 
 		for _, currentUnit := range rowUnits {
 			if currentUnit.Owner == bState.PlayerID {
-				drawUnit(currentUnit, bState, ps)
+				drawUnit(currentUnit, bState, pState)
 			}
 		}
 
 		for _, currentUnit := range rowUnits {
 			if currentUnit.Owner != bState.PlayerID {
-				drawUnit(currentUnit, bState, ps)
+				drawUnit(currentUnit, bState, pState)
 			}
 		}
 	}
@@ -1039,7 +1079,7 @@ func drawCorpses(y, startX, endX uint8, bState *battleState, ps *programState) {
 	}
 }
 
-func drawTrees(boardRow, startX, endX uint8, bState *battleState, ps *programState) {
+func drawTrees(boardRow, startX, endX uint8, bState *battleState, pState *programState) {
 	for boardColumn := startX; boardColumn < endX; boardColumn++ {
 		currentTile := &bState.Board.Tiles[boardColumn][boardRow]
 
@@ -1052,11 +1092,11 @@ func drawTrees(boardRow, startX, endX uint8, bState *battleState, ps *programSta
 		case noTree:
 			continue
 		case treeStraight:
-			drawStandingTree(boardColumn, boardRow, currentTile, bState, ps)
+			drawStandingTree(boardColumn, boardRow, currentTile, bState, pState)
 		case treeLeaning:
-			drawLeaningTree(boardColumn, boardRow, currentTile, ps)
+			drawLeaningTree(boardColumn, boardRow, currentTile, pState)
 		case treeFalling, treeImpact, treeFell:
-			drawFallingOrFallenTree(boardColumn, boardRow, currentTile, ps)
+			drawFallingOrFallenTree(boardColumn, boardRow, currentTile, pState)
 		}
 	}
 }
@@ -1263,11 +1303,11 @@ func drawUnit(u *unit, bState *battleState, ps *programState) {
 
 	if u.State == stateAttacking && frame > 2 && isMelee {
 		if renderDy > 0 {
-			screenY -= 7.0
+			screenY = 7.0
 		}
 
 		if renderDx > 0 {
-			screenX -= 8.0
+			screenX = 8.0
 		}
 	}
 
@@ -1491,9 +1531,6 @@ func drawEffects(bState *battleState, pState *programState) {
 
 			// Stałe, u dołu
 			permanentEffects(affectedTile, x, y, xPos, yPos, bState, pState)
-
-			// Tymczasowe, na wierzchu
-			temporaryEffects(affectedTile, x, y, xPos, yPos, bState, pState)
 		}
 	}
 }
@@ -1543,30 +1580,6 @@ func permanentEffects(currentTile *tile, x, y uint8, xPos, yPos float32, bState 
 		// Animacja punktu zwycięstwa (zakładamy 4 klatki animacji w atlasie)
 		frame := (bState.FireAnimationFrame) % 4
 		drawSprite(pState.Assets, spriteVictoryPoint+frame, xPos, yPos, colorNone)
-	}
-}
-
-func temporaryEffects(affectedTile *tile, x, y uint8, xPos, yPos float32, bState *battleState, pState *programState) {
-	// 1. Popiół
-	if affectedTile.hasAsh && affectedTile.AshIntensity > 0.01 {
-		alphaFactor := affectedTile.AshIntensity
-		tint := rl.Fade(rl.White, alphaFactor)
-
-		drawSpriteEx(spriteAsh00, xPos, yPos, colorNone, tint, pState)
-	}
-
-	// 2. Płonące kafelki
-	if affectedTile.IsBurning {
-		frame := (bState.FireAnimationFrame + uint16(x+y)) % 4
-		drawSprite(pState.Assets, affectedTile.BurnOverlayID+frame, xPos, yPos, colorNone)
-	}
-
-	// 3. Duch
-	if affectedTile.GhostEffect {
-		phase1 := float64(x)*31 + float64(y)*17
-		phase2 := float64(x)*43 + float64(y)*59
-
-		drawGhostlySprite(spriteMissileGhostAttack, xPos, yPos, phase1, phase2, bState.GlobalFrameCounter, pState)
 	}
 }
 
