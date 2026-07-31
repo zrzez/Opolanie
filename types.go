@@ -402,19 +402,17 @@ type battleState struct {
 	CampaignData     campaignData // Zawiera rzeczy związane wyprawą i obecną bitwą
 
 	// === PRZEDMIOTY I JEDNOSTKI NA MAPIE ===
-	Units              []*unit                // Żyjące jednostki
-	Buildings          []*building            // Działające budynki
-	NextUnitID         unitID                 // Licznik do tworzenia nowych identyfikatorów dla jednostek
-	NextBuildingID     buildingID             // Licznik do tworzenia nowych identyfikatorów dla budynków
-	Board              *boardData             // Wszystko co związane z przechowywaniem współrzędnych na planszy
-	Projectiles        []*projectile          // Pociski
-	HealingShrines     []point                // Wykaz współrzędnych miejsc leczenia
-	RenderUnitRows     [boardMaxY][]*unit     // Służy do wskazywania jednostek wg współrzędnej y i rysowania na planszy
-	RenderBuildingRows [boardMaxY][]*building // Służy do wskazywania budynków wg współrzędnych na potrzeby rysowania
-	CorpsesList        []corpse               // Służy do wskazywania zwłok wg współrzędnych na potrzeby rysowania
-	BurningTilesList   []*tile                // Służy do wskazania kafelków, które zostały podpalone
-	FallingTreesList   []*tile                // Służy do wskazania kafelków z upadającymi drzewami
-	GhostsList         []*tile                // Służy do wskazywania jednostek z efektem ducha
+	Units            []*unit       // Żyjące jednostki
+	Buildings        []*building   // Działające budynki
+	NextUnitID       unitID        // Licznik do tworzenia nowych identyfikatorów dla jednostek
+	NextBuildingID   buildingID    // Licznik do tworzenia nowych identyfikatorów dla budynków
+	Board            *boardData    // Wszystko co związane z przechowywaniem współrzędnych na planszy
+	Projectiles      []*projectile // Pociski
+	HealingShrines   []point       // Wykaz współrzędnych miejsc leczenia
+	CorpsesList      []corpse      // Służy do wskazywania zwłok wg współrzędnych na potrzeby rysowania
+	BurningTilesList []*tile       // Służy do wskazania kafelków, które zostały podpalone
+	FallingTreesList []*tile       // Służy do wskazania kafelków z upadającymi drzewami
+	GhostsList       []*tile       // Służy do wskazywania jednostek z efektem ducha
 	// === UI I INTERAKCJA ===
 	GameCamera              rl.Camera2D      // Kamera widoku gry
 	CurrentSelection        selectionState   // Bieżące zaznaczenie

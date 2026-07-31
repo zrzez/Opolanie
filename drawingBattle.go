@@ -11,9 +11,7 @@ package main
 // zamiast tworzyć je w każdej klatce.
 
 import (
-	"cmp"
 	"math"
-	"slices"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -378,7 +376,7 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 	rl.DrawTexturePro(tex, sharedSrcRect, sharedDestRect, sharedOrigin, 0, rl.White)
 }
 
-func drawSpriteEx(id uint16, destX, destY float32, ownerColor PlayerID, tint rl.Color, ps *programState) {
+func drawSpriteEx(id uint16, destX, destY float32, ownerColor PlayerID, tint rl.Color, pState *programState) {
 	if id >= maxSpriteID {
 		return
 	}
@@ -390,7 +388,7 @@ func drawSpriteEx(id uint16, destX, destY float32, ownerColor PlayerID, tint rl.
 	}
 
 	// Pobieramy atlas z managera
-	tex := ps.Assets.getAtlas(def.atlasID, ownerColor)
+	tex := pState.Assets.getAtlas(def.atlasID, ownerColor)
 
 	// Logika flipX i Offsetów z definicji
 	srcW := float32(def.cropWidth)
@@ -774,14 +772,12 @@ func drawUnitSelectionFrame(selectedUnit *unit, bState *battleState) {
 }
 
 // Odpowiada za rysowanie nakładek (ramka, pasek życia itd.) jednostkom widocznym na ekranie.
-func drawUnitsInterfaces(startY, endY uint8, bState *battleState) {
-	for boardRow := startY; boardRow < endY; boardRow++ {
-		unitsInRow := bState.RenderUnitRows[boardRow]
-
-		if len(unitsInRow) > 0 {
-			for _, renderUnit := range unitsInRow {
-				drawUnitInterface(renderUnit, bState)
-			}
+func drawUnitsInterfaces(startX, startY, endX, endY uint8, bState *battleState) {
+	for _, renderUnit := range bState.Units {
+		if renderUnit.Exists &&
+			renderUnit.Y >= startY && renderUnit.Y < endY &&
+			renderUnit.X >= startX && renderUnit.X < endX {
+			drawUnitInterface(renderUnit, bState)
 		}
 	}
 }
@@ -882,7 +878,7 @@ func getCameraWorldViewRect(camera rl.Camera2D, virtualScreenWidth, virtualScree
 	return rl.NewRectangle(topLeftWorld.X, topLeftWorld.Y, worldWidth, worldHeight)
 }
 
-func drawSoil(startX, startY, endX, endY uint8, bState *battleState, ps *programState) {
+func drawSoil(startX, startY, endX, endY uint8, bState *battleState, pState *programState) {
 	for yAxis := startY; yAxis < endY; yAxis++ {
 		for xAxis := startX; xAxis < endX; xAxis++ {
 			currentTile := &bState.Board.Tiles[xAxis][yAxis]
@@ -891,21 +887,21 @@ func drawSoil(startX, startY, endX, endY uint8, bState *battleState, ps *program
 			yPos := float32(yAxis) * float32(tileHeight)
 
 			if isDryEarth(texID) {
-				drawSprite(ps.Assets, spriteGrass00, xPos, yPos, colorNone)
+				drawSprite(pState.Assets, spriteGrass00, xPos, yPos, colorNone)
 
 				continue
 			}
 
 			if currentTile.IsGrazed {
-				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
-				drawSprite(ps.Assets, uint16(currentTile.GrazedOverlayID), xPos, yPos, colorNone)
+				drawSprite(pState.Assets, texID, xPos, yPos, colorNone)
+				drawSprite(pState.Assets, uint16(currentTile.GrazedOverlayID), xPos, yPos, colorNone)
 
 				continue
 			}
 
 			// Rysowanie trawy pod kapliczkami, miejscem zwycięstwa oraz drzewami.
 			if isSpecialTile(texID) || currentTile.isTree() || currentTile.isFallingTree() {
-				drawSprite(ps.Assets, spriteGrass00, xPos, yPos, colorNone)
+				drawSprite(pState.Assets, spriteGrass00, xPos, yPos, colorNone)
 			}
 
 			if isCompletedBridge(texID) || texID == spriteBridgeConstruction {
@@ -916,38 +912,64 @@ func drawSoil(startX, startY, endX, endY uint8, bState *battleState, ps *program
 				}
 
 				animationOffset := bState.WaterAnimationFrame * 13
-				drawSprite(ps.Assets, waterBaseID+animationOffset, xPos, yPos, colorNone)
-				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
+				drawSprite(pState.Assets, waterBaseID+animationOffset, xPos, yPos, colorNone)
+				drawSprite(pState.Assets, texID, xPos, yPos, colorNone)
 			}
 
 			if isWater(texID) {
 				animationOffset := bState.WaterAnimationFrame * 13
-				drawSprite(ps.Assets, texID+animationOffset, xPos, yPos, colorNone)
+				drawSprite(pState.Assets, texID+animationOffset, xPos, yPos, colorNone)
 			}
 
 			// @todo: tutaj funkcja spędza większość czasu, może coś da się z tym zrobić?
 			if isLandOrOther(texID) && !currentTile.isTree() && !isHealingShrine(texID) {
-				drawSprite(ps.Assets, texID, xPos, yPos, colorNone)
+				drawSprite(pState.Assets, texID, xPos, yPos, colorNone)
+			}
+
+			switch texID {
+			// B. Małe ognisko (stare 68 -> SPRITE_GADGET_14)
+			case spriteGadget14:
+				frame := (bState.FireAnimationFrame + uint16(xAxis+yAxis)) % 4
+
+				drawSprite(pState.Assets, spriteGadget14, xPos, yPos, colorNone)
+				drawSprite(pState.Assets, spriteFire08+frame, xPos, yPos, colorNone)
+
+			// C. Duże ognisko (stare 69 -> SPRITE_GADGET_15)
+			case spriteGadget15:
+				frame := (bState.FireAnimationFrame + uint16(xAxis+yAxis)) % 4
+
+				drawSprite(pState.Assets, spriteGadget15, xPos, yPos, colorNone)
+				drawSprite(pState.Assets, spriteFire04+frame, xPos, yPos, colorNone)
+
+			// D. Punkt Zwycięstwa (stare 301)
+			// @reminder: tekstura spriteVictoryPoint się nie rysuje 22.04.202
+			case spriteVictoryPoint:
+				// Animacja punktu zwycięstwa (zakładamy 4 klatki animacji w atlasie)
+				frame := (bState.FireAnimationFrame) % 4
+				drawSprite(pState.Assets, spriteVictoryPoint+frame, xPos, yPos, colorNone)
 			}
 		}
 	}
 }
 
-// @todo: przemyśl, czy musi to być tak być, bo wygląda tragicznie
 func drawBuilding(startY, endY uint8, bState *battleState, ps *programState) {
-	for yAxis := startY; yAxis < endY; yAxis++ {
-		for _, bld := range bState.RenderBuildingRows[yAxis] {
-			for _, currentTile := range bld.OccupiedTiles {
-				if currentTile.Y == yAxis {
-					id := bState.Board.Tiles[currentTile.X][yAxis].TextureID
-					if isBuildingTerrain(id) {
-						finalID := id
-						if flagID, ok := flagAnimationMap[uint8(id)]; ok && (bState.FireAnimationFrame+uint16(currentTile.X)+uint16(yAxis))%2 == 1 {
-							finalID = uint16(flagID)
-						}
+	// Przechodzimy bezpośrednio po liście budynków
+	for _, bld := range bState.Buildings {
+		if !bld.Exists || bld.Type == buildingPalisade {
+			continue
+		}
 
-						drawSprite(ps.Assets, finalID, float32(currentTile.X)*float32(tileWidth), float32(yAxis)*float32(tileHeight), bld.Owner)
+		// Sprawdzamy kafelki zajmowane przez budynek
+		for _, currentTile := range bld.OccupiedTiles {
+			// Rysujemy tylko te, które są w widocznym zasięgu kamery (oś Y)
+			if currentTile.Y >= startY && currentTile.Y < endY {
+				id := bState.Board.Tiles[currentTile.X][currentTile.Y].TextureID
+				if isBuildingTerrain(id) {
+					finalID := id
+					if flagID, ok := flagAnimationMap[uint8(id)]; ok && (bState.FireAnimationFrame+uint16(currentTile.X)+uint16(currentTile.Y))%2 == 1 {
+						finalID = uint16(flagID)
 					}
+					drawSprite(ps.Assets, finalID, float32(currentTile.X)*float32(tileWidth), float32(currentTile.Y)*float32(tileHeight), bld.Owner)
 				}
 			}
 		}
@@ -1003,7 +1025,7 @@ func drawCorpsesUnitsTrees(startX, startY, endX, endY uint8, bState *battleState
 			}
 		}
 
-		drawUnits(boardRow, bState, pState)
+		drawUnits(boardRow, startX, endX, bState, pState)
 
 		for x := startX; x < endX; x++ {
 			currentTile := &bState.Board.Tiles[x][boardRow]
@@ -1028,28 +1050,10 @@ func drawCorpsesUnitsTrees(startX, startY, endX, endY uint8, bState *battleState
 	}
 }
 
-func drawUnits(boardRow uint8, bState *battleState, pState *programState) {
-	rowUnits := bState.RenderUnitRows[boardRow]
-	if len(rowUnits) > 0 {
-		// @todo: ogarnij, bo za dużo sortowania.
-		// ↓↓↓↓↓↓↓ co tyknięcie sortujemy listę jednostek. Niby nic wielkiego, ale
-		// ↓↓↓↓↓↓↓ to jest kompletnie bez sensu, człowiek nie zauważy różnicy.
-		if bState.GlobalFrameCounter%3 == 0 {
-			// @reminder: mój przypadek jest bardzo prosty, muszę sprawdzić, czy
-			//   „naiwne” podejście do układania jednostek nie będzie lepsze.
-			slices.SortFunc(rowUnits, func(i, j *unit) int { return cmp.Compare(i.X, j.X) })
-		}
-
-		for _, currentUnit := range rowUnits {
-			if currentUnit.Owner == bState.PlayerID {
-				drawUnit(currentUnit, bState, pState)
-			}
-		}
-
-		for _, currentUnit := range rowUnits {
-			if currentUnit.Owner != bState.PlayerID {
-				drawUnit(currentUnit, bState, pState)
-			}
+func drawUnits(boardRow, startX, endX uint8, bState *battleState, pState *programState) {
+	for _, currentUnit := range bState.Units {
+		if currentUnit.Exists && currentUnit.Y == boardRow && currentUnit.X >= startX && currentUnit.X < endX {
+			drawUnit(currentUnit, bState, pState)
 		}
 	}
 }
@@ -1180,9 +1184,6 @@ func drawFallingOrFallenTree(boardColumn, boardRow uint8, t *tile, ps *programSt
 
 // @todo: porozbijać na podfunkcje! Inaczej nie rozprawię się z tym potworem.
 func drawWorldAndUnits(bState *battleState, pState *programState) {
-	// 1. Aktualizacja podręcznych
-	// @todo: Przydałoby się dokładniej opisać, co jest co, bo ciężko się rozeznać - 24.04.2026
-	bState.updateRenderCache()
 	cam := bState.GameCamera
 
 	// @todo: Sprawdź, czy mam rację: world… to część planszy, którą widzimy
@@ -1229,7 +1230,7 @@ func drawWorldAndUnits(bState *battleState, pState *programState) {
 	drawCorpsesUnitsTrees(startX, startY, endX, endY, bState, pState)
 
 	// Przebieg 4: efekty oraz nakładki
-	drawEffectsAndInterfaces(startY, endY, bState, pState)
+	drawEffectsAndInterfaces(startX, startY, endX, endY, bState, pState)
 
 	// @reminder: wydaje mi się, że pociski powinny być pod nakładkami.
 	// inaczej będą przesłaniać pasek życia.
@@ -1416,45 +1417,6 @@ func legacyDirToNewDir(dx, dy int) int {
 	return 4 // Domyślnie dół
 }
 
-func (bState *battleState) updateRenderCache() {
-	// @reminder Być może kiedyś okaże się, iż czyszczenie całości nie jest właściwe.
-	// Wtedy będę musiał zastanowić się, jak wywalać poszczególne jednostki i budynki.
-	// 1. Czyścimy jednostki oraz budynki po poprzedniej klatce
-	for y := range boardMaxY {
-		bState.RenderUnitRows[y] = bState.RenderUnitRows[y][:0]
-		bState.RenderBuildingRows[y] = bState.RenderBuildingRows[y][:0]
-	}
-	// 2. Dodajemy jednostki
-	for _, currentUnit := range bState.Units {
-		// Uwzględniamy tylko żywe jednostki
-		// Nie da się mieć jednostki poza planszą, więc nie muszę sprawdzać
-		// MAX_X i MAX_Y, pewnie kiedyś tego pożałuję
-		// @check nie sprawdzam MAX_Y oraz MAX_Y, w razie problemów z rysowaniem
-		// tutaj może się kryć przyczyna. Na przyszłość: nie <= bo pierwszy index to 0
-		if currentUnit.Exists { // && unit.y >= 0 && unit.y < MAX_Y
-			bState.RenderUnitRows[currentUnit.Y] = append(bState.RenderUnitRows[currentUnit.Y], currentUnit)
-		}
-	}
-	// 3. Dodajemy budynki
-	for _, bld := range bState.Buildings {
-		// Pomijamy palisady i zniszczone
-		if !bld.Exists || bld.Type == buildingPalisade {
-			continue
-		}
-
-		// Ponieważ budynki trzymają informacje o 9 kafelkach, to trzeba się zabezpieczyć
-		lastY := uint8(0)
-		for _, currentTile := range bld.OccupiedTiles {
-			if currentTile.Y != lastY {
-				// if tile.y >= 0 && tile.y < MAX_Y // @reminder Nie sprawdzam legalności!
-				bState.RenderBuildingRows[currentTile.Y] = append(bState.RenderBuildingRows[currentTile.Y], bld)
-			}
-
-			lastY = currentTile.Y
-		}
-	}
-}
-
 // drawSelectionBox odpowiada za rysowanie prostokąta do zaznaczania jednostek.
 func drawSelectionBox(bState *battleState) {
 	if !bState.DragContext.IsActive {
@@ -1507,32 +1469,10 @@ func drawSelectionBox(bState *battleState) {
 	rl.DrawRectangleLinesEx(rect, finalThickness, rl.White) // Zielona ramka, klasyk RTS
 }
 
-func drawEffectsAndInterfaces(startY, endY uint8, bState *battleState, ps *programState) {
-	drawEffects(bState, ps)
-	drawBuildingsInterfaces(bState)
-	drawUnitsInterfaces(startY, endY, bState)
-}
-
-// @reminder: Chodzenie po całej planszy i sprawdzanie dwukrotnie, czy mamy jakiś efekt do narysowania jest bardzo
-// niewydajny! Powinienem mieć jakąś podręczną listę na stałe efekty, jak święte miejsce oraz
-// na tymczasowe. Coś, jak ze zwłokami, poręczne szybkie i w ogóle.
-// @todo: zmień tak, żeby nie sprawdzać każdego kafelka. Efekty nie są niewiadomą.
-func drawEffects(bState *battleState, pState *programState) {
-	// @reminder: ponieważ już mam listę z kapliczkami, to z niej korzystam.
+func drawEffectsAndInterfaces(startX, startY, endX, endY uint8, bState *battleState, pState *programState) {
 	drawHealingShrines(bState, pState)
-
-	// Czemu y jest zewnętrzną pętlą?!
-	for y := range boardMaxY {
-		for x := range boardMaxX {
-			affectedTile := &bState.Board.Tiles[x][y]
-
-			xPos := float32(x) * float32(tileWidth)
-			yPos := float32(y) * float32(tileHeight)
-
-			// Stałe, u dołu
-			permanentEffects(affectedTile, x, y, xPos, yPos, bState, pState)
-		}
-	}
+	drawBuildingsInterfaces(bState)
+	drawUnitsInterfaces(startX, startY, endX, endY, bState)
 }
 
 func drawHealingShrines(bState *battleState, pState *programState) {
@@ -1553,33 +1493,6 @@ func drawHealingShrines(bState *battleState, pState *programState) {
 		}
 
 		drawSpriteEx(animID, xPos, yPos, colorNone, tint, pState)
-	}
-}
-
-func permanentEffects(currentTile *tile, x, y uint8, xPos, yPos float32, bState *battleState, pState *programState) {
-	textureID := currentTile.TextureID
-
-	switch textureID {
-	// B. Małe ognisko (stare 68 -> SPRITE_GADGET_14)
-	case spriteGadget14:
-		frame := (bState.FireAnimationFrame + uint16(x+y)) % 4
-
-		drawSprite(pState.Assets, spriteGadget14, xPos, yPos, colorNone)
-		drawSprite(pState.Assets, spriteFire08+frame, xPos, yPos, colorNone)
-
-	// C. Duże ognisko (stare 69 -> SPRITE_GADGET_15)
-	case spriteGadget15:
-		frame := (bState.FireAnimationFrame + uint16(x+y)) % 4
-
-		drawSprite(pState.Assets, spriteGadget15, xPos, yPos, colorNone)
-		drawSprite(pState.Assets, spriteFire04+frame, xPos, yPos, colorNone)
-
-	// D. Punkt Zwycięstwa (stare 301)
-	// @reminder: tekstura spriteVictoryPoint się nie rysuje 22.04.202
-	case spriteVictoryPoint:
-		// Animacja punktu zwycięstwa (zakładamy 4 klatki animacji w atlasie)
-		frame := (bState.FireAnimationFrame) % 4
-		drawSprite(pState.Assets, spriteVictoryPoint+frame, xPos, yPos, colorNone)
 	}
 }
 
