@@ -107,10 +107,6 @@ func drawMinimapUnits(mapX, mapY, mapWidth, mapHeight, actualGameViewWidth float
 		}
 
 		for _, currentTile := range bld.OccupiedTiles {
-			/*			if currentTile.X < 0 || currentTile.X >= boardMaxX || currentTile.Y < 0 || currentTile.Y >= boardMaxY {
-						continue
-					}*/
-
 			w := mapXGrid[currentTile.X+1] - mapXGrid[currentTile.X]
 			h := mapYGrid[currentTile.Y+1] - mapYGrid[currentTile.Y]
 
@@ -129,10 +125,6 @@ func drawMinimapUnits(mapX, mapY, mapWidth, mapHeight, actualGameViewWidth float
 		} else {
 			unitColor = rl.Red
 		}
-
-		/*		if currentUnit.X < 0 || currentUnit.X >= boardMaxX || currentUnit.Y < 0 || currentUnit.Y >= boardMaxY {
-				continue
-			}*/
 
 		w := mapXGrid[currentUnit.X+1] - mapXGrid[currentUnit.X]
 		h := mapYGrid[currentUnit.Y+1] - mapYGrid[currentUnit.Y]

@@ -860,11 +860,17 @@ func main() {
 	// 6. Inicjalizacja AssetManagera
 	if loader != nil {
 		pState.Assets = newAssetManager(loader)
+
+		err = loader.exportAtlases()
+		if err != nil {
+			fmt.Printf("dupa %v", err)
+		}
 	}
 
 	if err = pState.Assets.loadGlobalAssets(pState.BaseAssetsPath); err != nil {
 		log.Fatalf("BŁAD KRYTYCZNY: nie udało się załadować UI %v", err)
 	}
+
 	// 7. Stan bitwy (Pusty)
 	bState := newBattleState(pState)
 

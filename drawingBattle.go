@@ -1304,11 +1304,11 @@ func drawUnit(u *unit, bState *battleState, ps *programState) {
 
 	if u.State == stateAttacking && frame > 2 && isMelee {
 		if renderDy > 0 {
-			screenY = 7.0
+			screenY += 7.0
 		}
 
 		if renderDx > 0 {
-			screenX = 8.0
+			screenX += 8.0
 		}
 	}
 

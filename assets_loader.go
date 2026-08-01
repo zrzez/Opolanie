@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -180,4 +181,47 @@ func loadAllPalettes(path string) ([][]rl.Color, error) {
 	}
 
 	return res, nil
+}
+
+func (al *assetLoader) exportAtlases() error {
+	gamePath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("nie można pobrać ścieżki pliku wykonywalnego: %v", err)
+	}
+
+	outputDirectory := filepath.Dir(gamePath)
+
+	atlasNames := map[battleAtlasID]string{
+		atlasUI:        "atlas_ui.png",
+		atlasUnits1:    "atlas_units1.png",
+		atlasUnits2:    "atlas_units2.png",
+		atlasBuildings: "atlas_buildings.png",
+	}
+
+	for atlasID, def := range atlasDefinitions {
+		filename, ok := atlasNames[atlasID]
+		if !ok {
+			fmt.Printf("coś poszło nie tak przy pobieraniu definicja atlasu %v", atlasID)
+			continue
+		}
+
+		pixels, err2 := al.loadRawImage(def)
+		if err2 != nil {
+			return fmt.Errorf("błąd ładowania atlasu %d: %v", atlasID, err2)
+		}
+
+		image := rl.NewImage(pixels, loaderImageWidth, 200, 1, rl.UncompressedR8g8b8a8)
+		outputPath := filepath.Join(outputDirectory, filename)
+		success := rl.ExportImage(*image, outputPath)
+
+		// rl.UnloadImage(image)
+
+		if !success {
+			return fmt.Errorf("nie udało się znapisać %s w %s", filename, outputPath)
+		}
+
+		fmt.Printf("zapisano: %s\n", outputPath)
+	}
+
+	return nil
 }
