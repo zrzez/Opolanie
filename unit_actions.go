@@ -135,6 +135,8 @@ func (u *unit) build(targetBuilding *building, amount uint16) {
 
 // @reminder: najprawdopodobniej objectResolver nie jest prawidłowo użyty i będzie wyrzucony.
 // @reminder: wydaje mi się, że każde „idle” ustawiane wewnątrz tej metody jest zbyteczne.
+// @reminder: jeśli będę chciał dodać nowy czar, to muszę pamiętać o ustawieniu u.faceTarget(target).
+//    inaczej jednostka nie będzie miała odpowiedniego wyglądu.
 // @todo: brakuje ustawienia uruchomienia (animacji) ataku przy rzucaniu czarów.
 func (u *unit) castSpell(pathfindingBudget int, bState *battleState) {
 	if u.AttackCooldown > 0 {
@@ -154,6 +156,11 @@ func (u *unit) castSpell(pathfindingBudget int, bState *battleState) {
 
 	case spellMagicShower:
 		if u.canAttackTargetFromCurrentPosition(bState) {
+			target, err := bState.resolveTarget(u.Target)
+			if err == nil {
+				u.faceTarget(target)
+			}
+
 			u.State = stateCastingSpell
 			u.AnimationType = "fight"
 			u.clearPath()

@@ -202,6 +202,7 @@ func (al *assetLoader) exportAtlases() error {
 		filename, ok := atlasNames[atlasID]
 		if !ok {
 			fmt.Printf("coś poszło nie tak przy pobieraniu definicja atlasu %v", atlasID)
+
 			continue
 		}
 

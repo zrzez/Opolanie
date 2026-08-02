@@ -377,6 +377,8 @@ func (u *unit) unregisterFromBuilding() {
 	}
 }
 
+// Na podstawie rodzaju jednostki zwraca indeks potrzebny do
+// doboru odpowiedniego przesunięcia duszka w czasie wykonywania działań.
 func (ut unitType) getLegacyUnitIndex() int {
 	return int(ut)
 }

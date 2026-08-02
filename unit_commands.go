@@ -69,6 +69,9 @@ func (u *unit) setIdleWithReason(reason string) {
 	}
 }
 
+// @reminder: @todo: ustawianie rodzaju uruchomienia w tym miejscu nie jest
+// najlepszym pomysłem. Przez to muszę polować na u.AnimationType w różnych
+// miejscach zamiast mieć jedno łatwe w utrzymaniu skupisko.
 func (u *unit) applyCommandState(command commandType) {
 	switch command {
 	case cmdUAttack:
@@ -93,7 +96,7 @@ func (u *unit) applyCommandState(command commandType) {
 		u.State = stateGrazing
 	case cmdUBuild:
 		u.State = stateBuilding
-	case cmdURepair, cmdBPlaceConstruction: // @todo: czemu do cholery metoda u ma rozkazy B?
+	case cmdURepair:
 		u.State = stateRepairing
 	case cmdBMilking:
 		u.State = stateMilking
@@ -158,6 +161,8 @@ func (u *unit) handleWorkCommand(pathfindingBudget int, bState *battleState) {
 
 		return
 	}
+
+	u.faceTarget(target)
 
 	// 3. Ustawiamy odpowiedni stan
 	if u.Command == cmdUBuild {
@@ -666,7 +671,7 @@ func (u *unit) handleUnitTarget(targetedUnit *unit, bState *battleState) {
 	u.Target = targetReference{
 		Kind:     targetUnit,
 		ID:       uint(targetedUnit.ID),
-		Position: targetedUnit.Position,
+		Position: point{X: targetedUnit.X, Y: targetedUnit.Y},
 	}
 
 	coords, err := u.findApproachTileForTarget(u.Target, bState)

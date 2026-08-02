@@ -596,6 +596,8 @@ var legacyShiftY = [13][17]uint8{
 }
 
 // @reminder @todo: zastanów się, czy nie można tego lepiej rozwiązać.
+// „wskazuje klatkę animacji”, ale to bez rozpisania na przyjazne dla
+// człowieka nazwy nie ruszam tego.
 var legacyPhase = [13][19]uint8{
 	{0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 0, 6, 1, 1, 0, 8, 4},  // 0: Krowa
 	{0, 0, 1, 1, 1, 0, 0, 2, 2, 2, 0, 6, 0, 0, 0, 0, 0, 6, 3},  // 1: Drwal

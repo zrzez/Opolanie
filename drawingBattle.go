@@ -538,6 +538,8 @@ func drawBuildingsInterfaces(bState *battleState) {
 
 // === RYSOWANIE JEDNOSTEK I POCISKÓW ===
 
+// Przelicza na podstawie rodzaju jednostki jaką klatkę uruchomienia wybrać?
+// Nie jestem pewien.
 func calculateLegacyPhase(u *unit) uint8 {
 	idx := u.Type.getLegacyUnitIndex()
 	delay := u.Delay
@@ -567,71 +569,6 @@ func calculateLegacyPhase(u *unit) uint8 {
 	}
 
 	return phase
-}
-
-func getRenderDirection(u *unit, bState *battleState) (int, int) {
-	if u.AnimationType == "fight" {
-		var targetX, targetY uint8
-		foundTarget := false
-
-		// 1. Sprawdź, czy mamy cel
-		if u.Target.Kind != targetNone {
-			target, err := bState.resolveTarget(u.Target)
-			if err == nil {
-				if target.Unit != nil && target.Unit.Exists {
-					targetX, targetY = target.Unit.X, target.Unit.Y
-					foundTarget = true
-				} else if target.Building != nil && target.Building.Exists {
-					var ok bool
-					var closestPt *point
-					closestPt, ok = getClosestOccupiedTile(&point{X: u.X, Y: u.Y}, &target.Building.OccupiedTiles)
-					if ok && closestPt != nil {
-						targetX, targetY = closestPt.X, closestPt.Y
-						foundTarget = true
-					}
-				} else if target.Tile != nil {
-					targetX, targetY = target.Tile.X, target.Tile.Y
-					foundTarget = true
-				}
-			}
-		}
-
-		// 2. Jeśli nie mamy celu ataku lub zniknął, patrzymy na cel ruchu
-		if !foundTarget {
-			if u.Approach.X != u.X || u.Approach.Y != u.Y {
-				targetX, targetY = u.Approach.X, u.Approach.Y
-				foundTarget = true
-			}
-		}
-
-		// 3. Obliczanie delty
-		if foundTarget {
-			dx := 0
-			dy := 0
-
-			if targetX > u.X {
-				dx = 1
-			} else if targetX < u.X {
-				dx = -1
-			}
-
-			if targetY > u.Y {
-				dy = 1
-			} else if targetY < u.Y {
-				dy = -1
-			}
-
-			if dx != 0 || dy != 0 {
-				return dx, dy
-			}
-		}
-	}
-
-	// Domyślny kierunek
-	dx := int(math.Round(float64(u.Direction.X)))
-	dy := int(math.Round(float64(u.Direction.Y)))
-
-	return dx, dy
 }
 
 func drawProjectiles(bState *battleState, ps *programState) {
@@ -760,6 +697,9 @@ func drawMilkBar(screenX, screenY int32, unit *unit) {
 	rl.DrawRectangle(barX, newY, barW, fillH, rl.White)
 }
 
+// @reminder: @todo: rysowanie ramki powinno uwzględniać fakt, że jednostka
+// jest stopniowo przesuwana na ekranie za pomocą „legacyShift”. Bez tego
+// duszek jednostki płynnie przechodzi z kafelka na kafelek a ramka przeskakuje.
 func drawUnitSelectionFrame(selectedUnit *unit, bState *battleState) {
 	x := float32(selectedUnit.X) * float32(tileWidth)
 	y := float32(selectedUnit.Y) * float32(tileHeight)
@@ -1240,7 +1180,7 @@ func drawWorldAndUnits(bState *battleState, pState *programState) {
 
 // @todo: rozdziel logikę od rysowania, bo to zwyczajne pomieszanie z poplątaniem.
 // @todo: rysowanie kusznika się popsuło i nawet nie wiem kiedy 05.07.2026
-func drawUnit(u *unit, bState *battleState, ps *programState) {
+func drawUnit(u *unit, bState *battleState, programState *programState) {
 	// 1. Bazowa pozycja to CEL (bo w units.go X,Y zmieniają się na początku kroku)
 	screenX := float32(u.X) * float32(tileWidth)
 	screenY := float32(u.Y) * float32(tileHeight)
@@ -1260,7 +1200,7 @@ func drawUnit(u *unit, bState *battleState, ps *programState) {
 			delayIdx = 0
 		}
 
-		// Pobieramy wartość przesunięcia (0..16)
+		// Pobieramy wartość przesunięcia rysowanego duszka (0..16)
 		rawShiftX := float32(legacyShiftX[idx][delayIdx])
 		rawShiftY := float32(legacyShiftY[idx][delayIdx])
 
@@ -1289,16 +1229,12 @@ func drawUnit(u *unit, bState *battleState, ps *programState) {
 	frame := calculateLegacyPhase(u)
 
 	// 4. Kierunek duszka
-	// W ruchu wymuszamy patrzenie w kierunku idzenia (naprawia "moonwalk")
-	renderDx, renderDy := getRenderDirection(u, bState)
-	if u.State == stateMoving {
-		renderDx = int(u.Direction.X)
-		renderDy = int(u.Direction.Y)
-	}
+	renderDx := int(u.Direction.X)
+	renderDy := int(u.Direction.Y)
 
-	dir := legacyDirToNewDir(renderDx, renderDy)
+	dir := vectorToDirectionIndex(renderDx, renderDy)
 
-	// 5. Korekty dla jednostek Melee (zgodnie z MOVER1.CPP)
+	// 5. Korekty dla jednostek wręcznych, oczywiście tylko częściowo działają
 	isMelee := u.Type == unitAxeman || u.Type == unitSwordsman ||
 		u.Type == unitCommander || u.Type == unitBear || u.Type == unitUnknown
 
@@ -1314,16 +1250,16 @@ func drawUnit(u *unit, bState *battleState, ps *programState) {
 
 	// 6. Rysowanie
 	baseID := uint16(700 + (int(u.Type) * 200))
-	finalID := baseID + uint16(frame*8) + uint16(dir)
+	finalID := baseID + uint16(frame*8) + dir
 
-	drawSpriteEx(finalID, screenX, screenY, u.Owner, rl.White, ps)
+	drawSpriteEx(finalID, screenX, screenY, u.Owner, rl.White, programState)
 
 	if len(u.Wounds) > 0 {
-		drawUnitWounds(u, screenX, screenY, ps)
+		drawUnitWounds(u, screenX, screenY, programState)
 	}
 
-	// 7. Rysowanie magicznej tarczy dla czarodziejek
-	drawActiveMagicShield(u, screenX, screenY, bState, ps)
+	// 7. Rysowanie czarodziejskiej tarczy dla czarodziejek
+	drawActiveMagicShield(u, screenX, screenY, bState, programState)
 }
 
 func drawActiveMagicShield(u *unit, screenX, screenY float32, bState *battleState, ps *programState) {
@@ -1387,34 +1323,32 @@ func drawUnitWounds(u *unit, screenX, screenY float32, ps *programState) {
 	}
 }
 
-// Konwerter kierunków (dx, dy) -> 0..7 (zgodnie z assets_db)
-// @todo: to powinno się chyba później wywalić!
-func legacyDirToNewDir(dx, dy int) int {
+func vectorToDirectionIndex(dx, dy int) uint16 {
 	if dx == 0 && dy == -1 {
-		return 0
-	} // Góra
+		return uint16(directionUp)
+	}
 	if dx == 1 && dy == -1 {
-		return 1
-	} // GP
+		return uint16(directionUpRight)
+	}
 	if dx == 1 && dy == 0 {
-		return 2
-	} // Prawo
+		return uint16(directionRight)
+	}
 	if dx == 1 && dy == 1 {
-		return 3
-	} // DP
+		return uint16(directionDownRight)
+	}
 	if dx == 0 && dy == 1 {
-		return 4
-	} // Dół
+		return uint16(directionDown)
+	}
 	if dx == -1 && dy == 1 {
-		return 5
-	} // DL
+		return uint16(directionDownLeft)
+	}
 	if dx == -1 && dy == 0 {
-		return 6
-	} // Lewo
+		return uint16(directionLeft)
+	}
 	if dx == -1 && dy == -1 {
-		return 7
-	} // GL
-	return 4 // Domyślnie dół
+		return uint16(directionUpLeft)
+	}
+	return uint16(directionDown) // Domyślnie dół
 }
 
 // drawSelectionBox odpowiada za rysowanie prostokąta do zaznaczania jednostek.
