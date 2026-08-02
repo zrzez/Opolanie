@@ -70,6 +70,14 @@ const (
 	stateMilking                       // dojenie krowy, ew. oczekiwanie w kolejce na dojenie
 )
 
+type animationType uint8
+
+const (
+	animationIdle animationType = iota
+	animationWalk
+	animationFight
+)
+
 // unit określa pojedynczą jednostkę podczas bitwy.
 type unit struct {
 	ID     unitID // Unikatowy numer jednostki
@@ -113,10 +121,10 @@ type unit struct {
 	MagicShieldCooldown uint // Wskazuje ile zostało do końca ochrony magiczną tarczą
 
 	// Pola do rysowania jednostki
-	AnimationType    string     // Rodzaj rysunku ("walk", "attack"). "idle" NIE ISTNIEJE!
-	AnimationFrame   int        // Bieżąca klatka ruchu
-	AnimationCounter int        // Pomocniczy licznik do zarządzania prędkością rysowania ruchu
-	Direction        rl.Vector2 // Kierunek jednostki. (0,1) dla góry
+	AnimationType    animationType // Rodzaj animacji jednostki: bezczynność, chodzenie, walka (używana do wielu stanów)
+	AnimationFrame   int           // Bieżąca klatka ruchu
+	AnimationCounter int           // Pomocniczy licznik do zarządzania prędkością rysowania ruchu
+	Direction        rl.Vector2    // Kierunek jednostki. (0,1) dla góry
 
 	State          unitState // Obecne usposobienie jednostki (bezczynność, ruch, napaść itd.)
 	Delay          uint16    // Bieżące opóźnienie jednostki przy chodzeniu

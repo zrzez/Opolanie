@@ -132,11 +132,7 @@ func (u *unit) handleDelay(currentTick uint16) bool {
 func (u *unit) handleWaitingToActiveTransition() {
 	if u.State == stateWaiting {
 		u.State = u.determineActiveStateFromCommand()
-		if u.State == stateAttacking {
-			u.AnimationType = "fight"
-		} else {
-			u.AnimationType = "walk"
-		}
+		u.setAnimationType()
 	}
 }
 
@@ -206,7 +202,7 @@ func (u *unit) prepareForNewCommand(cmdType commandType, target targetReference,
 
 func (u *unit) setIdle() {
 	u.State = stateIdle
-	u.AnimationType = "idle"
+	u.setAnimationType()
 	u.Command = cmdUIdle
 	u.clearPath()
 	u.RetryAttempts = 0
@@ -225,7 +221,6 @@ func (u *unit) updateMovementAnimation(prevX, prevY uint8) {
 		u.Direction = rl.NewVector2(float32(dx), float32(dy))
 	}
 
-	u.AnimationType = "walk"
 	u.AnimationCounter++
 
 	if u.AnimationCounter >= animationSpeed {
@@ -381,4 +376,23 @@ func (u *unit) unregisterFromBuilding() {
 // doboru odpowiedniego przesunięcia duszka w czasie wykonywania działań.
 func (ut unitType) getLegacyUnitIndex() int {
 	return int(ut)
+}
+
+func (u *unit) getAnimationType() animationType {
+	switch u.State {
+	case stateIdle, stateWaiting, stateMilking:
+		return animationIdle
+	case stateMoving:
+		return animationWalk
+	case stateAttacking, stateRepairing, stateBuilding, stateCastingSpell:
+		return animationFight
+	case stateGrazing: // @reminder: 02.08.2026 nie jestem pewien w tej chwili więc dam walkę
+		return animationFight
+	default:
+		return animationIdle
+	}
+}
+
+func (u *unit) setAnimationType() {
+	u.AnimationType = u.getAnimationType()
 }

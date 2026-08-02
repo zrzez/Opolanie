@@ -12,7 +12,7 @@ const palisadeStrategicBuildingProximity = 10
 // przetwarzaniem rozkazów przez jednoski.
 
 func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
-	// ŁATANIE DZIURY W KOMPLETOWANIU ROZKAÓW DLA JEDNOSTEK
+	// ŁATANIE DZIURY W KOMPLETOWANIU ROZKAZÓW DLA JEDNOSTEK
 	// @reminder: Łatanie dziury w kompletowaniu rozkazów dla jednostek
 	// @todo: ogarnij to łatanie, bo nie powinno to tutaj być! - 02.07.2026
 	u.CurrentSpell = cmd.Spell
@@ -53,8 +53,9 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 
 func (u *unit) setIdleWithReason(reason string) {
 	fmt.Println(reason)
+
 	u.State = stateIdle
-	u.AnimationType = "idle"
+	u.setAnimationType()
 	u.Command = cmdUIdle
 	u.clearPath()
 	u.AllowFriendlyFire = false
@@ -76,20 +77,20 @@ func (u *unit) applyCommandState(command commandType) {
 	switch command {
 	case cmdUAttack:
 		u.State = stateAttacking
-		u.AnimationType = "fight"
+		u.setAnimationType()
 		u.AnimationFrame = 3
 		u.AnimationCounter = 0
 	case cmdUMove, cmdUFlee:
 		u.State = stateMoving
-		u.AnimationType = "walk"
+		u.setAnimationType()
 	case cmdUStop:
 		u.State = stateIdle
-		u.AnimationType = "walk"
+		u.setAnimationType()
 		u.AnimationFrame = 0
 		u.Command = cmdUIdle
 	case cmdUCastSpell:
 		u.State = stateCastingSpell
-		u.AnimationType = "fight"
+		u.setAnimationType()
 		u.AnimationFrame = 3
 		u.AnimationCounter = 0
 	case cmdUGraze:
@@ -144,10 +145,7 @@ func (u *unit) handleWorkCommand(pathfindingBudget int, bState *battleState) {
 	// 1. Zasięg
 	if !u.canAttackTargetFromCurrentPosition(bState) {
 		u.State = stateMoving
-
-		if u.AnimationType != "walk" {
-			u.AnimationType = "walk"
-		}
+		u.setAnimationType()
 
 		u.move(pathfindingBudget, bState)
 
@@ -171,10 +169,8 @@ func (u *unit) handleWorkCommand(pathfindingBudget int, bState *battleState) {
 		u.State = stateRepairing
 	}
 
-	if u.AnimationType != "fight" {
-		u.AnimationType = "fight"
-		u.AnimationFrame = 0
-	}
+	u.setAnimationType()
+	// u.AnimationFrame = 0
 
 	u.clearPath()
 
@@ -419,7 +415,7 @@ func (u *unit) handleTargetPostAttack(target *combatTarget) {
 		u.setIdleWithReason("cel zniszczony")
 	} else {
 		u.State = stateAttacking
-		u.AnimationType = "fight"
+		u.setAnimationType()
 		u.AnimationFrame = 0
 	}
 }
@@ -566,7 +562,7 @@ func (u *unit) executeActionByDistance(distance uint8) {
 	if distance <= u.AttackRange {
 		// Cel w zasięgu, od razu przechodzimy do ataku
 		u.State = stateAttacking
-		u.AnimationType = "fight"
+		u.setAnimationType()
 		u.AnimationFrame = 0
 		u.AnimationCounter = 0
 	} else {

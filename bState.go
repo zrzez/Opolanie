@@ -328,7 +328,7 @@ func (bState *battleState) initUnit(unitType unitType, x, y uint8, newUnitID uni
 	newUnit.Type = unitType
 	newUnit.X = x
 	newUnit.Y = y
-	newUnit.AnimationType = "walk"
+	newUnit.AnimationType = animationWalk
 	newUnit.Direction = rl.NewVector2(0, 1)
 	newUnit.Wounds = make([]wound, 0, maxWoundsCount)
 

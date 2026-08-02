@@ -540,17 +540,17 @@ func drawBuildingsInterfaces(bState *battleState) {
 
 // Przelicza na podstawie rodzaju jednostki jaką klatkę uruchomienia wybrać?
 // Nie jestem pewien.
-func calculateLegacyPhase(u *unit) uint8 {
+func calculateSpriteFrame(u *unit) uint8 {
 	idx := u.Type.getLegacyUnitIndex()
 	delay := u.Delay
 
 	delay = max(delay, minPhaseDelay)
 	delay = min(delay, maxPhaseDelay)
-	phase := legacyPhase[idx][delay]
+	phase := spriteFrameByUnitTypeAndDelay[idx][delay]
 
-	if u.AnimationType == "fight" {
-		triggerHit := uint16(legacyPhase[idx][17])
-		triggerReturn := uint16(legacyPhase[idx][18])
+	if u.AnimationType == animationFight {
+		triggerHit := uint16(spriteFrameByUnitTypeAndDelay[idx][17])
+		triggerReturn := uint16(spriteFrameByUnitTypeAndDelay[idx][18])
 
 		if delay > triggerHit {
 			phase = 3
@@ -1201,8 +1201,8 @@ func drawUnit(u *unit, bState *battleState, programState *programState) {
 		}
 
 		// Pobieramy wartość przesunięcia rysowanego duszka (0..16)
-		rawShiftX := float32(legacyShiftX[idx][delayIdx])
-		rawShiftY := float32(legacyShiftY[idx][delayIdx])
+		rawShiftX := float32(spriteXOffsetByUnitTypeAndDelay[idx][delayIdx])
+		rawShiftY := float32(spriteYOffsetByUnitTypeAndDelay[idx][delayIdx])
 
 		// Fizyczny kierunek ruchu (directionX, directionY)
 		directionX := int(u.Direction.X)
@@ -1226,7 +1226,7 @@ func drawUnit(u *unit, bState *battleState, programState *programState) {
 	}
 
 	// 3. Wyliczenie klatki animacji (Phase)
-	frame := calculateLegacyPhase(u)
+	frame := calculateSpriteFrame(u)
 
 	// 4. Kierunek duszka
 	renderDx := int(u.Direction.X)

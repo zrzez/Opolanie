@@ -121,7 +121,7 @@ func (u *unit) tryEatGrass(bState *battleState) bool {
 		currentTile.GrazedOverlayID = uint8(spriteGrassGrazed)
 
 		u.State = stateGrazing
-		u.AnimationType = "idle"
+		u.setAnimationType()
 		u.Udder += 25
 
 		if u.Udder > fullUdderAmount {
@@ -138,7 +138,7 @@ func (u *unit) tryEatGrass(bState *battleState) bool {
 		currentTile.GrazedOverlayID = uint8(spriteGrassStubbed)
 
 		u.State = stateGrazing
-		u.AnimationType = "idle"
+		u.setAnimationType()
 		u.Udder += 13
 
 		if u.Udder > fullUdderAmount {

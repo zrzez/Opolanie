@@ -25,7 +25,7 @@ func (u *unit) attack(bState *battleState) {
 	// 3. Sprawdzanie przerwy
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
-		u.AnimationType = "idle"
+		u.setAnimationType()
 
 		// Obracamy jednostkę w stronę celu, żeby nie stała bokiem/tyłem
 		u.faceTarget(target)
@@ -59,7 +59,7 @@ func (u *unit) attack(bState *battleState) {
 	u.invalidatePathForRecalculation()
 
 	u.State = stateMoving
-	u.AnimationType = "walk"
+	u.setAnimationType()
 	u.Approach = whereToGo
 }
 
@@ -141,7 +141,7 @@ func (u *unit) build(targetBuilding *building, amount uint16) {
 func (u *unit) castSpell(pathfindingBudget int, bState *battleState) {
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
-		u.AnimationType = "idle"
+		u.setAnimationType()
 		u.Delay = 1
 
 		return
@@ -162,12 +162,12 @@ func (u *unit) castSpell(pathfindingBudget int, bState *battleState) {
 			}
 
 			u.State = stateCastingSpell
-			u.AnimationType = "fight"
+			u.setAnimationType()
 			u.clearPath()
 			u.castMagicShower(bState)
 		} else {
 			u.State = stateMoving
-			u.AnimationType = "walk"
+			u.setAnimationType()
 			u.move(pathfindingBudget, bState)
 
 			return
@@ -268,7 +268,7 @@ func (u *unit) magicShower(target *point, bState *battleState) []*projectile {
 func (u *unit) castMagicShower(bState *battleState) {
 	if u.AttackCooldown > 0 {
 		u.State = stateIdle
-		u.AnimationType = "idle"
+		u.setAnimationType()
 		u.Delay = 1
 
 		return
@@ -284,7 +284,7 @@ func (u *unit) castMagicShower(bState *battleState) {
 		bState.Projectiles = append(bState.Projectiles, newProjs...)
 	} else {
 		u.State = stateIdle
-		u.AnimationType = "idle"
+		u.setAnimationType()
 		u.Command = cmdUIdle
 	}
 }

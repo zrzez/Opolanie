@@ -562,7 +562,7 @@ var musicTrack = [52]uint8{
 }
 
 // @reminder @todo: zastanów się, czy nie można tego lepiej rozwiązać.
-var legacyShiftX = [13][17]uint8{
+var spriteXOffsetByUnitTypeAndDelay = [13][17]uint8{
 	{0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 13, 14, 16, 15, 15, 15, 15},    // 0: Krowa
 	{0, 1, 2, 3, 4, 6, 8, 10, 12, 14, 16, 25, 15, 15, 15, 15, 15},   // 1: Drwal
 	{0, 2, 4, 6, 8, 10, 12, 14, 16, 15, 15, 15, 15, 15, 15, 15, 15}, // 2: Łucznik
@@ -579,7 +579,7 @@ var legacyShiftX = [13][17]uint8{
 }
 
 // @reminder @todo: zastanów się, czy nie można tego lepiej rozwiązać.
-var legacyShiftY = [13][17]uint8{
+var spriteYOffsetByUnitTypeAndDelay = [13][17]uint8{
 	{0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 13, 14, 15, 15, 15, 15, 15},   // Krowa
 	{0, 1, 2, 5, 6, 7, 8, 10, 11, 12, 14, 25, 15, 15, 15, 15, 15},  // Drwal
 	{0, 1, 3, 5, 7, 9, 11, 13, 14, 15, 15, 15, 15, 15, 15, 15, 15}, // Łucznik
@@ -598,7 +598,7 @@ var legacyShiftY = [13][17]uint8{
 // @reminder @todo: zastanów się, czy nie można tego lepiej rozwiązać.
 // „wskazuje klatkę animacji”, ale to bez rozpisania na przyjazne dla
 // człowieka nazwy nie ruszam tego.
-var legacyPhase = [13][19]uint8{
+var spriteFrameByUnitTypeAndDelay = [13][19]uint8{
 	{0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 0, 6, 1, 1, 0, 8, 4},  // 0: Krowa
 	{0, 0, 1, 1, 1, 0, 0, 2, 2, 2, 0, 6, 0, 0, 0, 0, 0, 6, 3},  // 1: Drwal
 	{0, 0, 2, 2, 0, 0, 1, 1, 1, 6, 0, 0, 0, 0, 0, 0, 0, 4, 2},  // 2: Łucznik
