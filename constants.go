@@ -598,6 +598,10 @@ var spriteYOffsetByUnitTypeAndDelay = [13][17]uint8{
 // @reminder @todo: zastanów się, czy nie można tego lepiej rozwiązać.
 // „wskazuje klatkę animacji”, ale to bez rozpisania na przyjazne dla
 // człowieka nazwy nie ruszam tego.
+// @reminder: liczby w indeksie 17 i 18 są używane przy ataku, ale nie pamiętam do czego (inattack)
+// ile czasu ma upłynąć.
+//          u.Delay
+//        u.Type↓↓  ↓ ↓ „klatka”
 var spriteFrameByUnitTypeAndDelay = [13][19]uint8{
 	{0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 0, 6, 1, 1, 0, 8, 4},  // 0: Krowa
 	{0, 0, 1, 1, 1, 0, 0, 2, 2, 2, 0, 6, 0, 0, 0, 0, 0, 6, 3},  // 1: Drwal
@@ -1064,7 +1068,8 @@ const (
 
 // == Rzeczy dla assets_db.go.
 const (
-	directionUp uint8 = iota
+	directionNone uint8 = iota
+	directionUp
 	directionUpRight
 	directionRight
 	directionDownRight

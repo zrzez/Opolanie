@@ -541,34 +541,38 @@ func drawBuildingsInterfaces(bState *battleState) {
 // Przelicza na podstawie rodzaju jednostki jaką klatkę uruchomienia wybrać?
 // Nie jestem pewien.
 func calculateSpriteFrame(u *unit) uint8 {
-	idx := u.Type.getLegacyUnitIndex()
+	// @reminder: @todo: to jest dosłownie unitType tylko jako wartość liczbowa.
+	//     mogę to przepisać i robić zwykłe rzutowanie.
+	typeIndex := u.Type.getLegacyUnitIndex()
 	delay := u.Delay
 
 	delay = max(delay, minPhaseDelay)
 	delay = min(delay, maxPhaseDelay)
-	phase := spriteFrameByUnitTypeAndDelay[idx][delay]
+	frame := spriteFrameByUnitTypeAndDelay[typeIndex][delay]
 
-	if u.AnimationType == animationFight {
-		triggerHit := uint16(spriteFrameByUnitTypeAndDelay[idx][17])
-		triggerReturn := uint16(spriteFrameByUnitTypeAndDelay[idx][18])
+	if u.AnimationType != animationFight {
+		return frame
+	}
 
-		if delay > triggerHit {
-			phase = 3
-		}
+	triggerHit := uint16(spriteFrameByUnitTypeAndDelay[typeIndex][17])
+	triggerReturn := uint16(spriteFrameByUnitTypeAndDelay[typeIndex][18])
 
-		if delay <= triggerHit && delay > triggerReturn {
-			phase = 4
-		}
+	if delay > triggerHit {
+		frame = 3
+	}
 
-		if delay <= triggerReturn {
-			phase = 1
-			if u.Type == unitCow {
-				phase = 0
-			}
+	if delay <= triggerHit && delay > triggerReturn {
+		frame = 4
+	}
+
+	if delay <= triggerReturn {
+		frame = 1
+		if u.Type == unitCow {
+			frame = 0
 		}
 	}
 
-	return phase
+	return frame
 }
 
 func drawProjectiles(bState *battleState, ps *programState) {
@@ -1323,32 +1327,37 @@ func drawUnitWounds(u *unit, screenX, screenY float32, ps *programState) {
 	}
 }
 
+//nolint:cyclop
 func vectorToDirectionIndex(dx, dy int) uint16 {
-	if dx == 0 && dy == -1 {
+	switch {
+	case dx == 0 && dy == -1:
 		return uint16(directionUp)
-	}
-	if dx == 1 && dy == -1 {
+	case dx == 1 && dy == -1:
 		return uint16(directionUpRight)
-	}
-	if dx == 1 && dy == 0 {
+
+	case dx == 1 && dy == 0:
 		return uint16(directionRight)
-	}
-	if dx == 1 && dy == 1 {
+
+	case dx == 1 && dy == 1:
 		return uint16(directionDownRight)
-	}
-	if dx == 0 && dy == 1 {
+
+	case dx == 0 && dy == 1:
 		return uint16(directionDown)
-	}
-	if dx == -1 && dy == 1 {
+
+	case dx == -1 && dy == 1:
 		return uint16(directionDownLeft)
-	}
-	if dx == -1 && dy == 0 {
+
+	case dx == -1 && dy == 0:
 		return uint16(directionLeft)
-	}
-	if dx == -1 && dy == -1 {
+
+	case dx == -1 && dy == -1:
 		return uint16(directionUpLeft)
+
+	case dx == 0 && dy == 0:
+		return uint16(directionNone)
+	default:
+		return uint16(directionNone)
 	}
-	return uint16(directionDown) // Domyślnie dół
 }
 
 // drawSelectionBox odpowiada za rysowanie prostokąta do zaznaczania jednostek.
