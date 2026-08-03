@@ -263,6 +263,7 @@ func (u *unit) move(pathfindingBudget int, bState *battleState) {
 		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.clearPath()
 			u.State = stateAttacking
+			u.setAnimationType()
 
 			return
 		}

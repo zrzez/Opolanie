@@ -24,7 +24,7 @@ func (u *unit) attack(bState *battleState) {
 
 	// 3. Sprawdzanie przerwy
 	if u.AttackCooldown > 0 {
-		u.State = stateIdle
+		u.State = stateAttacking
 		u.setAnimationType()
 
 		// Obracamy jednostkę w stronę celu, żeby nie stała bokiem/tyłem
@@ -36,6 +36,10 @@ func (u *unit) attack(bState *battleState) {
 
 	// 4. Sprawdzanie zasięgu
 	if u.canAttackTarget(target) {
+		u.State = stateAttacking
+		u.setAnimationType()
+		u.faceTarget(target)
+
 		proj := u.performAttack(target, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID,
 			bState)
 
@@ -140,7 +144,7 @@ func (u *unit) build(targetBuilding *building, amount uint16) {
 // @todo: brakuje ustawienia uruchomienia (animacji) ataku przy rzucaniu czarów.
 func (u *unit) castSpell(pathfindingBudget int, bState *battleState) {
 	if u.AttackCooldown > 0 {
-		u.State = stateIdle
+		u.State = stateAttacking
 		u.setAnimationType()
 		u.Delay = 1
 
@@ -267,7 +271,7 @@ func (u *unit) magicShower(target *point, bState *battleState) []*projectile {
 // @reminder: przechodzenie w idle powinno być inaczej załatwione.
 func (u *unit) castMagicShower(bState *battleState) {
 	if u.AttackCooldown > 0 {
-		u.State = stateIdle
+		u.State = stateAttacking
 		u.setAnimationType()
 		u.Delay = 1
 

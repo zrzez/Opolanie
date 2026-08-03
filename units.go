@@ -396,6 +396,8 @@ func (u *unit) getAnimationType() animationType {
 
 func (u *unit) setAnimationType() {
 	u.AnimationType = u.getAnimationType()
+	// @reminder: @todo: ↓↓↓teraz się tym zajmuję
+	u.updateArcherAnimation()
 }
 
 // @reminder: próba napisania nowego układu rysowania jednostek 03.08.2026

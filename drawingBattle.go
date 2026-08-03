@@ -11,7 +11,6 @@ package main
 // zamiast tworzyć je w każdej klatce.
 
 import (
-	"fmt"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -1262,7 +1261,7 @@ func drawUnit(u *unit, bState *battleState, programState *programState) {
 	baseID := uint16(700 + (int(u.Type) * 200))
 	finalID := baseID + uint16(frame*8) + dir
 
-	fmt.Printf("BaseID: %d, finalID: %d\n", baseID, finalID)
+	// fmt.Printf("BaseID: %d, finalID: %d\n", baseID, finalID)
 
 	drawSpriteEx(finalID, screenX, screenY, u.Owner, rl.White, programState)
 

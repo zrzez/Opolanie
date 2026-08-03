@@ -122,6 +122,7 @@ func (u *unit) executeStandardUnitCommand(pathfindingBudget int, bState *battleS
 	case cmdUAttack:
 		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.State = stateAttacking
+			u.setAnimationType()
 			u.clearPath()
 			u.attack(bState)
 		} else {
@@ -720,7 +721,11 @@ func (u *unit) handleTargetReached(bState *battleState) {
 	switch u.Command {
 	case cmdUAttack:
 		u.State = stateAttacking
-		u.attack(bState)
+		// u.attack(bState)
+		u.setAnimationType()
+		u.Delay = 1
+
+		return
 	case cmdUCastSpell:
 		u.State = stateCastingSpell
 	case cmdUBuild, cmdURepair:
