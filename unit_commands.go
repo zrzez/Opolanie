@@ -76,7 +76,7 @@ func (u *unit) setIdleWithReason(reason string) {
 func (u *unit) applyCommandState(command commandType) {
 	switch command {
 	case cmdUAttack:
-		u.State = stateAttacking
+		u.State = stateMoving
 		u.setAnimationType()
 		u.AnimationFrame = 3
 		u.AnimationCounter = 0
@@ -569,6 +569,7 @@ func (u *unit) executeActionByDistance(distance uint8) {
 		// Cel poza zasięgiem, przechodzimy w stan ruchu do wyliczonego ApproachX/Y
 		u.State = stateMoving
 		u.invalidatePathForRecalculation()
+		u.facePoint(u.Approach)
 	}
 }
 
@@ -636,6 +637,7 @@ func (u *unit) fleeBurningTile(bState *battleState) {
 		u.State = stateMoving
 		u.invalidatePathForRecalculation()
 		u.Delay = 1
+		u.facePoint(target)
 	}
 }
 

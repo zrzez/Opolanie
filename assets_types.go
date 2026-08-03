@@ -29,4 +29,4 @@ type rawAssetDef struct {
 
 // Liczba wszystkich składowych; mnie wyszło 743, ale dam zapas
 // @reminder: @todo: sprawdź ile rzeczywiście się ładuje i później popraw
-const maxSpriteID uint16 = 4096
+const maxSpriteID uint16 = 65000 // @reminder @todo: zmień na mniejszą po uporządkowaniu ładowania duszków jednostek! 03.08.2026

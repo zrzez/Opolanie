@@ -313,3 +313,70 @@ const (
 	spriteUnitBaseID uint16 = 700
 	spriteUnitStep   uint16 = 200
 )
+
+const (
+	// ======
+	// Ręczne ustawianie duszków
+
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualArcherBtn = iota + 10_000
+	// Bezczynność
+	spriteManualArcherIdleUpLeft
+	spriteManualArcherIdleLeft
+	spriteManualArcherIdleDownLeft
+	spriteManualArcherIdleDown
+	spriteManualArcherIdleDownRight
+	spriteManualArcherIdleRight
+	spriteManualArcherIdleUpRight
+	spriteManualArcherIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualArcherMove1Center
+	spriteManualArcherMove1UpLeft
+	spriteManualArcherMove1Left
+	spriteManualArcherMove1DownLeft
+	spriteManualArcherMove1Down
+	spriteManualArcherMove1Up
+	spriteManualArcherMove1UpRight
+	spriteManualArcherMove1Right
+	spriteManualArcherMove1DownRight
+
+	// chodzenie 2
+	spriteManualArcherMove2Center
+	spriteManualArcherMove2UpLeft
+	spriteManualArcherMove2Left
+	spriteManualArcherMove2DownLeft
+	spriteManualArcherMove2Down
+	spriteManualArcherMove2Up
+	spriteManualArcherMove2UpRight
+	spriteManualArcherMove2Right
+	spriteManualArcherMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualArcherAttack1UpLeft
+	spriteManualArcherAttack1Left
+	spriteManualArcherAttack1DownLeft
+	spriteManualArcherAttack1Down
+	spriteManualArcherAttack1Up
+	spriteManualArcherAttack1UpRight
+	spriteManualArcherAttack1Right
+	spriteManualArcherAttack1DownRight
+
+	// walka 2
+	spriteManualArcherAttack2UpLeft
+	spriteManualArcherAttack2Left
+	spriteManualArcherAttack2DownLeft
+	spriteManualArcherAttack2Down
+	spriteManualArcherAttack2Up
+	spriteManualArcherAttack2UpRight
+	spriteManualArcherAttack2Right
+	spriteManualArcherAttack2DownRight
+
+	// Czy zwłoki są już ogarnięte w starym układzie?
+	spriteManualArcherFreshDead
+	spriteManualArcherDecayStart
+	// KONIEC ŁUCZNIKA
+)

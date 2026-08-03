@@ -161,6 +161,7 @@ func init() {
 	initTerrainSprites()
 	initUISprites()
 	initUnitSprites()
+	initManualUnitSprites()
 	initBuildingSprites()
 	initProjectileSprites()
 }
@@ -1039,4 +1040,58 @@ var atlasDefinitions = map[battleAtlasID]rawAssetDef{
 	atlasUnits1:    {4, 19, 4}, // Jednostki
 	atlasUnits2:    {5, 20, 3}, // Jednostki i pociski
 	atlasBuildings: {7, 22, 3}, // Budynki
+}
+
+func initManualUnitSprites() {
+	// Przygotowanie funkcji do załadowania „duszków” do atlasu units1.
+	setManualUnits1 := func(spriteID, cropX, cropY uint16, cropWidth, cropHeight uint8, offX, offY int8, flipX bool) {
+		if spriteID >= maxSpriteID {
+			log.Printf("OSTRZEŻENIE: ręcznie wpisany duszek nie mieści się!")
+
+			return
+		}
+
+		spriteRegistry[spriteID] = spriteDef{
+			atlasID:    atlasUnits1,
+			cropX:      cropX,
+			cropY:      cropY,
+			cropWidth:  cropWidth,
+			cropHeight: cropHeight,
+			offX:       offX,
+			offY:       offY,
+			flipX:      flipX,
+		}
+	}
+
+	// Tutaj deklaruję dokładnie co i z jakiego wycinka jest duszkiem
+	setManualUnits1(spriteManualArcherBtn, 16, 98, 16, 14, 0, 0, false)
+
+	setManualUnits1(spriteManualArcherIdleUpLeft, 0, 84, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherIdleLeft, 0, 98, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherIdleDownLeft, 0, 112, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherIdleDown, 16, 112, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherIdleDownRight, 0, 112, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherIdleRight, 0, 98, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherIdleUpRight, 0, 84, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherIdleUp, 16, 84, 16, 14, 0, 0, false)
+
+	setManualUnits1(spriteManualArcherMove1Center, 48, 98, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove1UpLeft, 32, 84, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove1Left, 32, 98, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove1DownLeft, 32, 112, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove1Down, 48, 112, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove1Up, 48, 84, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove1UpRight, 32, 84, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherMove1Right, 32, 98, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherMove1DownRight, 32, 112, 16, 14, 0, 0, true)
+
+	setManualUnits1(spriteManualArcherMove2Center, 80, 98, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove2UpLeft, 64, 84, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove2Left, 64, 98, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove2DownLeft, 64, 112, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove2Down, 80, 112, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove2Up, 80, 84, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherMove2UpRight, 64, 84, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherMove2Right, 64, 98, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherMove2DownRight, 64, 112, 16, 14, 0, 0, true)
 }

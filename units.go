@@ -148,7 +148,7 @@ func (u *unit) determineActiveStateFromCommand() unitState {
 	case cmdUMove:
 		return stateMoving
 	case cmdUAttack:
-		return stateAttacking
+		return stateMoving
 	case cmdUGraze:
 		return stateGrazing
 	case cmdUBuild:
@@ -198,6 +198,7 @@ func (u *unit) prepareForNewCommand(cmdType commandType, target targetReference,
 	u.Approach = approach
 
 	u.Delay = 0
+	u.facePoint(approach)
 }
 
 func (u *unit) setIdle() {
@@ -402,19 +403,24 @@ func (u *unit) setAnimationType() {
 func (u *unit) updateArcherAnimation() {
 	anim := u.getAnimationType()
 
-	// Zmiana stanu = reset animacji
+	// Jeśli zmienił się stan, to zaczynamy animację od zera
 	if anim != u.AnimationType {
 		u.AnimationType = anim
 		u.AnimStep = 0
 		u.AnimTick = 0
 	}
 
+	// Co tyknięcie podmieniamy grafikę animacji
+	// @reminder: dzieje się to zbyt szybko, chyba zapomniałem „dzielić przez szybkość logiki”!
+	// bezczynność przy animationSpeed = 24 wygląda spoko
+	// atak przy animationSpeed = ? wygląda spoko
+	// chodzenie przy animationSpeed = ? wygląda spoko
 	u.AnimTick++
+
 	if u.AnimTick >= animationSpeed {
 		u.AnimTick = 0
 		u.AnimStep++
 
-		// ZAWSZE 4 klatki.
 		if u.AnimStep >= animFramesCount {
 			u.AnimStep = 0
 		}
@@ -422,43 +428,67 @@ func (u *unit) updateArcherAnimation() {
 
 	dir := vectorToDirectionIndex(int(u.Direction.X), int(u.Direction.Y))
 
-	// Bezpiecznik na wypadek wektora (0,0)
-	if dir >= directionsCount {
-		dir = 4 // directionDown
-	}
-
-	// JEDNA LINIA. Żadnych wzorów, żadnego mnożenia, żadnych struktur.
 	u.SpriteID = spriteTable[u.Type][u.AnimationType][dir][u.AnimStep]
 }
 
-// drawUnitArcher rysuje łucznika, używając GOTOWYCH danych.
-// Nie ma tu switchy, nie ma mnożenia, nie ma "if delay > trigger".
+func (u *unit) facePoint(p point) {
+	dx := int(p.X) - int(u.X)
+	dy := int(p.Y) - int(u.Y)
+
+	if dx > 0 {
+		dx = 1
+	} else if dx < 0 {
+		dx = -1
+	}
+
+	if dy > 0 {
+		dy = 1
+	} else if dy < 0 {
+		dy = -1
+	}
+
+	if dx != 0 || dy != 0 {
+		u.Direction = rl.NewVector2(float32(dx), float32(dy))
+	}
+}
+
 func drawUnitArcher(u *unit, bState *battleState, pState *programState) {
-	// 1. Bazowa pozycja na ekranie
+	// 1. Gdzie stoi jednostka na ekranie
 	screenX := float32(u.X) * float32(tileWidth)
 	screenY := float32(u.Y) * float32(tileHeight)
 
-	// 2. Interpolacja ruchu (zostawiamy stary mechanizm offsetów, bo działa i jest "spoko").
-	// To jedyny element, gdzie nadal patrzymy na u.Delay, ale TYLKO po to,
-	// żeby wiedzieć, gdzie postawić duszka między kafelkami. Nie wpływa to na wybór duszka!
+	// 2. Poprawki ułożenia grafiki na ekranie
 	if u.State == stateMoving {
-		idx := u.Type.getLegacyUnitIndex()
-		delayIdx := u.Delay
-		if delayIdx > maxPhaseDelay {
-			delayIdx = 16
-		}
-		if delayIdx < minPhaseDelay {
-			delayIdx = 0
+		// Każda jednostka ma swóją tablicę, musimy ustalić która to
+		unitIndex := u.Type.getLegacyUnitIndex()
+		// Z tablicy musimy pobrać odpowiednią wartość zależną od delay
+		delayIndex := u.Delay
+
+		// Delay = 16 jest dla bezczynności, dzięki temu
+		// z tablicy dobieramy
+		if delayIndex > maxPhaseDelay {
+			delayIndex = 16
 		}
 
-		rawShiftX := float32(spriteXOffsetByUnitTypeAndDelay[idx][delayIdx])
-		rawShiftY := float32(spriteYOffsetByUnitTypeAndDelay[idx][delayIdx])
+		// Nie pozwalamy delay nie mniejsze niż zero, bo nie ma
+		// takiego indeksu w tablicy
+		if delayIndex < minPhaseDelay {
+			delayIndex = 0
+		}
 
+		// Dzięki tym pokręconym obliczeniom mamy dokładne wartości dla
+		// przesunięć X i Y sprawiające, że jednostka się płynnie przesuwa
+		// po ekranie zamiast „przeskakiwać” z kafelka na kafelek.
+		rawShiftX := float32(spriteXOffsetByUnitTypeAndDelay[unitIndex][delayIndex])
+		rawShiftY := float32(spriteYOffsetByUnitTypeAndDelay[unitIndex][delayIndex])
+
+		// Poprawki na kierunek patrzenia jednostki
 		if int(u.Direction.X) > 0 {
 			screenX -= rawShiftX
 		} else if int(u.Direction.X) < 0 {
 			screenX += rawShiftX
 		}
+
 		if int(u.Direction.Y) > 0 {
 			screenY -= rawShiftY
 		} else if int(u.Direction.Y) < 0 {
@@ -466,14 +496,10 @@ func drawUnitArcher(u *unit, bState *battleState, pState *programState) {
 		}
 	}
 
-	// 3. RYSOWANIE WŁAŚCIWE.
-	// Używamy u.SpriteID, które zostało już wyliczone w updateArcherAnimation.
-	// drawUnitArcher jest "ślepy" na logikę gry. Widzi tylko ID i współrzędne.
+	// 3. Rysujemy
 	drawSpriteEx(u.SpriteID, screenX, screenY, u.Owner, rl.White, pState)
 
-	// 4. Dodatki (Rany, Tarcze).
-	// Musimy je wywołać, skoro ominęliśmy stary drawUnit.
-	// Dzięki temu łucznik nadal krwawi i ma tarcze, ale jego "ciało" pochodzi z nowego układu.
+	// 4. Dodatki
 	if len(u.Wounds) > 0 {
 		drawUnitWounds(u, screenX, screenY, pState)
 	}
@@ -490,11 +516,61 @@ const (
 var spriteTable [unitTypeCount][animTypesCount][directionsCount][animFramesCount]uint16
 
 func initSpriteTable() {
-	// Tutaj przechowuję zestawienie wszystkich grafik (tfu, duszków) używanych przez jednostki
+	// Tutaj przechowuję zestawienie wszystkich grafik (tfu, duszków) używanych przez jednostki.
 
-	// Chodzenie w dół
-	spriteTable[unitArcher][animationIdle][directionNone][0] = 700 // cośtam
-	spriteTable[unitArcher][animationIdle][directionNone][1] = 700 // cośtam
-	spriteTable[unitArcher][animationIdle][directionNone][2] = 700 // cośtam
-	spriteTable[unitArcher][animationIdle][directionNone][3] = 700 // cośtam
+	// Bezczynność
+	// Nie ma kierunku
+	spriteTable[unitArcher][animationIdle][directionNone][0] = spriteManualArcherIdleDown  // DOBRZE
+	spriteTable[unitArcher][animationIdle][directionNone][1] = spriteManualArcherIdleLeft  // DOBRZE
+	spriteTable[unitArcher][animationIdle][directionNone][2] = spriteManualArcherIdleUp    // DOBRZE
+	spriteTable[unitArcher][animationIdle][directionNone][3] = spriteManualArcherIdleRight // DOBRZE
+
+	// Chodzenie
+	// w dół
+	spriteTable[unitArcher][animationWalk][directionDown][0] = spriteManualArcherMove1Center // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDown][1] = spriteManualArcherMove1Down   // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDown][2] = spriteManualArcherMove2Center // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDown][3] = spriteManualArcherMove2Down   // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w lewo
+	spriteTable[unitArcher][animationWalk][directionLeft][0] = spriteManualArcherIdleLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionLeft][1] = spriteManualArcherMove1Left // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionLeft][2] = spriteManualArcherIdleLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionLeft][3] = spriteManualArcherMove2Left // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w górę
+	spriteTable[unitArcher][animationWalk][directionUp][0] = spriteManualArcherIdleUp  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUp][1] = spriteManualArcherMove1Up // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUp][2] = spriteManualArcherIdleUp  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUp][3] = spriteManualArcherMove2Up // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w prawo (w lewo + zwierciadlane odbicie)
+	spriteTable[unitArcher][animationWalk][directionRight][0] = spriteManualArcherIdleRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionRight][1] = spriteManualArcherMove1Right // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionRight][2] = spriteManualArcherIdleRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionRight][3] = spriteManualArcherMove2Right // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w lewy górny róg
+	spriteTable[unitArcher][animationWalk][directionUpLeft][0] = spriteManualArcherIdleUpLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUpLeft][1] = spriteManualArcherMove1UpLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUpLeft][2] = spriteManualArcherIdleUpLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUpLeft][3] = spriteManualArcherMove2UpLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w prawy górny róg (zwierciadlane odbicie)
+	spriteTable[unitArcher][animationWalk][directionUpRight][0] = spriteManualArcherIdleUpRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUpRight][1] = spriteManualArcherMove1UpRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUpRight][2] = spriteManualArcherIdleUpRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUpRight][3] = spriteManualArcherMove2UpRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w lewy dolny róg
+	spriteTable[unitArcher][animationWalk][directionDownLeft][0] = spriteManualArcherIdleDownLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDownLeft][1] = spriteManualArcherMove1DownLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDownLeft][2] = spriteManualArcherIdleDownLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDownLeft][3] = spriteManualArcherMove2DownLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w prawy dolny róg (zwierdlane odbicie)
+	spriteTable[unitArcher][animationWalk][directionDownRight][0] = spriteManualArcherIdleDownRight  // cośtam
+	spriteTable[unitArcher][animationWalk][directionDownRight][1] = spriteManualArcherMove1DownRight // cośtam
+	spriteTable[unitArcher][animationWalk][directionDownRight][2] = spriteManualArcherIdleDownRight  // cośtam
+	spriteTable[unitArcher][animationWalk][directionDownRight][3] = spriteManualArcherMove2DownRight // cośtam
 }
