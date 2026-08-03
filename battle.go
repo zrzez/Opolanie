@@ -572,6 +572,11 @@ func (bState *battleState) updateUnit(u *unit) {
 		return
 	}
 
+	// @reminder: @todo: teraz się tym zajmuję, animacje dla łucznika
+	if u.Type == unitArcher {
+		u.updateArcherAnimation()
+	}
+
 	u.handleWaitingToActiveTransition()
 	u.handleMovementTargetReached(bState)
 

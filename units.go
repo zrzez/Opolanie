@@ -396,3 +396,105 @@ func (u *unit) getAnimationType() animationType {
 func (u *unit) setAnimationType() {
 	u.AnimationType = u.getAnimationType()
 }
+
+// @reminder: próba napisania nowego układu rysowania jednostek 03.08.2026
+// Układ zmieniający wygląd łucznika w zależności od tego, co robi.
+func (u *unit) updateArcherAnimation() {
+	anim := u.getAnimationType()
+
+	// Zmiana stanu = reset animacji
+	if anim != u.AnimationType {
+		u.AnimationType = anim
+		u.AnimStep = 0
+		u.AnimTick = 0
+	}
+
+	u.AnimTick++
+	if u.AnimTick >= animationSpeed {
+		u.AnimTick = 0
+		u.AnimStep++
+
+		// ZAWSZE 4 klatki.
+		if u.AnimStep >= animFramesCount {
+			u.AnimStep = 0
+		}
+	}
+
+	dir := vectorToDirectionIndex(int(u.Direction.X), int(u.Direction.Y))
+
+	// Bezpiecznik na wypadek wektora (0,0)
+	if dir >= directionsCount {
+		dir = 4 // directionDown
+	}
+
+	// JEDNA LINIA. Żadnych wzorów, żadnego mnożenia, żadnych struktur.
+	u.SpriteID = spriteTable[u.Type][u.AnimationType][dir][u.AnimStep]
+}
+
+// drawUnitArcher rysuje łucznika, używając GOTOWYCH danych.
+// Nie ma tu switchy, nie ma mnożenia, nie ma "if delay > trigger".
+func drawUnitArcher(u *unit, bState *battleState, pState *programState) {
+	// 1. Bazowa pozycja na ekranie
+	screenX := float32(u.X) * float32(tileWidth)
+	screenY := float32(u.Y) * float32(tileHeight)
+
+	// 2. Interpolacja ruchu (zostawiamy stary mechanizm offsetów, bo działa i jest "spoko").
+	// To jedyny element, gdzie nadal patrzymy na u.Delay, ale TYLKO po to,
+	// żeby wiedzieć, gdzie postawić duszka między kafelkami. Nie wpływa to na wybór duszka!
+	if u.State == stateMoving {
+		idx := u.Type.getLegacyUnitIndex()
+		delayIdx := u.Delay
+		if delayIdx > maxPhaseDelay {
+			delayIdx = 16
+		}
+		if delayIdx < minPhaseDelay {
+			delayIdx = 0
+		}
+
+		rawShiftX := float32(spriteXOffsetByUnitTypeAndDelay[idx][delayIdx])
+		rawShiftY := float32(spriteYOffsetByUnitTypeAndDelay[idx][delayIdx])
+
+		if int(u.Direction.X) > 0 {
+			screenX -= rawShiftX
+		} else if int(u.Direction.X) < 0 {
+			screenX += rawShiftX
+		}
+		if int(u.Direction.Y) > 0 {
+			screenY -= rawShiftY
+		} else if int(u.Direction.Y) < 0 {
+			screenY += rawShiftY
+		}
+	}
+
+	// 3. RYSOWANIE WŁAŚCIWE.
+	// Używamy u.SpriteID, które zostało już wyliczone w updateArcherAnimation.
+	// drawUnitArcher jest "ślepy" na logikę gry. Widzi tylko ID i współrzędne.
+	drawSpriteEx(u.SpriteID, screenX, screenY, u.Owner, rl.White, pState)
+
+	// 4. Dodatki (Rany, Tarcze).
+	// Musimy je wywołać, skoro ominęliśmy stary drawUnit.
+	// Dzięki temu łucznik nadal krwawi i ma tarcze, ale jego "ciało" pochodzi z nowego układu.
+	if len(u.Wounds) > 0 {
+		drawUnitWounds(u, screenX, screenY, pState)
+	}
+
+	drawActiveMagicShield(u, screenX, screenY, bState, pState)
+}
+
+const (
+	animFramesCount = 4
+	directionsCount = 9
+	animTypesCount  = 3
+)
+
+var spriteTable [unitTypeCount][animTypesCount][directionsCount][animFramesCount]uint16
+
+func initSpriteTable() {
+	// Tutaj przechowuję zestawienie wszystkich grafik (tfu, duszków) używanych przez jednostki
+
+	// Chodzenie w dół
+	spriteTable[unitArcher][animationIdle][directionNone][0] = 700 // cośtam
+	spriteTable[unitArcher][animationIdle][directionNone][1] = 700 // cośtam
+	spriteTable[unitArcher][animationIdle][directionNone][2] = 700 // cośtam
+	spriteTable[unitArcher][animationIdle][directionNone][3] = 700 // cośtam
+}

@@ -11,6 +11,7 @@ package main
 // zamiast tworzyć je w każdej klatce.
 
 import (
+	"fmt"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -997,7 +998,12 @@ func drawCorpsesUnitsTrees(startX, startY, endX, endY uint8, bState *battleState
 func drawUnits(boardRow, startX, endX uint8, bState *battleState, pState *programState) {
 	for _, currentUnit := range bState.Units {
 		if currentUnit.Exists && currentUnit.Y == boardRow && currentUnit.X >= startX && currentUnit.X < endX {
-			drawUnit(currentUnit, bState, pState)
+			// @reminder: 03.08.2026 przepisuję animacje jednostek, łucznicy są królikiem doświadczalnym.
+			if currentUnit.Type != unitArcher {
+				drawUnit(currentUnit, bState, pState)
+			} else {
+				drawUnitArcher(currentUnit, bState, pState)
+			}
 		}
 	}
 }
@@ -1255,6 +1261,8 @@ func drawUnit(u *unit, bState *battleState, programState *programState) {
 	// 6. Rysowanie
 	baseID := uint16(700 + (int(u.Type) * 200))
 	finalID := baseID + uint16(frame*8) + dir
+
+	fmt.Printf("BaseID: %d, finalID: %d\n", baseID, finalID)
 
 	drawSpriteEx(finalID, screenX, screenY, u.Owner, rl.White, programState)
 

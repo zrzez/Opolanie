@@ -5,6 +5,8 @@ import (
 	"log"
 	"math"
 	"math/rand"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 const (
@@ -139,6 +141,7 @@ func (u *unit) clearPath() {
 	u.PathIndex = 0
 	u.NoMoveTicks = 0
 	u.LastX, u.LastY = 0, 0
+	u.Direction = rl.Vector2{X: 0, Y: 0}
 }
 
 func (u *unit) handlePathfindingFailure() {
