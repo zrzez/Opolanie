@@ -1094,4 +1094,22 @@ func initManualUnitSprites() {
 	setManualUnits1(spriteManualArcherMove2UpRight, 64, 84, 16, 14, 0, 0, true)
 	setManualUnits1(spriteManualArcherMove2Right, 64, 98, 16, 14, 0, 0, true)
 	setManualUnits1(spriteManualArcherMove2DownRight, 64, 112, 16, 14, 0, 0, true)
+
+	setManualUnits1(spriteManualArcherAttack1UpLeft, 96, 84, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherAttack1Left, 96, 98, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherAttack1DownLeft, 96, 112, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherAttack1Down, 112, 112, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherAttack1Up, 112, 84, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherAttack1UpRight, 96, 84, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherAttack1Right, 96, 98, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherAttack1DownRight, 96, 112, 16, 14, 0, 0, true)
+
+	setManualUnits1(spriteManualArcherAttack2UpLeft, 128, 84, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherAttack2Left, 128, 98, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherAttack2DownLeft, 128, 112, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherAttack2Down, 144, 112, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherAttack2Up, 144, 84, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualArcherAttack2UpRight, 128, 84, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherAttack2Right, 128, 98, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualArcherAttack2DownRight, 128, 112, 16, 14, 0, 0, true)
 }

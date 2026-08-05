@@ -24,11 +24,11 @@ func (u *unit) attack(bState *battleState) {
 
 	// 3. Sprawdzanie przerwy
 	if u.AttackCooldown > 0 {
+		u.faceTarget(target)
 		u.State = stateAttacking
 		u.setAnimationType()
 
 		// Obracamy jednostkę w stronę celu, żeby nie stała bokiem/tyłem
-		u.faceTarget(target)
 		u.Delay = u.MaxDelay
 
 		return
@@ -36,9 +36,9 @@ func (u *unit) attack(bState *battleState) {
 
 	// 4. Sprawdzanie zasięgu
 	if u.canAttackTarget(target) {
+		u.faceTarget(target)
 		u.State = stateAttacking
 		u.setAnimationType()
-		u.faceTarget(target)
 
 		proj := u.performAttack(target, bState.HumanPlayerState.PlayerID, bState.AIEnemyState.PlayerID,
 			bState)

@@ -337,12 +337,14 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 	}
 
 	// 2. Pobranie definicji
+	// @reminder: 1% czasu działania funkcji
 	def := spriteRegistry[id]
 	if def.cropWidth == 0 {
 		return // Pusty wpis (np. ID 0)
 	}
 
 	// 3. Pobranie Tekstury
+	// @reminder: 10% czasu działania funkcji, 4% całości
 	tex := assets.getAtlas(def.atlasID, ownerColor)
 	if tex.ID == 0 {
 		return // Zabezpieczenie przed brakiem atlasu
@@ -359,6 +361,7 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 	sharedSrcRect.Y = float32(def.cropY)
 
 	sharedSrcRect.Height = float32(def.cropHeight)
+	// @reminder: 1% czasu działania funkcji
 	if def.flipX {
 		sharedSrcRect.Width = -float32(def.cropWidth)
 	} else {
@@ -372,7 +375,7 @@ func drawSprite(assets *assetManager, id uint16, destX, destY float32, ownerColo
 	sharedDestRect.Height = float32(def.cropHeight)
 
 	// 6. Rysowanie
-	// @todo: tutaj kod spędza większość czasu, może coś da się z tym zrobić?
+	// to się zmienia↓↓↓↓ ↓↓współdzielone↓↓więc nie zaśmiecam↓↓↓↓ ↓↓nic więcej↓↓ nie zrobię z tym
 	rl.DrawTexturePro(tex, sharedSrcRect, sharedDestRect, sharedOrigin, 0, rl.White)
 }
 
@@ -1643,6 +1646,7 @@ func drawButtons(bState *battleState, ps *programState) {
 			case spellMagicShower:
 				tex = ps.Assets.getAtlas(def.atlasID, colorNone)
 				drawTripleIcon(tex, def, rect)
+
 				continue
 			default:
 				panic("nieobsługiwany rodzaj czaru. drawingBattle.go drawingButtons się wykrzaczyło")

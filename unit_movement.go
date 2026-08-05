@@ -263,7 +263,7 @@ func (u *unit) move(pathfindingBudget int, bState *battleState) {
 		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.clearPath()
 			u.State = stateAttacking
-			u.setAnimationType()
+			// u.setAnimationType()
 
 			return
 		}
@@ -288,6 +288,7 @@ func (u *unit) move(pathfindingBudget int, bState *battleState) {
 	// Jeśli utknęliśmy, to zarzucamy ruch
 	if u.NoMoveTicks > maxNoMoveTicks {
 		u.setIdleWithReason("przyblokowana")
+
 		return
 	}
 

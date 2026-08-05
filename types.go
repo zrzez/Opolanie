@@ -126,10 +126,11 @@ type unit struct {
 	AnimationCounter int           // Pomocniczy licznik do zarządzania prędkością rysowania ruchu
 	Direction        rl.Vector2    // Kierunek jednostki. (0,1) dla góry
 
-	// Nowe animacje, @reminder: 03.08.2026 tylko dla łucznika w ramach próby
+	// Nowe animacje, @reminder: 03.08.2026 tylko dla łucznika w ramach próby.
 	AnimStep uint8  // bierzący krok w animacji
 	AnimTick uint16 // licznik tyknięć do zmiany kroku
 	SpriteID uint16 // grafika do narysowania
+	Facing   uint16 // kierunek Direction+1 w którym patrzy jednostka, pewnie wywalę, bo Direction jest podobne
 
 	State          unitState // Obecne usposobienie jednostki (bezczynność, ruch, napaść itd.)
 	Delay          uint16    // Bieżące opóźnienie jednostki przy chodzeniu

@@ -218,9 +218,7 @@ func (u *unit) updateMovementAnimation(prevX, prevY uint8) {
 	dx := int(u.X) - int(prevX)
 	dy := int(u.Y) - int(prevY)
 
-	if dx != 0 || dy != 0 {
-		u.Direction = rl.NewVector2(float32(dx), float32(dy))
-	}
+	u.applyDirection(dx, dy)
 
 	u.AnimationCounter++
 
@@ -231,6 +229,10 @@ func (u *unit) updateMovementAnimation(prevX, prevY uint8) {
 		if u.AnimationFrame >= walkAnimationFrames {
 			u.AnimationFrame = 0
 		}
+	}
+
+	if u.Type == unitArcher {
+		u.updateArcherAnimation()
 	}
 }
 
@@ -266,7 +268,7 @@ func (u *unit) faceTarget(target *combatTarget) {
 
 	// Ustawiamy wektor kierunku
 	if dx != 0 || dy != 0 {
-		u.Direction = rl.NewVector2(float32(dx), float32(dy))
+		u.applyDirection(dx, dy)
 	}
 }
 
@@ -395,9 +397,14 @@ func (u *unit) getAnimationType() animationType {
 }
 
 func (u *unit) setAnimationType() {
-	u.AnimationType = u.getAnimationType()
 	// @reminder: @todo: ↓↓↓teraz się tym zajmuję
-	u.updateArcherAnimation()
+	if u.Type == unitArcher {
+		u.updateArcherAnimation()
+
+		return
+	}
+
+	u.AnimationType = u.getAnimationType()
 }
 
 // @reminder: próba napisania nowego układu rysowania jednostek 03.08.2026
@@ -415,11 +422,12 @@ func (u *unit) updateArcherAnimation() {
 	// Co tyknięcie podmieniamy grafikę animacji
 	// @reminder: dzieje się to zbyt szybko, chyba zapomniałem „dzielić przez szybkość logiki”!
 	// bezczynność przy animationSpeed = 24 wygląda spoko
-	// atak przy animationSpeed = ? wygląda spoko
-	// chodzenie przy animationSpeed = ? wygląda spoko
+	// atak przy animationSpeed = 1 wygląda spoko, ale tylko na początku, później się rozjeżdża
+	// chodzenie przy animationSpeed = 1 to zbyt mało, poza tym „bezczynność” jest nieproporcjonalnei długa do
+	//         przebierania nogami
 	u.AnimTick++
 
-	if u.AnimTick >= animationSpeed {
+	if u.AnimTick >= 2 { // animationSpeed
 		u.AnimTick = 0
 		u.AnimStep++
 
@@ -428,9 +436,48 @@ func (u *unit) updateArcherAnimation() {
 		}
 	}
 
-	dir := vectorToDirectionIndex(int(u.Direction.X), int(u.Direction.Y))
+	dir := u.animationDirection()
 
 	u.SpriteID = spriteTable[u.Type][u.AnimationType][dir][u.AnimStep]
+}
+
+func (u *unit) animationDirection() uint16 {
+	dir := vectorToDirectionIndex(int(u.Direction.X), int(u.Direction.Y))
+
+	if dir != uint16(directionNone) {
+		return dir
+	}
+
+	if u.AnimationType == animationIdle {
+		return uint16(directionNone)
+	}
+
+	if last, ok := u.rememberedDirection(); ok {
+		return last
+	}
+
+	return uint16(directionDown)
+}
+
+func (u *unit) rememberDirection(dir uint16) {
+	u.Facing = dir + 1
+}
+
+func (u *unit) rememberedDirection() (uint16, bool) {
+	if u.Facing == 0 {
+		return 0, false
+	}
+
+	return u.Facing - 1, true
+}
+
+func (u *unit) applyDirection(dx, dy int) {
+	if dx == 0 && dy == 0 {
+		return
+	}
+
+	u.Direction = rl.NewVector2(float32(dx), float32(dy))
+	u.rememberDirection(vectorToDirectionIndex(dx, dy))
 }
 
 func (u *unit) facePoint(p point) {
@@ -450,7 +497,7 @@ func (u *unit) facePoint(p point) {
 	}
 
 	if dx != 0 || dy != 0 {
-		u.Direction = rl.NewVector2(float32(dx), float32(dy))
+		u.applyDirection(dx, dy)
 	}
 }
 
@@ -515,6 +562,7 @@ const (
 	animTypesCount  = 3
 )
 
+// @reminder: zastanów się, jak przechowywać ubitą jednostkę.
 var spriteTable [unitTypeCount][animTypesCount][directionsCount][animFramesCount]uint16
 
 func initSpriteTable() {
@@ -571,8 +619,52 @@ func initSpriteTable() {
 	spriteTable[unitArcher][animationWalk][directionDownLeft][3] = spriteManualArcherMove2DownLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
 
 	// w prawy dolny róg (zwierdlane odbicie)
-	spriteTable[unitArcher][animationWalk][directionDownRight][0] = spriteManualArcherIdleDownRight  // cośtam
-	spriteTable[unitArcher][animationWalk][directionDownRight][1] = spriteManualArcherMove1DownRight // cośtam
-	spriteTable[unitArcher][animationWalk][directionDownRight][2] = spriteManualArcherIdleDownRight  // cośtam
-	spriteTable[unitArcher][animationWalk][directionDownRight][3] = spriteManualArcherMove2DownRight // cośtam
+	spriteTable[unitArcher][animationWalk][directionDownRight][0] = spriteManualArcherIdleDownRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDownRight][1] = spriteManualArcherMove1DownRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDownRight][2] = spriteManualArcherIdleDownRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDownRight][3] = spriteManualArcherMove2DownRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// Walka
+
+	// w dół
+	spriteTable[unitArcher][animationFight][directionDown][0] = spriteManualArcherAttack1Down // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionDown][1] = spriteManualArcherAttack2Down // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionDown][2] = spriteManualArcherIdleDown    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionDown][3] = spriteManualArcherIdleDown    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w górę
+	spriteTable[unitArcher][animationFight][directionUp][0] = spriteManualArcherIdleUp    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionUp][1] = spriteManualArcherAttack1Up // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionUp][2] = spriteManualArcherAttack2Up // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionUp][3] = spriteManualArcherIdleUp    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w lewo
+	spriteTable[unitArcher][animationFight][directionLeft][0] = spriteManualArcherIdleLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionLeft][1] = spriteManualArcherAttack1Left // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionLeft][2] = spriteManualArcherAttack2Left // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionLeft][3] = spriteManualArcherIdleLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w lewy dolny róg
+	spriteTable[unitArcher][animationFight][directionDownLeft][0] = spriteManualArcherIdleDownLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionDownLeft][1] = spriteManualArcherAttack1DownLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionDownLeft][2] = spriteManualArcherAttack2DownLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionDownLeft][3] = spriteManualArcherIdleDownLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w lewy górny róg
+	spriteTable[unitArcher][animationFight][directionUpLeft][0] = spriteManualArcherIdleUpLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionUpLeft][1] = spriteManualArcherAttack1UpLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionUpLeft][2] = spriteManualArcherAttack2UpLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionUpLeft][3] = spriteManualArcherIdleUpLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w prawy dolny róg
+	spriteTable[unitArcher][animationFight][directionDownRight][0] = spriteManualArcherIdleDownRight    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionDownRight][1] = spriteManualArcherAttack1DownRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionDownRight][2] = spriteManualArcherAttack2DownRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionDownRight][3] = spriteManualArcherIdleDownRight    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+
+	// w prawy górny
+	spriteTable[unitArcher][animationFight][directionUpRight][0] = spriteManualArcherIdleUpRight    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionUpRight][1] = spriteManualArcherAttack1UpRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionUpRight][2] = spriteManualArcherAttack2UpRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationFight][directionUpRight][3] = spriteManualArcherIdleUpRight    // DOBRZE, ALE ZA WOLNO ZMIENIA!
 }

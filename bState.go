@@ -365,14 +365,14 @@ func (bState *battleState) resolveTarget(reference targetReference) (*combatTarg
 	case targetUnit:
 		targetedUnit, ok := bState.getUnitByID(unitID(reference.ID))
 		if !ok || !targetedUnit.Exists {
-			return nil, fmt.Errorf("jednotka do zaatakowania nie istnieje", reference.ID)
+			return nil, fmt.Errorf("jednotka %d do zaatakowania nie istnieje", reference.ID)
 		}
 
 		return &combatTarget{Unit: targetedUnit}, nil
 	case targetBuilding:
 		targetedBld, ok := bState.getBuildingByID(buildingID(reference.ID))
 		if !ok || !targetedBld.Exists {
-			return nil, fmt.Errorf("budynek do zaatakowania nie istnieje", reference.ID)
+			return nil, fmt.Errorf("budynek %d do zaatakowania nie istnieje", reference.ID)
 		}
 
 		return &combatTarget{Building: targetedBld}, nil

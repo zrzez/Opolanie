@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
@@ -812,11 +813,10 @@ func getEnemyColor(levelNumber uint8) PlayerID {
 }
 
 func main() {
-	// Debugger (opcjonalny)
-	//	go func() {
-	//		log.Println("Uruchamiam serwer pprof na localhost:6060")
-	//		log.Println(http.ListenAndServe("localhost:6060", nil))
-	//	}()
+	go func() {
+		log.Println("Uruchamiam serwer pprof na localhost:6060")
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	// 1. Inicjalizacja zmiennych stanu (bez grafiki!)
 	pState := newProgramState()
