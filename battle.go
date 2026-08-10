@@ -568,6 +568,10 @@ func (bState *battleState) updateUnit(u *unit) {
 
 	u.handleAttackCooldown(bState.GlobalFrameCounter)
 
+	if u.Type == unitArcher {
+		u.updateArcherAttackAnimation()
+	}
+
 	if u.handleDelay(bState.GlobalFrameCounter) {
 		return
 	}

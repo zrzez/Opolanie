@@ -137,6 +137,9 @@ func (u *unit) handleWaitingToActiveTransition() {
 }
 
 func (u *unit) ensureDelayIsSet() {
+	if u.State == stateAttacking {
+		return
+	}
 	if u.State != stateWaiting && u.State != stateIdle && u.Delay == 0 {
 		fmt.Print("DUPA ZAPOMŁES USTAWIĆ DELAY!!!!\n")
 		u.Delay = u.MaxDelay
@@ -230,10 +233,6 @@ func (u *unit) updateMovementAnimation(prevX, prevY uint8) {
 			u.AnimationFrame = 0
 		}
 	}
-
-	if u.Type == unitArcher {
-		u.updateArcherAnimation()
-	}
 }
 
 func (u *unit) faceTarget(target *combatTarget) {
@@ -295,6 +294,11 @@ func (u *unit) setAttackTimings() {
 		u.setRangedTimings()
 	} else {
 		u.setMeleeTimings()
+	}
+
+	// Nowy atak = start animacji od początku.
+	if u.Type == unitArcher {
+		u.updateArcherAttackAnimation()
 	}
 }
 
@@ -397,48 +401,71 @@ func (u *unit) getAnimationType() animationType {
 }
 
 func (u *unit) setAnimationType() {
-	// @reminder: @todo: ↓↓↓teraz się tym zajmuję
+	u.AnimationType = u.getAnimationType()
+
 	if u.Type == unitArcher {
-		u.updateArcherAnimation()
+		u.AnimStep = 0
+		u.AnimTick = 0
+
+		if u.AnimationType == animationFight {
+			u.updateArcherAttackAnimation()
+		} else {
+			u.updateArcherAnimation()
+		}
 
 		return
 	}
-
-	u.AnimationType = u.getAnimationType()
 }
 
-// @reminder: próba napisania nowego układu rysowania jednostek 03.08.2026
-// Układ zmieniający wygląd łucznika w zależności od tego, co robi.
 func (u *unit) updateArcherAnimation() {
 	anim := u.getAnimationType()
 
-	// Jeśli zmienił się stan, to zaczynamy animację od zera
 	if anim != u.AnimationType {
 		u.AnimationType = anim
 		u.AnimStep = 0
 		u.AnimTick = 0
 	}
 
-	// Co tyknięcie podmieniamy grafikę animacji
-	// @reminder: dzieje się to zbyt szybko, chyba zapomniałem „dzielić przez szybkość logiki”!
-	// bezczynność przy animationSpeed = 24 wygląda spoko
-	// atak przy animationSpeed = 1 wygląda spoko, ale tylko na początku, później się rozjeżdża
-	// chodzenie przy animationSpeed = 1 to zbyt mało, poza tym „bezczynność” jest nieproporcjonalnei długa do
-	//         przebierania nogami
-	u.AnimTick++
+	// Walka jest obsługiwana osobno przez updateArcherAttackAnimation.
+	if u.AnimationType == animationFight {
+		return
+	}
 
-	if u.AnimTick >= 2 { // animationSpeed
+	u.AnimTick++
+	if u.AnimTick >= 2 {
 		u.AnimTick = 0
 		u.AnimStep++
-
 		if u.AnimStep >= animFramesCount {
 			u.AnimStep = 0
 		}
 	}
 
 	dir := u.animationDirection()
-
 	u.SpriteID = spriteTable[u.Type][u.AnimationType][dir][u.AnimStep]
+}
+
+func (u *unit) updateArcherAttackAnimation() {
+	if u.AnimationType != animationFight {
+		u.AnimationType = animationFight
+	}
+
+	// Fazy ataku łucznika:
+	// Delay > 4  -> Attack1 / zamach
+	// Delay 3..4 -> Attack2 / wystrzał
+	// Delay <= 2 -> Idle / złożenie i czekanie
+	switch {
+	case u.Delay > 4:
+		u.AnimStep = 0
+	case u.Delay > 2:
+		u.AnimStep = 1
+	default:
+		u.AnimStep = 2
+	}
+
+	u.AnimTick = 0
+
+	dir := u.animationDirection()
+	u.SpriteID = spriteTable[u.Type][animationFight][dir][u.AnimStep]
 }
 
 func (u *unit) animationDirection() uint16 {
@@ -502,36 +529,23 @@ func (u *unit) facePoint(p point) {
 }
 
 func drawUnitArcher(u *unit, bState *battleState, pState *programState) {
-	// 1. Gdzie stoi jednostka na ekranie
 	screenX := float32(u.X) * float32(tileWidth)
 	screenY := float32(u.Y) * float32(tileHeight)
 
-	// 2. Poprawki ułożenia grafiki na ekranie
 	if u.State == stateMoving {
-		// Każda jednostka ma swóją tablicę, musimy ustalić która to
 		unitIndex := u.Type.getLegacyUnitIndex()
-		// Z tablicy musimy pobrać odpowiednią wartość zależną od delay
 		delayIndex := u.Delay
 
-		// Delay = 16 jest dla bezczynności, dzięki temu
-		// z tablicy dobieramy
 		if delayIndex > maxPhaseDelay {
 			delayIndex = 16
 		}
-
-		// Nie pozwalamy delay nie mniejsze niż zero, bo nie ma
-		// takiego indeksu w tablicy
 		if delayIndex < minPhaseDelay {
 			delayIndex = 0
 		}
 
-		// Dzięki tym pokręconym obliczeniom mamy dokładne wartości dla
-		// przesunięć X i Y sprawiające, że jednostka się płynnie przesuwa
-		// po ekranie zamiast „przeskakiwać” z kafelka na kafelek.
 		rawShiftX := float32(spriteXOffsetByUnitTypeAndDelay[unitIndex][delayIndex])
 		rawShiftY := float32(spriteYOffsetByUnitTypeAndDelay[unitIndex][delayIndex])
 
-		// Poprawki na kierunek patrzenia jednostki
 		if int(u.Direction.X) > 0 {
 			screenX -= rawShiftX
 		} else if int(u.Direction.X) < 0 {
@@ -545,10 +559,12 @@ func drawUnitArcher(u *unit, bState *battleState, pState *programState) {
 		}
 	}
 
-	// 3. Rysujemy
-	drawSpriteEx(u.SpriteID, screenX, screenY, u.Owner, rl.White, pState)
+	finalID := getSpriteID(u)
 
-	// 4. Dodatki
+	fmt.Printf("będę rysować finalID: %v, bo u.Delay to: %v\n", finalID, u.Delay)
+
+	drawSpriteEx(finalID, screenX, screenY, u.Owner, rl.White, pState)
+
 	if len(u.Wounds) > 0 {
 		drawUnitWounds(u, screenX, screenY, pState)
 	}
@@ -556,115 +572,572 @@ func drawUnitArcher(u *unit, bState *battleState, pState *programState) {
 	drawActiveMagicShield(u, screenX, screenY, bState, pState)
 }
 
+// Pobiera jawne ID duszka z tablicy spriteTable na podstawie stanu jednostki.
+// Zastępuje matematyczne obliczenia ze starego układu.
+func getSpriteID(u *unit) uint16 {
+	anim := u.getAnimationType()
+	dir := u.animationDirection()
+
+	delayIdx := int(u.Delay)
+	if delayIdx > int(maxPhaseDelay) {
+		delayIdx = int(maxPhaseDelay)
+	}
+	if delayIdx < int(minPhaseDelay) {
+		delayIdx = int(minPhaseDelay)
+	}
+
+	return spriteTable[u.Type][anim][dir][delayIdx]
+}
+
 const (
 	animFramesCount = 4
 	directionsCount = 9
 	animTypesCount  = 3
+
+	delayStatesCount = 17
 )
 
 // @reminder: zastanów się, jak przechowywać ubitą jednostkę.
-var spriteTable [unitTypeCount][animTypesCount][directionsCount][animFramesCount]uint16
+var spriteTable [unitTypeCount][animTypesCount][directionsCount][delayStatesCount]uint16
 
 func initSpriteTable() {
-	// Tutaj przechowuję zestawienie wszystkich grafik (tfu, duszków) używanych przez jednostki.
+	spriteTable[unitArcher][animationIdle][directionNone] = [delayStatesCount]uint16{
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+	}
 
-	// Bezczynność
-	// Nie ma kierunku
-	spriteTable[unitArcher][animationIdle][directionNone][0] = spriteManualArcherIdleDown  // DOBRZE
-	spriteTable[unitArcher][animationIdle][directionNone][1] = spriteManualArcherIdleLeft  // DOBRZE
-	spriteTable[unitArcher][animationIdle][directionNone][2] = spriteManualArcherIdleUp    // DOBRZE
-	spriteTable[unitArcher][animationIdle][directionNone][3] = spriteManualArcherIdleRight // DOBRZE
+	spriteTable[unitArcher][animationIdle][directionDown] = [delayStatesCount]uint16{
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+	}
 
-	// Chodzenie
-	// w dół
-	spriteTable[unitArcher][animationWalk][directionDown][0] = spriteManualArcherMove1Center // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionDown][1] = spriteManualArcherMove1Down   // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionDown][2] = spriteManualArcherMove2Center // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionDown][3] = spriteManualArcherMove2Down   // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationIdle][directionLeft] = [delayStatesCount]uint16{
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+	}
 
-	// w lewo
-	spriteTable[unitArcher][animationWalk][directionLeft][0] = spriteManualArcherIdleLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionLeft][1] = spriteManualArcherMove1Left // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionLeft][2] = spriteManualArcherIdleLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionLeft][3] = spriteManualArcherMove2Left // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationIdle][directionUp] = [delayStatesCount]uint16{
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+	}
 
-	// w górę
-	spriteTable[unitArcher][animationWalk][directionUp][0] = spriteManualArcherIdleUp  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionUp][1] = spriteManualArcherMove1Up // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionUp][2] = spriteManualArcherIdleUp  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionUp][3] = spriteManualArcherMove2Up // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationIdle][directionRight] = [delayStatesCount]uint16{
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+	}
 
-	// w prawo (w lewo + zwierciadlane odbicie)
-	spriteTable[unitArcher][animationWalk][directionRight][0] = spriteManualArcherIdleRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionRight][1] = spriteManualArcherMove1Right // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionRight][2] = spriteManualArcherIdleRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionRight][3] = spriteManualArcherMove2Right // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationIdle][directionUpLeft] = [delayStatesCount]uint16{
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+	}
 
-	// w lewy górny róg
-	spriteTable[unitArcher][animationWalk][directionUpLeft][0] = spriteManualArcherIdleUpLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionUpLeft][1] = spriteManualArcherMove1UpLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionUpLeft][2] = spriteManualArcherIdleUpLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionUpLeft][3] = spriteManualArcherMove2UpLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationIdle][directionUpRight] = [delayStatesCount]uint16{
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+	}
 
-	// w prawy górny róg (zwierciadlane odbicie)
-	spriteTable[unitArcher][animationWalk][directionUpRight][0] = spriteManualArcherIdleUpRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionUpRight][1] = spriteManualArcherMove1UpRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionUpRight][2] = spriteManualArcherIdleUpRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionUpRight][3] = spriteManualArcherMove2UpRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationIdle][directionDownLeft] = [delayStatesCount]uint16{
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+	}
 
-	// w lewy dolny róg
-	spriteTable[unitArcher][animationWalk][directionDownLeft][0] = spriteManualArcherIdleDownLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionDownLeft][1] = spriteManualArcherMove1DownLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionDownLeft][2] = spriteManualArcherIdleDownLeft  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionDownLeft][3] = spriteManualArcherMove2DownLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationIdle][directionDownRight] = [delayStatesCount]uint16{
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+	}
 
-	// w prawy dolny róg (zwierdlane odbicie)
-	spriteTable[unitArcher][animationWalk][directionDownRight][0] = spriteManualArcherIdleDownRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionDownRight][1] = spriteManualArcherMove1DownRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionDownRight][2] = spriteManualArcherIdleDownRight  // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationWalk][directionDownRight][3] = spriteManualArcherMove2DownRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionNone] = [delayStatesCount]uint16{
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove2Center,
+		spriteManualArcherMove2Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Down,
+		spriteManualArcherMove1Down,
+		spriteManualArcherMove1Down,
+		spriteManualArcherMove2Down,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+	}
 
-	// Walka
+	spriteTable[unitArcher][animationWalk][directionDown] = [delayStatesCount]uint16{
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove2Center,
+		spriteManualArcherMove2Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Down,
+		spriteManualArcherMove1Down,
+		spriteManualArcherMove1Down,
+		spriteManualArcherMove2Down,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+		spriteManualArcherMove1Center,
+	}
 
-	// w dół
-	spriteTable[unitArcher][animationFight][directionDown][0] = spriteManualArcherAttack1Down // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionDown][1] = spriteManualArcherAttack2Down // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionDown][2] = spriteManualArcherIdleDown    // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionDown][3] = spriteManualArcherIdleDown    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionLeft] = [delayStatesCount]uint16{
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherMove1Left,
+		spriteManualArcherMove1Left,
+		spriteManualArcherMove1Left,
+		spriteManualArcherMove2Left,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+	}
 
-	// w górę
-	spriteTable[unitArcher][animationFight][directionUp][0] = spriteManualArcherIdleUp    // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionUp][1] = spriteManualArcherAttack1Up // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionUp][2] = spriteManualArcherAttack2Up // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionUp][3] = spriteManualArcherIdleUp    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUp] = [delayStatesCount]uint16{
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherMove1Up,
+		spriteManualArcherMove1Up,
+		spriteManualArcherMove1Up,
+		spriteManualArcherMove2Up,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+	}
 
-	// w lewo
-	spriteTable[unitArcher][animationFight][directionLeft][0] = spriteManualArcherIdleLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionLeft][1] = spriteManualArcherAttack1Left // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionLeft][2] = spriteManualArcherAttack2Left // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionLeft][3] = spriteManualArcherIdleLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionRight] = [delayStatesCount]uint16{
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherMove1Right,
+		spriteManualArcherMove1Right,
+		spriteManualArcherMove1Right,
+		spriteManualArcherMove2Right,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+	}
 
-	// w lewy dolny róg
-	spriteTable[unitArcher][animationFight][directionDownLeft][0] = spriteManualArcherIdleDownLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionDownLeft][1] = spriteManualArcherAttack1DownLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionDownLeft][2] = spriteManualArcherAttack2DownLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionDownLeft][3] = spriteManualArcherIdleDownLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUpLeft] = [delayStatesCount]uint16{
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherMove1UpLeft,
+		spriteManualArcherMove1UpLeft,
+		spriteManualArcherMove1UpLeft,
+		spriteManualArcherMove2UpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+	}
 
-	// w lewy górny róg
-	spriteTable[unitArcher][animationFight][directionUpLeft][0] = spriteManualArcherIdleUpLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionUpLeft][1] = spriteManualArcherAttack1UpLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionUpLeft][2] = spriteManualArcherAttack2UpLeft // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionUpLeft][3] = spriteManualArcherIdleUpLeft    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionUpRight] = [delayStatesCount]uint16{
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherMove1UpRight,
+		spriteManualArcherMove1UpRight,
+		spriteManualArcherMove1UpRight,
+		spriteManualArcherMove2UpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+	}
 
-	// w prawy dolny róg
-	spriteTable[unitArcher][animationFight][directionDownRight][0] = spriteManualArcherIdleDownRight    // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionDownRight][1] = spriteManualArcherAttack1DownRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionDownRight][2] = spriteManualArcherAttack2DownRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionDownRight][3] = spriteManualArcherIdleDownRight    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDownLeft] = [delayStatesCount]uint16{
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherMove1DownLeft,
+		spriteManualArcherMove1DownLeft,
+		spriteManualArcherMove1DownLeft,
+		spriteManualArcherMove2DownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+	}
 
-	// w prawy górny
-	spriteTable[unitArcher][animationFight][directionUpRight][0] = spriteManualArcherIdleUpRight    // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionUpRight][1] = spriteManualArcherAttack1UpRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionUpRight][2] = spriteManualArcherAttack2UpRight // DOBRZE, ALE ZA WOLNO ZMIENIA!
-	spriteTable[unitArcher][animationFight][directionUpRight][3] = spriteManualArcherIdleUpRight    // DOBRZE, ALE ZA WOLNO ZMIENIA!
+	spriteTable[unitArcher][animationWalk][directionDownRight] = [delayStatesCount]uint16{
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherMove1DownRight,
+		spriteManualArcherMove1DownRight,
+		spriteManualArcherMove1DownRight,
+		spriteManualArcherMove2DownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+	}
+
+	spriteTable[unitArcher][animationFight][directionNone] = [delayStatesCount]uint16{
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherAttack2Down,
+		spriteManualArcherAttack2Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+	}
+
+	spriteTable[unitArcher][animationFight][directionDown] = [delayStatesCount]uint16{
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherIdleDown,
+		spriteManualArcherAttack2Down,
+		spriteManualArcherAttack2Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+		spriteManualArcherAttack1Down,
+	}
+
+	spriteTable[unitArcher][animationFight][directionLeft] = [delayStatesCount]uint16{
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherIdleLeft,
+		spriteManualArcherAttack2Left,
+		spriteManualArcherAttack2Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+		spriteManualArcherAttack1Left,
+	}
+
+	spriteTable[unitArcher][animationFight][directionUp] = [delayStatesCount]uint16{
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherIdleUp,
+		spriteManualArcherAttack2Up,
+		spriteManualArcherAttack2Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+		spriteManualArcherAttack1Up,
+	}
+
+	spriteTable[unitArcher][animationFight][directionRight] = [delayStatesCount]uint16{
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherIdleRight,
+		spriteManualArcherAttack2Right,
+		spriteManualArcherAttack2Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+		spriteManualArcherAttack1Right,
+	}
+
+	spriteTable[unitArcher][animationFight][directionUpLeft] = [delayStatesCount]uint16{
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherIdleUpLeft,
+		spriteManualArcherAttack2UpLeft,
+		spriteManualArcherAttack2UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+		spriteManualArcherAttack1UpLeft,
+	}
+
+	spriteTable[unitArcher][animationFight][directionUpRight] = [delayStatesCount]uint16{
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherIdleUpRight,
+		spriteManualArcherAttack2UpRight,
+		spriteManualArcherAttack2UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+		spriteManualArcherAttack1UpRight,
+	}
+
+	spriteTable[unitArcher][animationFight][directionDownLeft] = [delayStatesCount]uint16{
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherIdleDownLeft,
+		spriteManualArcherAttack2DownLeft,
+		spriteManualArcherAttack2DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+		spriteManualArcherAttack1DownLeft,
+	}
+
+	spriteTable[unitArcher][animationFight][directionDownRight] = [delayStatesCount]uint16{
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherIdleDownRight,
+		spriteManualArcherAttack2DownRight,
+		spriteManualArcherAttack2DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+		spriteManualArcherAttack1DownRight,
+	}
 }
