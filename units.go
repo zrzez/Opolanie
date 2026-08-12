@@ -1141,3 +1141,77 @@ func initSpriteTable() {
 		spriteManualArcherAttack1DownRight,
 	}
 }
+
+type corpseSpriteSet struct {
+	Fresh uint16
+	Decay uint16
+}
+
+var corpseSprites [unitTypeCount]corpseSpriteSet
+
+func initCorpseSpriteTable() {
+	corpseSprites[unitArcher] = corpseSpriteSet{
+		Fresh: spriteManualArcherCorpseFresh,
+		Decay: spriteManualArcherCorpseDecay,
+	}
+
+	corpseSprites[unitAxeman] = corpseSpriteSet{
+		Fresh: spriteManualAxemanCorpseFresh,
+		Decay: spriteManualAxemanCorpseDecay,
+	}
+
+	corpseSprites[unitBear] = corpseSpriteSet{
+		Fresh: spriteManualBearCorpseFresh,
+		Decay: spriteManualBearCorpseDecay,
+	}
+
+	corpseSprites[unitCommander] = corpseSpriteSet{
+		Fresh: spriteManualCommanderCorpseFresh,
+		Decay: spriteManualCommanderCorpseDecay,
+	}
+
+	corpseSprites[unitCow] = corpseSpriteSet{
+		Fresh: spriteManualCowCorpseFresh,
+		Decay: spriteManualCowCorpseDecay,
+	}
+
+	corpseSprites[unitCrossbowman] = corpseSpriteSet{
+		Fresh: spriteManualCrossbowmanCorpseFresh,
+		Decay: spriteManualCrossbowmanCorpseDecay,
+	}
+
+	corpseSprites[unitMage] = corpseSpriteSet{
+		Fresh: spriteManualMageCorpseFresh,
+		Decay: spriteManualMageCorpseDecay,
+	}
+
+	corpseSprites[unitPriest] = corpseSpriteSet{
+		Fresh: spriteManualPriestCorpseFresh,
+		Decay: spriteManualPriestCorpseDecay,
+	}
+
+	corpseSprites[unitPriestess] = corpseSpriteSet{
+		Fresh: spriteManualPriestressCorpseFresh,
+		Decay: spriteManualPriestressCorpseDecay,
+	}
+
+	corpseSprites[unitShepherd] = corpseSpriteSet{
+		Fresh: spriteManualShepherdCorpseFresh,
+		Decay: spriteManualShepherdCorpseDecay,
+	}
+
+	corpseSprites[unitSpearman] = corpseSpriteSet{
+		Fresh: spriteManualSpearmanCorpseFresh,
+		Decay: spriteManualSpearmanCorpseDecay,
+	}
+
+	corpseSprites[unitSwordsman] = corpseSpriteSet{
+		Fresh: spriteManualSwordsmanCorpseFresh,
+		Decay: spriteManualSwordsmanCorpseDecay,
+	}
+
+	corpseSprites[unitUnknown] = corpseSpriteSet{
+		Fresh: spriteManualUnknownCorpseFresh,
+		Decay: spriteManualUnknownCorpseDecay,
+	}
+}

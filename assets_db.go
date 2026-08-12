@@ -162,6 +162,7 @@ func init() {
 	initUISprites()
 	initUnitSprites()
 	initManualUnitSprites()
+	initManualCorpseSprites()
 	initBuildingSprites()
 	initProjectileSprites()
 }
@@ -661,68 +662,6 @@ func initUnitSprites() {
 				}
 			}
 		}
-
-		var freshDeadX, freshDeadY, decayStartX, decayStartY uint16
-
-		// unitNone nie istnieje, jest chwilowym zapychaczem. Dlatego go tutaj nie ma.
-		switch currentUnitType { //nolint:exhaustive
-		case unitCow: // Cow
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 112, 14, 144, 14
-		case unitAxeman: // Axeman
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 120, 70, 200, 70
-		case unitArcher: // Archer
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 112, 98, 144, 98
-		case unitPriestess: // Priestess
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 111, 140, 143, 140
-		case unitPriest: // Priest
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 112, 14, 144, 14
-		case unitSwordsman: // Swordsman
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 120, 70, 200, 70
-		case unitSpearman: // Spearman
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 112, 98, 144, 98
-		case unitCommander: // Commander
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 120, 154, 200, 154
-		case unitBear: // Bear
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 120, 28, 200, 28
-		case unitUnknown: // Strzyga
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 120, 70, 200, 70
-		case unitShepherd: // Shepherd
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 160, 98, 192, 98
-		case unitMage: // Mage
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 224, 98, 256, 98
-		case unitCrossbowman: // Crossbow
-			freshDeadX, freshDeadY, decayStartX, decayStartY = 239, 56, 271, 56
-		default:
-			continue
-		}
-
-		freshDeadSpriteID := spriteBaseID + freshlyDeadSpriteOffset
-		if freshDeadSpriteID < maxSpriteID {
-			spriteRegistry[freshDeadSpriteID] = spriteDef{
-				atlasID:    cfg.Atlas,
-				cropX:      freshDeadX,
-				cropY:      freshDeadY,
-				cropWidth:  tileWidth,
-				cropHeight: tileHeight,
-				flipX:      false,
-				offX:       0,
-				offY:       0,
-			}
-		}
-
-		decayStartSpriteID := spriteBaseID + decayStartSpriteOffset
-		if decayStartSpriteID < maxSpriteID {
-			spriteRegistry[decayStartSpriteID] = spriteDef{
-				atlasID:    cfg.Atlas,
-				cropX:      decayStartX,
-				cropY:      decayStartY,
-				cropWidth:  tileWidth,
-				cropHeight: tileHeight,
-				flipX:      false,
-				offX:       0,
-				offY:       0,
-			}
-		}
 	}
 }
 
@@ -1112,4 +1051,63 @@ func initManualUnitSprites() {
 	setManualUnits1(spriteManualArcherAttack2UpRight, 128, 84, 16, 14, 0, 0, true)
 	setManualUnits1(spriteManualArcherAttack2Right, 128, 98, 16, 14, 0, 0, true)
 	setManualUnits1(spriteManualArcherAttack2DownRight, 128, 112, 16, 14, 0, 0, true)
+}
+
+func initManualCorpseSprites() {
+	setManualCorpse := func(spriteID uint16, atlas battleAtlasID, cropX, cropY uint16) {
+		if spriteID >= maxSpriteID {
+			log.Printf("OSTRZEŻENIE: ręcznie wpisany duszek zwłok nie mieści się!")
+			return
+		}
+
+		spriteRegistry[spriteID] = spriteDef{
+			atlasID:    atlas,
+			cropX:      cropX,
+			cropY:      cropY,
+			cropWidth:  tileWidth,
+			cropHeight: tileHeight,
+			offX:       0,
+			offY:       0,
+			flipX:      false,
+		}
+	}
+
+	setManualCorpse(spriteManualArcherCorpseFresh, atlasUnits1, 112, 98)
+	setManualCorpse(spriteManualArcherCorpseDecay, atlasUnits1, 144, 98)
+
+	setManualCorpse(spriteManualAxemanCorpseFresh, atlasUnits1, 120, 70)
+	setManualCorpse(spriteManualAxemanCorpseDecay, atlasUnits1, 200, 70)
+
+	setManualCorpse(spriteManualBearCorpseFresh, atlasBuildings, 120, 28)
+	setManualCorpse(spriteManualBearCorpseDecay, atlasBuildings, 200, 28)
+
+	setManualCorpse(spriteManualCommanderCorpseFresh, atlasUnits2, 120, 154)
+	setManualCorpse(spriteManualCommanderCorpseDecay, atlasUnits2, 200, 154)
+
+	setManualCorpse(spriteManualCowCorpseFresh, atlasUnits1, 112, 14)
+	setManualCorpse(spriteManualCowCorpseDecay, atlasUnits1, 144, 14)
+
+	setManualCorpse(spriteManualCrossbowmanCorpseFresh, atlasBuildings, 255, 56)
+	setManualCorpse(spriteManualCrossbowmanCorpseDecay, atlasBuildings, 287, 56)
+
+	setManualCorpse(spriteManualMageCorpseFresh, atlasUnits1, 224, 98)
+	setManualCorpse(spriteManualMageCorpseDecay, atlasUnits1, 256, 98)
+
+	setManualCorpse(spriteManualPriestCorpseFresh, atlasUnits2, 112, 14)
+	setManualCorpse(spriteManualPriestCorpseDecay, atlasUnits2, 144, 14)
+
+	setManualCorpse(spriteManualPriestressCorpseFresh, atlasUnits1, 111, 140)
+	setManualCorpse(spriteManualPriestressCorpseDecay, atlasUnits1, 143, 140)
+
+	setManualCorpse(spriteManualShepherdCorpseFresh, atlasUnits1, 160, 98)
+	setManualCorpse(spriteManualShepherdCorpseDecay, atlasUnits1, 192, 98)
+
+	setManualCorpse(spriteManualSpearmanCorpseFresh, atlasUnits2, 112, 98)
+	setManualCorpse(spriteManualSpearmanCorpseDecay, atlasUnits2, 144, 98)
+
+	setManualCorpse(spriteManualSwordsmanCorpseFresh, atlasUnits2, 120, 70)
+	setManualCorpse(spriteManualSwordsmanCorpseDecay, atlasUnits2, 200, 70)
+
+	setManualCorpse(spriteManualUnknownCorpseFresh, atlasBuildings, 120, 70)
+	setManualCorpse(spriteManualUnknownCorpseDecay, atlasBuildings, 200, 70)
 }

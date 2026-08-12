@@ -873,6 +873,7 @@ func main() {
 
 	// @reminder: @todo: tymczasowe rozwiązanie mające na celu sprawdzenie, czy moge lepiej rysować jednostki.
 	initSpriteTable()
+	initCorpseSpriteTable()
 
 	// 7. Stan bitwy (Pusty)
 	bState := newBattleState(pState)

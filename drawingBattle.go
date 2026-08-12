@@ -1016,20 +1016,19 @@ func drawCorpses(y, startX, endX uint8, bState *battleState, ps *programState) {
 			posX := float32(currentCorpse.X) * float32(tileWidth)
 			posY := float32(currentCorpse.Y) * float32(tileHeight)
 
-			if currentCorpse.Phase < corpsesPhase2 {
-				var offsetIndex uint16
-
-				if currentCorpse.Phase == corpsesPhase1 {
-					offsetIndex = 1
-				}
-
-				baseID := spriteUnitBaseID + (uint16(currentCorpse.UnitType) * spriteUnitStep)
-				finalID := baseID + corpsesFrameIndexOffset + offsetIndex
-				drawSprite(ps.Assets, finalID, posX, posY, currentCorpse.Owner)
-			} else {
+			switch currentCorpse.Phase {
+			case corpsesPhase2:
 				cid := spriteEffectskeleton00 + uint16(currentCorpse.SkeletonType)
 				tint := rl.Fade(rl.White, float32(currentCorpse.Alpha)/corpsesMaxAlpha)
 				drawSpriteEx(cid, posX, posY, colorNone, tint, ps)
+
+			case corpsesPhase1:
+				ids := corpseSprites[currentCorpse.UnitType]
+				drawSprite(ps.Assets, ids.Decay, posX, posY, currentCorpse.Owner)
+
+			default:
+				ids := corpseSprites[currentCorpse.UnitType]
+				drawSprite(ps.Assets, ids.Fresh, posX, posY, currentCorpse.Owner)
 			}
 		}
 	}

@@ -175,10 +175,9 @@ const (
 
 const (
 	// rzeczy związane ze zwłokami.
-	corpsesFrameIndexOffset uint16  = 40
-	corpsesPhase2           uint8   = 2
-	corpsesPhase1           uint8   = 1
-	corpsesMaxAlpha         float32 = 255.0
+	corpsesPhase2   uint8   = 2
+	corpsesPhase1   uint8   = 1
+	corpsesMaxAlpha float32 = 255.0
 )
 
 // ↓↓↓Płonięcie kafelków↓↓↓.
@@ -671,21 +670,21 @@ var unitTypeMap = map[string]unitType{
 
 const (
 	// Przypisanie wartości liczbowych każdemu z rodzajów jednostek.
-	unitCow         unitType          = iota // Krowa
-	unitAxeman                               // Drwal
-	unitArcher                               // Łucznik
-	unitPriestess                            // Kapłanka
-	unitPriest                               // Kapłan
-	unitSwordsman                            // Miecznik
-	unitSpearman                             // Włócznik
-	unitCommander                            // Rycerz (w tamtych czasach nie było jeszcze rycerzy!)
-	unitBear                                 // Niedźwiedź
-	unitUnknown                              // Strzyga
-	unitShepherd                             // Pastuch
-	unitMage                                 // Mag
-	unitCrossbowman                          // Kusznik
-	unitNone                                 // Zapychacz jakiś @todo: usuń później.
-	unitTypeCount   = unitCrossbowman        // @reminder: nie wiem na ile to potrzebne;zawsze ostatnie
+	unitCow         unitType              = iota // Krowa
+	unitAxeman                                   // Drwal
+	unitArcher                                   // Łucznik
+	unitPriestess                                // Kapłanka
+	unitPriest                                   // Kapłan
+	unitSwordsman                                // Miecznik
+	unitSpearman                                 // Włócznik
+	unitCommander                                // Rycerz (w tamtych czasach nie było jeszcze rycerzy!)
+	unitBear                                     // Niedźwiedź
+	unitUnknown                                  // Strzyga
+	unitShepherd                                 // Pastuch
+	unitMage                                     // Mag
+	unitCrossbowman                              // Kusznik
+	unitNone                                     // Zapychacz jakiś @todo: usuń później.
+	unitTypeCount   = unitCrossbowman + 1        // @reminder: nie wiem na ile to potrzebne;zawsze ostatnie
 )
 
 const (

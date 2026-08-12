@@ -375,8 +375,33 @@ const (
 	spriteManualArcherAttack2Right
 	spriteManualArcherAttack2DownRight
 
-	// Czy zwłoki są już ogarnięte w starym układzie?
-	spriteManualArcherFreshDead
-	spriteManualArcherDecayStart
 	// KONIEC ŁUCZNIKA
+
+	// Zwłoki
+	spriteManualArcherCorpseFresh
+	spriteManualArcherCorpseDecay
+	spriteManualAxemanCorpseFresh
+	spriteManualAxemanCorpseDecay
+	spriteManualBearCorpseFresh
+	spriteManualBearCorpseDecay
+	spriteManualCommanderCorpseFresh
+	spriteManualCommanderCorpseDecay
+	spriteManualCowCorpseFresh
+	spriteManualCowCorpseDecay
+	spriteManualCrossbowmanCorpseFresh
+	spriteManualCrossbowmanCorpseDecay
+	spriteManualMageCorpseFresh
+	spriteManualMageCorpseDecay
+	spriteManualPriestCorpseFresh
+	spriteManualPriestCorpseDecay
+	spriteManualPriestressCorpseFresh
+	spriteManualPriestressCorpseDecay
+	spriteManualShepherdCorpseFresh
+	spriteManualShepherdCorpseDecay
+	spriteManualSpearmanCorpseFresh
+	spriteManualSpearmanCorpseDecay
+	spriteManualSwordsmanCorpseFresh
+	spriteManualSwordsmanCorpseDecay
+	spriteManualUnknownCorpseFresh
+	spriteManualUnknownCorpseDecay
 )
