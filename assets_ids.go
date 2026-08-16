@@ -377,6 +377,65 @@ const (
 
 	// KONIEC ŁUCZNIKA
 
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualCowBtn
+	// Bezczynność
+	spriteManualCowIdleUpLeft
+	spriteManualCowIdleLeft
+	spriteManualCowIdleDownLeft
+	spriteManualCowIdleDown
+	spriteManualCowIdleDownRight
+	spriteManualCowIdleRight
+	spriteManualCowIdleUpRight
+	spriteManualCowIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualCowMove1Center
+	spriteManualCowMove1UpLeft
+	spriteManualCowMove1Left
+	spriteManualCowMove1DownLeft
+	spriteManualCowMove1Down
+	spriteManualCowMove1Up
+	spriteManualCowMove1UpRight
+	spriteManualCowMove1Right
+	spriteManualCowMove1DownRight
+
+	// chodzenie 2
+	spriteManualCowMove2Center
+	spriteManualCowMove2UpLeft
+	spriteManualCowMove2Left
+	spriteManualCowMove2DownLeft
+	spriteManualCowMove2Down
+	spriteManualCowMove2Up
+	spriteManualCowMove2UpRight
+	spriteManualCowMove2Right
+	spriteManualCowMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualCowAttack1UpLeft
+	spriteManualCowAttack1Left
+	spriteManualCowAttack1DownLeft
+	spriteManualCowAttack1Down
+	spriteManualCowAttack1Up
+	spriteManualCowAttack1UpRight
+	spriteManualCowAttack1Right
+	spriteManualCowAttack1DownRight
+
+	// walka 2
+	spriteManualCowAttack2UpLeft
+	spriteManualCowAttack2Left
+	spriteManualCowAttack2DownLeft
+	spriteManualCowAttack2Down
+	spriteManualCowAttack2Up
+	spriteManualCowAttack2UpRight
+	spriteManualCowAttack2Right
+	spriteManualCowAttack2DownRight
+
+	// Koniec krowy.
+
 	// Zwłoki
 	spriteManualArcherCorpseFresh
 	spriteManualArcherCorpseDecay

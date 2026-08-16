@@ -1001,7 +1001,7 @@ func drawUnits(boardRow, startX, endX uint8, bState *battleState, pState *progra
 	for _, currentUnit := range bState.Units {
 		if currentUnit.Exists && currentUnit.Y == boardRow && currentUnit.X >= startX && currentUnit.X < endX {
 			// @reminder: 03.08.2026 przepisuję animacje jednostek, łucznicy są królikiem doświadczalnym.
-			if currentUnit.Type != unitArcher {
+			if currentUnit.Type != unitArcher && currentUnit.Type != unitCow {
 				drawUnit(currentUnit, bState, pState)
 			} else {
 				drawUnitArcher(currentUnit, bState, pState)
@@ -1089,21 +1089,21 @@ func drawStandingTree(boardColumn, boardRow uint8, t *tile, bState *battleState,
 	}
 }
 
-func drawLeaningTree(boardColumn, boardRow uint8, t *tile, ps *programState) {
+func drawLeaningTree(boardColumn, boardRow uint8, currentTile *tile, pState *programState) {
 	drawX := float32(boardColumn) * float32(tileWidth)
 	drawY := float32(boardRow) * float32(tileHeight)
 
 	var baseStump uint16
 
-	if t.IsBurnt {
+	if currentTile.IsBurnt {
 		baseStump = spriteBurntLeaningTreeStump
 	} else {
 		baseStump = spriteDryLeaningTreeStump
 	}
 
-	drawSprite(ps.Assets, baseStump, drawX, drawY, colorNone)
-	drawSprite(ps.Assets, baseStump+1, drawX, drawY, colorNone)
-	drawSprite(ps.Assets, baseStump+2, drawX, drawY, colorNone)
+	drawSprite(pState.Assets, baseStump, drawX, drawY, colorNone)
+	drawSprite(pState.Assets, baseStump+1, drawX, drawY, colorNone)
+	drawSprite(pState.Assets, baseStump+2, drawX, drawY, colorNone)
 }
 
 func drawFallingOrFallenTree(boardColumn, boardRow uint8, t *tile, ps *programState) {

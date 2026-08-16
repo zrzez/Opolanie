@@ -1051,6 +1051,57 @@ func initManualUnitSprites() {
 	setManualUnits1(spriteManualArcherAttack2UpRight, 128, 84, 16, 14, 0, 0, true)
 	setManualUnits1(spriteManualArcherAttack2Right, 128, 98, 16, 14, 0, 0, true)
 	setManualUnits1(spriteManualArcherAttack2DownRight, 128, 112, 16, 14, 0, 0, true)
+	// Koniec łucznika
+
+	setManualUnits1(spriteManualCowBtn, 16, 14, 16, 14, 0, 0, false)
+
+	setManualUnits1(spriteManualCowIdleUpLeft, 0, 0, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowIdleLeft, 0, 14, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowIdleDownLeft, 0, 28, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowIdleDown, 16, 28, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowIdleDownRight, 0, 28, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowIdleRight, 0, 14, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowIdleUpRight, 0, 0, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowIdleUp, 16, 0, 16, 14, 0, 0, false)
+
+	setManualUnits1(spriteManualCowMove1Center, 48, 14, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove1UpLeft, 32, 0, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove1Left, 32, 14, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove1DownLeft, 32, 28, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove1Down, 48, 28, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove1Up, 48, 0, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove1UpRight, 32, 0, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowMove1Right, 32, 14, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowMove1DownRight, 32, 28, 16, 14, 0, 0, true)
+
+	setManualUnits1(spriteManualCowMove2Center, 80, 14, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove2UpLeft, 64, 0, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove2Left, 64, 14, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove2DownLeft, 64, 28, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove2Down, 80, 28, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove2Up, 80, 0, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowMove2UpRight, 64, 0, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowMove2Right, 64, 14, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowMove2DownRight, 64, 28, 16, 14, 0, 0, true)
+
+	setManualUnits1(spriteManualCowAttack1UpLeft, 96, 0, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowAttack1Left, 96, 14, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowAttack1DownLeft, 96, 28, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowAttack1Down, 112, 28, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowAttack1Up, 112, 0, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowAttack1UpRight, 96, 0, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowAttack1Right, 96, 14, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowAttack1DownRight, 96, 28, 16, 14, 0, 0, true)
+
+	setManualUnits1(spriteManualCowAttack2UpLeft, 128, 0, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowAttack2Left, 128, 14, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowAttack2DownLeft, 128, 28, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowAttack2Down, 144, 28, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowAttack2Up, 144, 0, 16, 14, 0, 0, false)
+	setManualUnits1(spriteManualCowAttack2UpRight, 128, 0, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowAttack2Right, 128, 14, 16, 14, 0, 0, true)
+	setManualUnits1(spriteManualCowAttack2DownRight, 128, 28, 16, 14, 0, 0, true)
+	// Koniec krowy
 }
 
 func initManualCorpseSprites() {

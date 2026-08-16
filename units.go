@@ -1140,6 +1140,91 @@ func initSpriteTable() {
 		spriteManualArcherAttack1DownRight,
 		spriteManualArcherAttack1DownRight,
 	}
+
+	// Koniec Łucznika
+	spriteTable[unitCow][animationIdle][directionNone] = [delayStatesCount]uint16{
+		spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown,
+	}
+	spriteTable[unitCow][animationIdle][directionDown] = [delayStatesCount]uint16{
+		spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown,
+	}
+	spriteTable[unitCow][animationIdle][directionLeft] = [delayStatesCount]uint16{
+		spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft,
+	}
+	spriteTable[unitCow][animationIdle][directionUp] = [delayStatesCount]uint16{
+		spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp,
+	}
+	spriteTable[unitCow][animationIdle][directionRight] = [delayStatesCount]uint16{
+		spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight,
+	}
+	spriteTable[unitCow][animationIdle][directionUpLeft] = [delayStatesCount]uint16{
+		spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft,
+	}
+	spriteTable[unitCow][animationIdle][directionUpRight] = [delayStatesCount]uint16{
+		spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight,
+	}
+	spriteTable[unitCow][animationIdle][directionDownLeft] = [delayStatesCount]uint16{
+		spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft,
+	}
+	spriteTable[unitCow][animationIdle][directionDownRight] = [delayStatesCount]uint16{
+		spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight,
+	}
+
+	spriteTable[unitCow][animationWalk][directionNone] = [delayStatesCount]uint16{
+		spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowMove1Down, spriteManualCowMove1Down, spriteManualCowMove1Down, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowMove2Down, spriteManualCowMove2Down, spriteManualCowMove2Down, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowMove1Down, spriteManualCowMove1Down, spriteManualCowIdleDown,
+	}
+	spriteTable[unitCow][animationWalk][directionDown] = [delayStatesCount]uint16{
+		spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowMove1Down, spriteManualCowMove1Down, spriteManualCowMove1Down, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowMove2Down, spriteManualCowMove2Down, spriteManualCowMove2Down, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowMove1Down, spriteManualCowMove1Down, spriteManualCowIdleDown,
+	}
+	spriteTable[unitCow][animationWalk][directionLeft] = [delayStatesCount]uint16{
+		spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowMove1Left, spriteManualCowMove1Left, spriteManualCowMove1Left, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowMove2Left, spriteManualCowMove2Left, spriteManualCowMove2Left, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowMove1Left, spriteManualCowMove1Left, spriteManualCowIdleLeft,
+	}
+	spriteTable[unitCow][animationWalk][directionUp] = [delayStatesCount]uint16{
+		spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowMove1Up, spriteManualCowMove1Up, spriteManualCowMove1Up, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowMove2Up, spriteManualCowMove2Up, spriteManualCowMove2Up, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowMove1Up, spriteManualCowMove1Up, spriteManualCowIdleUp,
+	}
+	spriteTable[unitCow][animationWalk][directionRight] = [delayStatesCount]uint16{
+		spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowMove1Right, spriteManualCowMove1Right, spriteManualCowMove1Right, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowMove2Right, spriteManualCowMove2Right, spriteManualCowMove2Right, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowMove1Right, spriteManualCowMove1Right, spriteManualCowIdleRight,
+	}
+	spriteTable[unitCow][animationWalk][directionUpLeft] = [delayStatesCount]uint16{
+		spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowMove1UpLeft, spriteManualCowMove1UpLeft, spriteManualCowMove1UpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowMove2UpLeft, spriteManualCowMove2UpLeft, spriteManualCowMove2UpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowMove1UpLeft, spriteManualCowMove1UpLeft, spriteManualCowIdleUpLeft,
+	}
+	spriteTable[unitCow][animationWalk][directionUpRight] = [delayStatesCount]uint16{
+		spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowMove1UpRight, spriteManualCowMove1UpRight, spriteManualCowMove1UpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowMove2UpRight, spriteManualCowMove2UpRight, spriteManualCowMove2UpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowMove1UpRight, spriteManualCowMove1UpRight, spriteManualCowIdleUpRight,
+	}
+	spriteTable[unitCow][animationWalk][directionDownLeft] = [delayStatesCount]uint16{
+		spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowMove1DownLeft, spriteManualCowMove1DownLeft, spriteManualCowMove1DownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowMove2DownLeft, spriteManualCowMove2DownLeft, spriteManualCowMove2DownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowMove1DownLeft, spriteManualCowMove1DownLeft, spriteManualCowIdleDownLeft,
+	}
+	spriteTable[unitCow][animationWalk][directionDownRight] = [delayStatesCount]uint16{
+		spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowMove1DownRight, spriteManualCowMove1DownRight, spriteManualCowMove1DownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowMove2DownRight, spriteManualCowMove2DownRight, spriteManualCowMove2DownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowMove1DownRight, spriteManualCowMove1DownRight, spriteManualCowIdleDownRight,
+	}
+
+	spriteTable[unitCow][animationFight][directionNone] = [delayStatesCount]uint16{
+		spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowAttack2Down, spriteManualCowAttack2Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down,
+	}
+	spriteTable[unitCow][animationFight][directionDown] = [delayStatesCount]uint16{
+		spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowIdleDown, spriteManualCowAttack2Down, spriteManualCowAttack2Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down, spriteManualCowAttack1Down,
+	}
+	spriteTable[unitCow][animationFight][directionLeft] = [delayStatesCount]uint16{
+		spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowIdleLeft, spriteManualCowAttack2Left, spriteManualCowAttack2Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left, spriteManualCowAttack1Left,
+	}
+	spriteTable[unitCow][animationFight][directionUp] = [delayStatesCount]uint16{
+		spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowIdleUp, spriteManualCowAttack2Up, spriteManualCowAttack2Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up, spriteManualCowAttack1Up,
+	}
+	spriteTable[unitCow][animationFight][directionRight] = [delayStatesCount]uint16{
+		spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowIdleRight, spriteManualCowAttack2Right, spriteManualCowAttack2Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right, spriteManualCowAttack1Right,
+	}
+	spriteTable[unitCow][animationFight][directionUpLeft] = [delayStatesCount]uint16{
+		spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowIdleUpLeft, spriteManualCowAttack2UpLeft, spriteManualCowAttack2UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft, spriteManualCowAttack1UpLeft,
+	}
+	spriteTable[unitCow][animationFight][directionUpRight] = [delayStatesCount]uint16{
+		spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowIdleUpRight, spriteManualCowAttack2UpRight, spriteManualCowAttack2UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight, spriteManualCowAttack1UpRight,
+	}
+	spriteTable[unitCow][animationFight][directionDownLeft] = [delayStatesCount]uint16{
+		spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowIdleDownLeft, spriteManualCowAttack2DownLeft, spriteManualCowAttack2DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft, spriteManualCowAttack1DownLeft,
+	}
+	spriteTable[unitCow][animationFight][directionDownRight] = [delayStatesCount]uint16{
+		spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowIdleDownRight, spriteManualCowAttack2DownRight, spriteManualCowAttack2DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight, spriteManualCowAttack1DownRight,
+	}
 }
 
 type corpseSpriteSet struct {
