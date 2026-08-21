@@ -11,6 +11,7 @@ package main
 // zamiast tworzyć je w każdej klatce.
 
 import (
+	"fmt"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -1000,12 +1001,7 @@ func drawCorpsesUnitsTrees(startX, startY, endX, endY uint8, bState *battleState
 func drawUnits(boardRow, startX, endX uint8, bState *battleState, pState *programState) {
 	for _, currentUnit := range bState.Units {
 		if currentUnit.Exists && currentUnit.Y == boardRow && currentUnit.X >= startX && currentUnit.X < endX {
-			// @reminder: 03.08.2026 przepisuję animacje jednostek, łucznicy są królikiem doświadczalnym.
-			if currentUnit.Type != unitArcher && currentUnit.Type != unitCow {
-				drawUnit(currentUnit, bState, pState)
-			} else {
-				drawUnitArcher(currentUnit, bState, pState)
-			}
+			drawUnit(currentUnit, bState, pState)
 		}
 	}
 }
@@ -1189,92 +1185,76 @@ func drawWorldAndUnits(bState *battleState, pState *programState) {
 	drawSelectionBox(bState)
 }
 
-// @todo: rozdziel logikę od rysowania, bo to zwyczajne pomieszanie z poplątaniem.
-// @todo: rysowanie kusznika się popsuło i nawet nie wiem kiedy 05.07.2026
-func drawUnit(u *unit, bState *battleState, programState *programState) {
-	// 1. Bazowa pozycja to CEL (bo w units.go X,Y zmieniają się na początku kroku)
+func drawUnit(u *unit, bState *battleState, pState *programState) {
 	screenX := float32(u.X) * float32(tileWidth)
 	screenY := float32(u.Y) * float32(tileHeight)
 
-	// 2. Logika ruchu - Cofanie od celu
-
 	if u.State == stateMoving {
-		idx := u.Type.getLegacyUnitIndex()
-		delayIdx := u.Delay
+		unitIndex := u.Type.getLegacyUnitIndex()
+		delayIndex := u.Delay
 
-		// Zabezpieczenie zakresu
-		if delayIdx > maxPhaseDelay {
-			delayIdx = 16
+		if delayIndex > maxPhaseDelay {
+			delayIndex = 16
+		}
+		if delayIndex < minPhaseDelay {
+			delayIndex = 0
 		}
 
-		if delayIdx < minPhaseDelay {
-			delayIdx = 0
+		rawShiftX := float32(spriteXOffsetByUnitTypeAndDelay[unitIndex][delayIndex])
+		rawShiftY := float32(spriteYOffsetByUnitTypeAndDelay[unitIndex][delayIndex])
+
+		if int(u.Direction.X) > 0 {
+			screenX -= rawShiftX
+		} else if int(u.Direction.X) < 0 {
+			screenX += rawShiftX
 		}
 
-		// Pobieramy wartość przesunięcia rysowanego duszka (0..16)
-		rawShiftX := float32(spriteXOffsetByUnitTypeAndDelay[idx][delayIdx])
-		rawShiftY := float32(spriteYOffsetByUnitTypeAndDelay[idx][delayIdx])
-
-		// Fizyczny kierunek ruchu (directionX, directionY)
-		directionX := int(u.Direction.X)
-		directionY := int(u.Direction.Y)
-
-		// LOGIKA: Jesteśmy na CELU. Musimy cofnąć się o 'rawShift' w stronę STARTU.
-		// Start (Delay=Max, Shift=16): Cel - 16 = Start. (Jednostka w miejscu startu)
-		// Koniec (Delay=0, Shift=0):   Cel - 0  = Cel.   (Jednostka w miejscu celu)
-
-		if directionX > 0 {
-			screenX -= rawShiftX // Idzie w prawo, więc cofamy w lewo
-		} else if directionX < 0 {
-			screenX += rawShiftX // Idzie w lewo, więc cofamy w prawo
-		}
-
-		if directionY > 0 {
-			screenY -= rawShiftY // Idzie w dół, więc cofamy w górę
-		} else if directionY < 0 {
-			screenY += rawShiftY // Idzie w górę, więc cofamy w dół
+		if int(u.Direction.Y) > 0 {
+			screenY -= rawShiftY
+		} else if int(u.Direction.Y) < 0 {
+			screenY += rawShiftY
 		}
 	}
 
-	// 3. Wyliczenie klatki animacji (Phase)
-	frame := calculateSpriteFrame(u)
+	finalID := getSpriteID(u)
 
-	// 4. Kierunek duszka
-	renderDx := int(u.Direction.X)
-	renderDy := int(u.Direction.Y)
+	fmt.Printf("będę rysować finalID: %v, bo u.Delay to: %v\n", finalID, u.Delay)
 
-	dir := vectorToDirectionIndex(renderDx, renderDy)
-
-	// 5. Korekty dla jednostek wręcznych, oczywiście tylko częściowo działają
-	isMelee := u.Type == unitAxeman || u.Type == unitSwordsman ||
-		u.Type == unitCommander || u.Type == unitBear || u.Type == unitUnknown
-
-	if u.State == stateAttacking && frame > 2 && isMelee {
-		if renderDy > 0 {
-			screenY += 7.0
-		}
-
-		if renderDx > 0 {
-			screenX += 8.0
-		}
-	}
-
-	// 6. Rysowanie
-	baseID := uint16(700 + (int(u.Type) * 200))
-	finalID := baseID + uint16(frame*8) + dir
-
-	// fmt.Printf("BaseID: %d, finalID: %d\n", baseID, finalID)
-
-	drawSpriteEx(finalID, screenX, screenY, u.Owner, rl.White, programState)
+	drawSpriteEx(finalID, screenX, screenY, u.Owner, rl.White, pState)
 
 	if len(u.Wounds) > 0 {
-		drawUnitWounds(u, screenX, screenY, programState)
+		drawUnitWounds(u, screenX, screenY, pState)
 	}
 
-	// 7. Rysowanie czarodziejskiej tarczy dla czarodziejek
-	drawActiveMagicShield(u, screenX, screenY, bState, programState)
+	drawActiveMagicShield(u, screenX, screenY, bState, pState)
 }
 
+// Pobiera jawne ID duszka z tablicy spriteTable na podstawie stanu jednostki.
+// Zastępuje matematyczne obliczenia ze starego układu.
+func getSpriteID(u *unit) uint16 {
+	anim := u.getAnimationType()
+	dir := u.animationDirection()
+
+	delayIdx := int(u.Delay)
+	if delayIdx > int(maxPhaseDelay) {
+		delayIdx = int(maxPhaseDelay)
+	}
+	if delayIdx < int(minPhaseDelay) {
+		delayIdx = int(minPhaseDelay)
+	}
+
+	return spriteTable[u.Type][anim][dir][delayIdx]
+}
+
+const (
+	animFramesCount = 4
+	directionsCount = 9
+	animTypesCount  = 3
+
+	delayStatesCount = 17
+)
+
+// @todo: dodaj migotanie tarczy, gdy się kończy
 func drawActiveMagicShield(u *unit, screenX, screenY float32, bState *battleState, ps *programState) {
 	if u.Type == unitPriestess && u.hasMagicShield {
 		// 0. Podkładka.
@@ -1603,15 +1583,6 @@ func drawButtons(bState *battleState, ps *programState) {
 		// rl.DrawRectangleRec(rect, bgColor)
 
 		iconID := action.IconID
-
-		// jeśli IconID == 0 (nie ustawiono ręcznie),
-		// wyliczamy ikonę na podstawie typu jednostki (np. "twarz" krowy)
-		// @todo: teraz wszystkie jednostki z tego korzystają, ale muszę to zmienić
-		// oby się udało wpisać „na sztywno”, co chcę wyświetlić. Bardzo uprości życie
-		if action.Cmd.ActionType == cmdBProduce {
-			// Base (700) + Typ * 200 + Kierunek Dół (4) = Portret
-			iconID = uint16(int(spriteUnitBaseID + (uint16(action.Cmd.CreateType) * spriteUnitStep) + 4))
-		}
 
 		def := spriteRegistry[iconID]
 		// Pobieramy odpowiedni atlas z AssetManagera

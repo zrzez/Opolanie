@@ -435,6 +435,642 @@ const (
 	spriteManualCowAttack2DownRight
 
 	// Koniec krowy.
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualPriestessBtn
+	// Bezczynność
+	spriteManualPriestessIdleUpLeft
+	spriteManualPriestessIdleLeft
+	spriteManualPriestessIdleDownLeft
+	spriteManualPriestessIdleDown
+	spriteManualPriestessIdleDownRight
+	spriteManualPriestessIdleRight
+	spriteManualPriestessIdleUpRight
+	spriteManualPriestessIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualPriestessMove1Center
+	spriteManualPriestessMove1UpLeft
+	spriteManualPriestessMove1Left
+	spriteManualPriestessMove1DownLeft
+	spriteManualPriestessMove1Down
+	spriteManualPriestessMove1Up
+	spriteManualPriestessMove1UpRight
+	spriteManualPriestessMove1Right
+	spriteManualPriestessMove1DownRight
+
+	// chodzenie 2
+	spriteManualPriestessMove2Center
+	spriteManualPriestessMove2UpLeft
+	spriteManualPriestessMove2Left
+	spriteManualPriestessMove2DownLeft
+	spriteManualPriestessMove2Down
+	spriteManualPriestessMove2Up
+	spriteManualPriestessMove2UpRight
+	spriteManualPriestessMove2Right
+	spriteManualPriestessMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualPriestessAttack1UpLeft
+	spriteManualPriestessAttack1Left
+	spriteManualPriestessAttack1DownLeft
+	spriteManualPriestessAttack1Down
+	spriteManualPriestessAttack1Up
+	spriteManualPriestessAttack1UpRight
+	spriteManualPriestessAttack1Right
+	spriteManualPriestessAttack1DownRight
+
+	// walka 2
+	spriteManualPriestessAttack2UpLeft
+	spriteManualPriestessAttack2Left
+	spriteManualPriestessAttack2DownLeft
+	spriteManualPriestessAttack2Down
+	spriteManualPriestessAttack2Up
+	spriteManualPriestessAttack2UpRight
+	spriteManualPriestessAttack2Right
+	spriteManualPriestessAttack2DownRight
+
+	// Koniec kapłanki
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualShepherdBtn
+	// Bezczynność
+	spriteManualShepherdIdleUpLeft
+	spriteManualShepherdIdleLeft
+	spriteManualShepherdIdleDownLeft
+	spriteManualShepherdIdleDown
+	spriteManualShepherdIdleDownRight
+	spriteManualShepherdIdleRight
+	spriteManualShepherdIdleUpRight
+	spriteManualShepherdIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualShepherdMove1Center
+	spriteManualShepherdMove1UpLeft
+	spriteManualShepherdMove1Left
+	spriteManualShepherdMove1DownLeft
+	spriteManualShepherdMove1Down
+	spriteManualShepherdMove1Up
+	spriteManualShepherdMove1UpRight
+	spriteManualShepherdMove1Right
+	spriteManualShepherdMove1DownRight
+
+	// chodzenie 2
+	spriteManualShepherdMove2Center
+	spriteManualShepherdMove2UpLeft
+	spriteManualShepherdMove2Left
+	spriteManualShepherdMove2DownLeft
+	spriteManualShepherdMove2Down
+	spriteManualShepherdMove2Up
+	spriteManualShepherdMove2UpRight
+	spriteManualShepherdMove2Right
+	spriteManualShepherdMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualShepherdAttack1UpLeft
+	spriteManualShepherdAttack1Left
+	spriteManualShepherdAttack1DownLeft
+	spriteManualShepherdAttack1Down
+	spriteManualShepherdAttack1Up
+	spriteManualShepherdAttack1UpRight
+	spriteManualShepherdAttack1Right
+	spriteManualShepherdAttack1DownRight
+
+	// walka 2
+	spriteManualShepherdAttack2UpLeft
+	spriteManualShepherdAttack2Left
+	spriteManualShepherdAttack2DownLeft
+	spriteManualShepherdAttack2Down
+	spriteManualShepherdAttack2Up
+	spriteManualShepherdAttack2UpRight
+	spriteManualShepherdAttack2Right
+	spriteManualShepherdAttack2DownRight
+
+	// Koniec pastucha
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualMageBtn
+	// Bezczynność
+	spriteManualMageIdleUpLeft
+	spriteManualMageIdleLeft
+	spriteManualMageIdleDownLeft
+	spriteManualMageIdleDown
+	spriteManualMageIdleDownRight
+	spriteManualMageIdleRight
+	spriteManualMageIdleUpRight
+	spriteManualMageIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualMageMove1Center
+	spriteManualMageMove1UpLeft
+	spriteManualMageMove1Left
+	spriteManualMageMove1DownLeft
+	spriteManualMageMove1Down
+	spriteManualMageMove1Up
+	spriteManualMageMove1UpRight
+	spriteManualMageMove1Right
+	spriteManualMageMove1DownRight
+
+	// chodzenie 2
+	spriteManualMageMove2Center
+	spriteManualMageMove2UpLeft
+	spriteManualMageMove2Left
+	spriteManualMageMove2DownLeft
+	spriteManualMageMove2Down
+	spriteManualMageMove2Up
+	spriteManualMageMove2UpRight
+	spriteManualMageMove2Right
+	spriteManualMageMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualMageAttack1UpLeft
+	spriteManualMageAttack1Left
+	spriteManualMageAttack1DownLeft
+	spriteManualMageAttack1Down
+	spriteManualMageAttack1Up
+	spriteManualMageAttack1UpRight
+	spriteManualMageAttack1Right
+	spriteManualMageAttack1DownRight
+
+	// walka 2
+	spriteManualMageAttack2UpLeft
+	spriteManualMageAttack2Left
+	spriteManualMageAttack2DownLeft
+	spriteManualMageAttack2Down
+	spriteManualMageAttack2Up
+	spriteManualMageAttack2UpRight
+	spriteManualMageAttack2Right
+	spriteManualMageAttack2DownRight
+
+	// Koniec pastucha
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualPriestBtn
+	// Bezczynność
+	spriteManualPriestIdleUpLeft
+	spriteManualPriestIdleLeft
+	spriteManualPriestIdleDownLeft
+	spriteManualPriestIdleDown
+	spriteManualPriestIdleDownRight
+	spriteManualPriestIdleRight
+	spriteManualPriestIdleUpRight
+	spriteManualPriestIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualPriestMove1Center
+	spriteManualPriestMove1UpLeft
+	spriteManualPriestMove1Left
+	spriteManualPriestMove1DownLeft
+	spriteManualPriestMove1Down
+	spriteManualPriestMove1Up
+	spriteManualPriestMove1UpRight
+	spriteManualPriestMove1Right
+	spriteManualPriestMove1DownRight
+
+	// chodzenie 2
+	spriteManualPriestMove2Center
+	spriteManualPriestMove2UpLeft
+	spriteManualPriestMove2Left
+	spriteManualPriestMove2DownLeft
+	spriteManualPriestMove2Down
+	spriteManualPriestMove2Up
+	spriteManualPriestMove2UpRight
+	spriteManualPriestMove2Right
+	spriteManualPriestMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualPriestAttack1UpLeft
+	spriteManualPriestAttack1Left
+	spriteManualPriestAttack1DownLeft
+	spriteManualPriestAttack1Down
+	spriteManualPriestAttack1Up
+	spriteManualPriestAttack1UpRight
+	spriteManualPriestAttack1Right
+	spriteManualPriestAttack1DownRight
+
+	// walka 2
+	spriteManualPriestAttack2UpLeft
+	spriteManualPriestAttack2Left
+	spriteManualPriestAttack2DownLeft
+	spriteManualPriestAttack2Down
+	spriteManualPriestAttack2Up
+	spriteManualPriestAttack2UpRight
+	spriteManualPriestAttack2Right
+	spriteManualPriestAttack2DownRight
+
+	// Koniec kapłana
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualSpearmanBtn
+	// Bezczynność
+	spriteManualSpearmanIdleUpLeft
+	spriteManualSpearmanIdleLeft
+	spriteManualSpearmanIdleDownLeft
+	spriteManualSpearmanIdleDown
+	spriteManualSpearmanIdleDownRight
+	spriteManualSpearmanIdleRight
+	spriteManualSpearmanIdleUpRight
+	spriteManualSpearmanIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualSpearmanMove1Center
+	spriteManualSpearmanMove1UpLeft
+	spriteManualSpearmanMove1Left
+	spriteManualSpearmanMove1DownLeft
+	spriteManualSpearmanMove1Down
+	spriteManualSpearmanMove1Up
+	spriteManualSpearmanMove1UpRight
+	spriteManualSpearmanMove1Right
+	spriteManualSpearmanMove1DownRight
+
+	// chodzenie 2
+	spriteManualSpearmanMove2Center
+	spriteManualSpearmanMove2UpLeft
+	spriteManualSpearmanMove2Left
+	spriteManualSpearmanMove2DownLeft
+	spriteManualSpearmanMove2Down
+	spriteManualSpearmanMove2Up
+	spriteManualSpearmanMove2UpRight
+	spriteManualSpearmanMove2Right
+	spriteManualSpearmanMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualSpearmanAttack1UpLeft
+	spriteManualSpearmanAttack1Left
+	spriteManualSpearmanAttack1DownLeft
+	spriteManualSpearmanAttack1Down
+	spriteManualSpearmanAttack1Up
+	spriteManualSpearmanAttack1UpRight
+	spriteManualSpearmanAttack1Right
+	spriteManualSpearmanAttack1DownRight
+
+	// walka 2
+	spriteManualSpearmanAttack2UpLeft
+	spriteManualSpearmanAttack2Left
+	spriteManualSpearmanAttack2DownLeft
+	spriteManualSpearmanAttack2Down
+	spriteManualSpearmanAttack2Up
+	spriteManualSpearmanAttack2UpRight
+	spriteManualSpearmanAttack2Right
+	spriteManualSpearmanAttack2DownRight
+
+	// Koniec włócznika
+
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualCrossbowmanBtn
+	// Bezczynność
+	spriteManualCrossbowmanIdleUpLeft
+	spriteManualCrossbowmanIdleLeft
+	spriteManualCrossbowmanIdleDownLeft
+	spriteManualCrossbowmanIdleDown
+	spriteManualCrossbowmanIdleDownRight
+	spriteManualCrossbowmanIdleRight
+	spriteManualCrossbowmanIdleUpRight
+	spriteManualCrossbowmanIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualCrossbowmanMove1Center
+	spriteManualCrossbowmanMove1UpLeft
+	spriteManualCrossbowmanMove1Left
+	spriteManualCrossbowmanMove1DownLeft
+	spriteManualCrossbowmanMove1Down
+	spriteManualCrossbowmanMove1Up
+	spriteManualCrossbowmanMove1UpRight
+	spriteManualCrossbowmanMove1Right
+	spriteManualCrossbowmanMove1DownRight
+
+	// chodzenie 2
+	spriteManualCrossbowmanMove2Center
+	spriteManualCrossbowmanMove2UpLeft
+	spriteManualCrossbowmanMove2Left
+	spriteManualCrossbowmanMove2DownLeft
+	spriteManualCrossbowmanMove2Down
+	spriteManualCrossbowmanMove2Up
+	spriteManualCrossbowmanMove2UpRight
+	spriteManualCrossbowmanMove2Right
+	spriteManualCrossbowmanMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualCrossbowmanAttack1UpLeft
+	spriteManualCrossbowmanAttack1Left
+	spriteManualCrossbowmanAttack1DownLeft
+	spriteManualCrossbowmanAttack1Down
+	spriteManualCrossbowmanAttack1Up
+	spriteManualCrossbowmanAttack1UpRight
+	spriteManualCrossbowmanAttack1Right
+	spriteManualCrossbowmanAttack1DownRight
+
+	// walka 2
+	spriteManualCrossbowmanAttack2UpLeft
+	spriteManualCrossbowmanAttack2Left
+	spriteManualCrossbowmanAttack2DownLeft
+	spriteManualCrossbowmanAttack2Down
+	spriteManualCrossbowmanAttack2Up
+	spriteManualCrossbowmanAttack2UpRight
+	spriteManualCrossbowmanAttack2Right
+	spriteManualCrossbowmanAttack2DownRight
+
+	// Koniec kusznika
+
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualAxemanBtn
+	// Bezczynność
+	spriteManualAxemanIdleUpLeft
+	spriteManualAxemanIdleLeft
+	spriteManualAxemanIdleDownLeft
+	spriteManualAxemanIdleDown
+	spriteManualAxemanIdleDownRight
+	spriteManualAxemanIdleRight
+	spriteManualAxemanIdleUpRight
+	spriteManualAxemanIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualAxemanMove1Center
+	spriteManualAxemanMove1UpLeft
+	spriteManualAxemanMove1Left
+	spriteManualAxemanMove1DownLeft
+	spriteManualAxemanMove1Down
+	spriteManualAxemanMove1Up
+	spriteManualAxemanMove1UpRight
+	spriteManualAxemanMove1Right
+	spriteManualAxemanMove1DownRight
+
+	// chodzenie 2
+	spriteManualAxemanMove2Center
+	spriteManualAxemanMove2UpLeft
+	spriteManualAxemanMove2Left
+	spriteManualAxemanMove2DownLeft
+	spriteManualAxemanMove2Down
+	spriteManualAxemanMove2Up
+	spriteManualAxemanMove2UpRight
+	spriteManualAxemanMove2Right
+	spriteManualAxemanMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualAxemanAttack1UpLeft
+	spriteManualAxemanAttack1Left
+	spriteManualAxemanAttack1DownLeft
+	spriteManualAxemanAttack1Down
+	spriteManualAxemanAttack1Up
+	spriteManualAxemanAttack1UpRight
+	spriteManualAxemanAttack1Right
+	spriteManualAxemanAttack1DownRight
+
+	// walka 2
+	spriteManualAxemanAttack2UpLeft
+	spriteManualAxemanAttack2Left
+	spriteManualAxemanAttack2DownLeft
+	spriteManualAxemanAttack2Down
+	spriteManualAxemanAttack2Up
+	spriteManualAxemanAttack2UpRight
+	spriteManualAxemanAttack2Right
+	spriteManualAxemanAttack2DownRight
+
+	// Koniec drwala
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualSwordsmanBtn
+	// Bezczynność
+	spriteManualSwordsmanIdleUpLeft
+	spriteManualSwordsmanIdleLeft
+	spriteManualSwordsmanIdleDownLeft
+	spriteManualSwordsmanIdleDown
+	spriteManualSwordsmanIdleDownRight
+	spriteManualSwordsmanIdleRight
+	spriteManualSwordsmanIdleUpRight
+	spriteManualSwordsmanIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualSwordsmanMove1Center
+	spriteManualSwordsmanMove1UpLeft
+	spriteManualSwordsmanMove1Left
+	spriteManualSwordsmanMove1DownLeft
+	spriteManualSwordsmanMove1Down
+	spriteManualSwordsmanMove1Up
+	spriteManualSwordsmanMove1UpRight
+	spriteManualSwordsmanMove1Right
+	spriteManualSwordsmanMove1DownRight
+
+	// chodzenie 2
+	spriteManualSwordsmanMove2Center
+	spriteManualSwordsmanMove2UpLeft
+	spriteManualSwordsmanMove2Left
+	spriteManualSwordsmanMove2DownLeft
+	spriteManualSwordsmanMove2Down
+	spriteManualSwordsmanMove2Up
+	spriteManualSwordsmanMove2UpRight
+	spriteManualSwordsmanMove2Right
+	spriteManualSwordsmanMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualSwordsmanAttack1UpLeft
+	spriteManualSwordsmanAttack1Left
+	spriteManualSwordsmanAttack1DownLeft
+	spriteManualSwordsmanAttack1Down
+	spriteManualSwordsmanAttack1Up
+	spriteManualSwordsmanAttack1UpRight
+	spriteManualSwordsmanAttack1Right
+	spriteManualSwordsmanAttack1DownRight
+
+	// walka 2
+	spriteManualSwordsmanAttack2UpLeft
+	spriteManualSwordsmanAttack2Left
+	spriteManualSwordsmanAttack2DownLeft
+	spriteManualSwordsmanAttack2Down
+	spriteManualSwordsmanAttack2Up
+	spriteManualSwordsmanAttack2UpRight
+	spriteManualSwordsmanAttack2Right
+	spriteManualSwordsmanAttack2DownRight
+	// koniec miecznika
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualCommanderBtn
+	// Bezczynność
+	spriteManualCommanderIdleUpLeft
+	spriteManualCommanderIdleLeft
+	spriteManualCommanderIdleDownLeft
+	spriteManualCommanderIdleDown
+	spriteManualCommanderIdleDownRight
+	spriteManualCommanderIdleRight
+	spriteManualCommanderIdleUpRight
+	spriteManualCommanderIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualCommanderMove1Center
+	spriteManualCommanderMove1UpLeft
+	spriteManualCommanderMove1Left
+	spriteManualCommanderMove1DownLeft
+	spriteManualCommanderMove1Down
+	spriteManualCommanderMove1Up
+	spriteManualCommanderMove1UpRight
+	spriteManualCommanderMove1Right
+	spriteManualCommanderMove1DownRight
+
+	// chodzenie 2
+	spriteManualCommanderMove2Center
+	spriteManualCommanderMove2UpLeft
+	spriteManualCommanderMove2Left
+	spriteManualCommanderMove2DownLeft
+	spriteManualCommanderMove2Down
+	spriteManualCommanderMove2Up
+	spriteManualCommanderMove2UpRight
+	spriteManualCommanderMove2Right
+	spriteManualCommanderMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualCommanderAttack1UpLeft
+	spriteManualCommanderAttack1Left
+	spriteManualCommanderAttack1DownLeft
+	spriteManualCommanderAttack1Down
+	spriteManualCommanderAttack1Up
+	spriteManualCommanderAttack1UpRight
+	spriteManualCommanderAttack1Right
+	spriteManualCommanderAttack1DownRight
+
+	// walka 2
+	spriteManualCommanderAttack2UpLeft
+	spriteManualCommanderAttack2Left
+	spriteManualCommanderAttack2DownLeft
+	spriteManualCommanderAttack2Down
+	spriteManualCommanderAttack2Up
+	spriteManualCommanderAttack2UpRight
+	spriteManualCommanderAttack2Right
+	spriteManualCommanderAttack2DownRight
+	// koniec dowódcy
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualBearBtn
+	// Bezczynność
+	spriteManualBearIdleUpLeft
+	spriteManualBearIdleLeft
+	spriteManualBearIdleDownLeft
+	spriteManualBearIdleDown
+	spriteManualBearIdleDownRight
+	spriteManualBearIdleRight
+	spriteManualBearIdleUpRight
+	spriteManualBearIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualBearMove1Center
+	spriteManualBearMove1UpLeft
+	spriteManualBearMove1Left
+	spriteManualBearMove1DownLeft
+	spriteManualBearMove1Down
+	spriteManualBearMove1Up
+	spriteManualBearMove1UpRight
+	spriteManualBearMove1Right
+	spriteManualBearMove1DownRight
+
+	// chodzenie 2
+	spriteManualBearMove2Center
+	spriteManualBearMove2UpLeft
+	spriteManualBearMove2Left
+	spriteManualBearMove2DownLeft
+	spriteManualBearMove2Down
+	spriteManualBearMove2Up
+	spriteManualBearMove2UpRight
+	spriteManualBearMove2Right
+	spriteManualBearMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualBearAttack1UpLeft
+	spriteManualBearAttack1Left
+	spriteManualBearAttack1DownLeft
+	spriteManualBearAttack1Down
+	spriteManualBearAttack1Up
+	spriteManualBearAttack1UpRight
+	spriteManualBearAttack1Right
+	spriteManualBearAttack1DownRight
+
+	// walka 2
+	spriteManualBearAttack2UpLeft
+	spriteManualBearAttack2Left
+	spriteManualBearAttack2DownLeft
+	spriteManualBearAttack2Down
+	spriteManualBearAttack2Up
+	spriteManualBearAttack2UpRight
+	spriteManualBearAttack2Right
+	spriteManualBearAttack2DownRight
+	// koneic niedźwiedzia
+	// Przycisk na UI do stworzenia jednostki!
+	spriteManualUnknownBtn
+	// Bezczynność
+	spriteManualUnknownIdleUpLeft
+	spriteManualUnknownIdleLeft
+	spriteManualUnknownIdleDownLeft
+	spriteManualUnknownIdleDown
+	spriteManualUnknownIdleDownRight
+	spriteManualUnknownIdleRight
+	spriteManualUnknownIdleUpRight
+	spriteManualUnknownIdleUp
+
+	// Chodzenie
+	// chodzenie 1
+	spriteManualUnknownMove1Center
+	spriteManualUnknownMove1UpLeft
+	spriteManualUnknownMove1Left
+	spriteManualUnknownMove1DownLeft
+	spriteManualUnknownMove1Down
+	spriteManualUnknownMove1Up
+	spriteManualUnknownMove1UpRight
+	spriteManualUnknownMove1Right
+	spriteManualUnknownMove1DownRight
+
+	// chodzenie 2
+	spriteManualUnknownMove2Center
+	spriteManualUnknownMove2UpLeft
+	spriteManualUnknownMove2Left
+	spriteManualUnknownMove2DownLeft
+	spriteManualUnknownMove2Down
+	spriteManualUnknownMove2Up
+	spriteManualUnknownMove2UpRight
+	spriteManualUnknownMove2Right
+	spriteManualUnknownMove2DownRight
+
+	// Walka
+
+	// walka 1
+	spriteManualUnknownAttack1UpLeft
+	spriteManualUnknownAttack1Left
+	spriteManualUnknownAttack1DownLeft
+	spriteManualUnknownAttack1Down
+	spriteManualUnknownAttack1Up
+	spriteManualUnknownAttack1UpRight
+	spriteManualUnknownAttack1Right
+	spriteManualUnknownAttack1DownRight
+
+	// walka 2
+	spriteManualUnknownAttack2UpLeft
+	spriteManualUnknownAttack2Left
+	spriteManualUnknownAttack2DownLeft
+	spriteManualUnknownAttack2Down
+	spriteManualUnknownAttack2Up
+	spriteManualUnknownAttack2UpRight
+	spriteManualUnknownAttack2Right
+	spriteManualUnknownAttack2DownRight
+	// koniec strzygi
 
 	// Zwłoki
 	spriteManualArcherCorpseFresh
@@ -453,8 +1089,8 @@ const (
 	spriteManualMageCorpseDecay
 	spriteManualPriestCorpseFresh
 	spriteManualPriestCorpseDecay
-	spriteManualPriestressCorpseFresh
-	spriteManualPriestressCorpseDecay
+	spriteManualPriestessCorpseFresh
+	spriteManualPriestessCorpseDecay
 	spriteManualShepherdCorpseFresh
 	spriteManualShepherdCorpseDecay
 	spriteManualSpearmanCorpseFresh

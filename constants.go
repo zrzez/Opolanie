@@ -914,7 +914,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitShepherd,
 			Label:    "Pastuch",
 			MinLevel: 0, // @todo: SHEPHERD_LEVEL powinno być
-			IconID:   0,
+			IconID:   spriteManualShepherdBtn,
 		},
 		// Przycisk 2/5
 		//nolint:exhaustruct
@@ -922,7 +922,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitCow,
 			Label:    "Krowa",
 			MinLevel: 0,
-			IconID:   0,
+			IconID:   spriteManualCowBtn,
 		},
 		// Przycisk 3/5
 		// Przycisk 4/5
@@ -944,7 +944,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitArcher,
 			Label:    "Łucznik",
 			MinLevel: 0,
-			IconID:   0,
+			IconID:   spriteManualArcherBtn,
 		},
 		// Przycisk 3/5
 		//nolint:exhaustruct
@@ -952,7 +952,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitAxeman,
 			Label:    "Drwal",
 			MinLevel: 0,
-			IconID:   0,
+			IconID:   spriteManualAxemanBtn,
 		},
 		// Przycisk 4/5
 		// Przycisk 5/5
@@ -973,7 +973,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitSpearman, //nolint:nolintlint,nolintlint,exhaustruct
 			Label:    "Włócznik",
 			MinLevel: 0,
-			IconID:   0,
+			IconID:   spriteManualSpearmanBtn,
 		},
 		// Przycisk 3/5
 		//nolint:exhaustruct
@@ -981,7 +981,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitSwordsman,
 			Label:    "Miecznik",
 			MinLevel: 0,
-			IconID:   0,
+			IconID:   spriteManualSwordsmanBtn,
 		},
 
 		// Przycisk 4/5
@@ -1001,7 +1001,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitMage,
 			Label:    "Mag",
 			MinLevel: 0,
-			IconID:   0,
+			IconID:   spriteManualMageBtn,
 		},
 		// Przycisk 2/5
 		//nolint:exhaustruct
@@ -1009,7 +1009,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitPriest,
 			Label:    "Kapłan",
 			MinLevel: 0,
-			IconID:   0,
+			IconID:   spriteManualPriestBtn,
 		},
 		// Przycisk 3/5
 		//nolint:exhaustruct
@@ -1017,7 +1017,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitPriestess,
 			Label:    "Kapłanka",
 			MinLevel: 0,
-			IconID:   0,
+			IconID:   spriteManualPriestessBtn,
 		},
 		// Przycisk 4/5
 		// N/D
@@ -1032,7 +1032,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitCrossbowman,
 			Label:    "Kusznik",
 			MinLevel: 0,
-			IconID:   0,
+			IconID:   spriteManualCrossbowmanBtn,
 		},
 		// Przycisk 2/5
 		//nolint:exhaustruct
@@ -1040,7 +1040,7 @@ var buildingRecipes = map[buildingType][]buildingAction{
 			UnitType: unitCommander,
 			Label:    "Rycerz",
 			MinLevel: 0,
-			IconID:   0,
+			IconID:   spriteManualCommanderBtn,
 		},
 		// Przycisk 3/5
 		// Przycisk 4/5
@@ -1059,12 +1059,6 @@ const (
 	magicGhostManaCost   uint16 = 20
 )
 
-const (
-	// Stałe związane z duszkami zmarłych jednostek.
-	freshlyDeadSpriteOffset = 40
-	decayStartSpriteOffset  = 41
-)
-
 // == Rzeczy dla assets_db.go.
 const (
 	directionNone uint8 = iota
@@ -1077,13 +1071,4 @@ const (
 	directionLeft
 	directionUpLeft
 	directionCount
-)
-
-const (
-	frameIdle unitFrame = iota
-	frameWalk1
-	frameWalk2
-	frameAttack1
-	frameAttack2
-	frameCount
 )
