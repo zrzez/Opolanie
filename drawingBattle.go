@@ -11,7 +11,6 @@ package main
 // zamiast tworzyć je w każdej klatce.
 
 import (
-	"fmt"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -613,13 +612,14 @@ func drawGhostlySprite(spriteID uint16, x, y float32, phase1, phase2 float64, fr
 	tint := rl.Fade(rl.White, alpha)
 
 	// 3. Wycięcie duszka z atlasu (w tym zwierciadlane odbicie)
-	sharedSrcRect.X = float32(def.cropX)
-	sharedSrcRect.Y = float32(def.cropY)
-	sharedSrcRect.Height = float32(def.cropHeight)
+	srcRect := rl.Rectangle{}
+	srcRect.X = float32(def.cropX)
+	srcRect.Y = float32(def.cropY)
+	srcRect.Height = float32(def.cropHeight)
 	if def.flipX {
-		sharedSrcRect.Width = -float32(def.cropWidth)
+		srcRect.Width = -float32(def.cropWidth)
 	} else {
-		sharedSrcRect.Width = float32(def.cropWidth)
+		srcRect.Width = float32(def.cropWidth)
 	}
 
 	// 4. Pozycjonowanie
@@ -630,17 +630,19 @@ func drawGhostlySprite(spriteID uint16, x, y float32, phase1, phase2 float64, fr
 	destW := float32(def.cropWidth) * pulse
 	destH := float32(def.cropHeight) * pulse
 
-	sharedDestRect.X = centerX - destW*0.5
-	sharedDestRect.Y = centerY - destH*0.5
-	sharedDestRect.Width = destW
-	sharedDestRect.Height = destH
+	destRect := rl.Rectangle{}
+	destRect.X = centerX - destW*0.5
+	destRect.Y = centerY - destH*0.5
+	destRect.Width = destW
+	destRect.Height = destH
 
 	// 6. Ustawienie punktu obrotu/skalowania
-	sharedOrigin.X = destW * 0.5
-	sharedOrigin.Y = destH * 0.5
+	origin := rl.Vector2{}
+	origin.X = destW * 0.5
+	origin.Y = destH * 0.5
 
 	// 7. Rysujemy
-	rl.DrawTexturePro(texture, sharedSrcRect, sharedDestRect, sharedOrigin, 0, tint)
+	rl.DrawTexturePro(texture, srcRect, destRect, origin, 0, tint)
 }
 
 func drawSingleProjectile(p *projectile, frameCounter uint16, ps *programState) {
@@ -1217,8 +1219,6 @@ func drawUnit(u *unit, bState *battleState, pState *programState) {
 	}
 
 	finalID := getSpriteID(u)
-
-	fmt.Printf("będę rysować finalID: %v, bo u.Delay to: %v\n", finalID, u.Delay)
 
 	drawSpriteEx(finalID, screenX, screenY, u.Owner, rl.White, pState)
 
