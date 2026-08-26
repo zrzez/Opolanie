@@ -48,7 +48,8 @@ func (u *unit) addUnitCommand(cmd *command, bState *battleState) {
 
 	// Przekazujemy cel oraz podejście
 	u.prepareForNewCommand(cmd.ActionType, cmd.Target, approach)
-	u.applyCommandState(cmd.ActionType)
+	needsMovement := (approach.X != u.X || approach.Y != u.Y)
+	u.applyCommandState(cmd.ActionType, needsMovement)
 }
 
 func (u *unit) setIdleWithReason(reason string) {
@@ -73,12 +74,18 @@ func (u *unit) setIdleWithReason(reason string) {
 // @reminder: @todo: ustawianie rodzaju uruchomienia w tym miejscu nie jest
 // najlepszym pomysłem. Przez to muszę polować na u.AnimationType w różnych
 // miejscach zamiast mieć jedno łatwe w utrzymaniu skupisko.
-func (u *unit) applyCommandState(command commandType) {
-	switch command {
-	case cmdUAttack:
+func (u *unit) applyCommandState(command commandType, needsMovement bool) {
+	if needsMovement && command.isInteraction() {
 		u.State = stateMoving
 		u.setAnimationType()
-		u.AnimationFrame = 3
+
+		return
+	}
+
+	switch command {
+	case cmdUAttack:
+		u.State = stateAttacking
+		u.setAnimationType()
 		u.AnimationCounter = 0
 	case cmdUMove, cmdUFlee:
 		u.State = stateMoving
@@ -86,12 +93,10 @@ func (u *unit) applyCommandState(command commandType) {
 	case cmdUStop:
 		u.State = stateIdle
 		u.setAnimationType()
-		u.AnimationFrame = 0
 		u.Command = cmdUIdle
 	case cmdUCastSpell:
 		u.State = stateCastingSpell
 		u.setAnimationType()
-		u.AnimationFrame = 3
 		u.AnimationCounter = 0
 	case cmdUGraze:
 		u.State = stateGrazing
@@ -122,7 +127,7 @@ func (u *unit) executeStandardUnitCommand(pathfindingBudget int, bState *battleS
 	case cmdUAttack:
 		if u.canAttackTargetFromCurrentPosition(bState) {
 			u.State = stateAttacking
-			// u.setAnimationType()
+			u.setAnimationType()
 			u.clearPath()
 
 			if u.Delay == 0 && u.AttackCooldown == 0 {
@@ -131,6 +136,7 @@ func (u *unit) executeStandardUnitCommand(pathfindingBudget int, bState *battleS
 
 		} else {
 			u.State = stateMoving
+			u.setAnimationType()
 			u.move(pathfindingBudget, bState)
 		}
 	case cmdUBuild, cmdURepair:
@@ -200,13 +206,6 @@ func (u *unit) handleWorkCommand(pathfindingBudget int, bState *battleState) {
 }
 
 func (u *unit) canAttackTargetFromCurrentPosition(bState *battleState) bool {
-	// @reminder: dzięki temu sprawdzeniu jednostki idące ściąć drzewo nie ładują się w
-	//   miejsce, na które zaraz spadnie. Bez tego ignorowałyby bezpieczne podejście.
-	// bez u.Command == cmdUAttack lub sprawdzenia czy cel jest drzewem psuje się rzucanie czarów.
-	if u.Target.Kind == targetTile && u.Command == cmdUAttack {
-		return false
-	}
-
 	if bState.Board.Tiles[u.X][u.Y].IsBurning {
 		u.invalidatePathForRecalculation()
 
@@ -221,6 +220,15 @@ func (u *unit) canAttackTargetFromCurrentPosition(bState *battleState) bool {
 	target, err := bState.resolveTarget(u.Target)
 	if err != nil {
 		return false
+	}
+
+	// @reminder: dzięki temu sprawdzeniu jednostki idące ściąć drzewo nie ładują się w
+	//   miejsce, na które zaraz spadnie. Bez tego ignorowałyby bezpieczne podejście.
+	// bez u.Command == cmdUAttack lub sprawdzenia czy cel jest drzewem psuje się rzucanie czarów.
+	if u.Type == unitAxeman && u.Target.Kind == targetTile && u.Command == cmdUAttack {
+		if u.X == target.Tile.X-1 && u.Y == target.Tile.Y {
+			return false
+		}
 	}
 
 	distance := u.calculateDistanceToTarget(target)
@@ -635,15 +643,21 @@ func (u *unit) fleeBurningTile(bState *battleState) {
 		}
 	}
 
-	if len(safeTiles) > 0 {
-		target := safeTiles[rng.Intn(len(safeTiles))]
-		u.Command = cmdUMove
-		u.Approach = target
-		u.State = stateMoving
-		u.invalidatePathForRecalculation()
-		u.Delay = 1
-		u.facePoint(target)
+	if len(safeTiles) == 0 {
+		return
 	}
+
+	target, err := findBestReachableTile(u, safeTiles, bState.Board)
+	if err != nil {
+		return
+	}
+
+	u.Command = cmdUMove
+	u.Approach = target
+	u.State = stateMoving
+	u.invalidatePathForRecalculation()
+	u.Delay = 1
+	u.facePoint(target)
 }
 
 func (u *unit) canActOnIdle() bool {
@@ -732,6 +746,9 @@ func (u *unit) handleTargetReached(bState *battleState) {
 		return
 	case cmdUCastSpell:
 		u.State = stateCastingSpell
+		u.setAnimationType()
+		u.AnimationFrame = 0
+		u.AnimationCounter = 0
 	case cmdUBuild, cmdURepair:
 		u.work(bState)
 	default:

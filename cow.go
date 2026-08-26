@@ -150,7 +150,7 @@ func (u *unit) tryEatGrass(bState *battleState) bool {
 		return true
 	}
 
-	// Jeśli to ściernisko (STUBBED) lub inny teren → nie da się zjeść
+	// Jeśli to ściernisko lub inny teren → nie da się zjeść
 	return false
 }
 

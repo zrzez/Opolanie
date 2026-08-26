@@ -147,6 +147,10 @@ func (u *unit) ensureDelayIsSet() {
 }
 
 func (u *unit) determineActiveStateFromCommand() unitState {
+	if !u.isAtTarget() {
+		return stateMoving
+	}
+
 	switch u.Command {
 	case cmdUMove:
 		return stateMoving
@@ -296,10 +300,13 @@ func (u *unit) setAttackTimings() {
 		u.setMeleeTimings()
 	}
 
-	// Nowy atak = start animacji od początku.
-	if u.Type == unitArcher {
-		u.updateArcherAttackAnimation()
-	}
+	/*
+	   // Nowy atak = start animacji od początku.
+
+	   	if u.Type == unitArcher {
+	   		u.updateArcherAttackAnimation()
+	   	}
+	*/
 }
 
 func (u *unit) setRangedTimings() {
@@ -402,46 +409,6 @@ func (u *unit) getAnimationType() animationType {
 
 func (u *unit) setAnimationType() {
 	u.AnimationType = u.getAnimationType()
-
-	if u.Type == unitArcher {
-		u.AnimStep = 0
-		u.AnimTick = 0
-
-		if u.AnimationType == animationFight {
-			u.updateArcherAttackAnimation()
-		} else {
-			u.updateArcherAnimation()
-		}
-
-		return
-	}
-}
-
-func (u *unit) updateArcherAnimation() {
-	anim := u.getAnimationType()
-
-	if anim != u.AnimationType {
-		u.AnimationType = anim
-		u.AnimStep = 0
-		u.AnimTick = 0
-	}
-
-	// Walka jest obsługiwana osobno przez updateArcherAttackAnimation.
-	if u.AnimationType == animationFight {
-		return
-	}
-
-	u.AnimTick++
-	if u.AnimTick >= 2 {
-		u.AnimTick = 0
-		u.AnimStep++
-		if u.AnimStep >= animFramesCount {
-			u.AnimStep = 0
-		}
-	}
-
-	dir := u.animationDirection()
-	u.SpriteID = spriteTable[u.Type][u.AnimationType][dir][u.AnimStep]
 }
 
 func (u *unit) updateArcherAttackAnimation() {
