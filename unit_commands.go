@@ -137,6 +137,12 @@ func (u *unit) executeStandardUnitCommand(pathfindingBudget int, bState *battleS
 		} else {
 			u.State = stateMoving
 			u.setAnimationType()
+
+			if appraoch, err := u.findApproachTileForTarget(u.Target, bState); err == nil {
+				u.Approach = appraoch
+				u.invalidatePathForRecalculation()
+			}
+
 			u.move(pathfindingBudget, bState)
 		}
 	case cmdUBuild, cmdURepair:
