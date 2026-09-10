@@ -138,8 +138,8 @@ func (u *unit) executeStandardUnitCommand(pathfindingBudget int, bState *battleS
 			u.State = stateMoving
 			u.setAnimationType()
 
-			if appraoch, err := u.findApproachTileForTarget(u.Target, bState); err == nil {
-				u.Approach = appraoch
+			if approach, err := u.findApproachTileForTarget(u.Target, bState); err == nil {
+				u.Approach = approach
 				u.invalidatePathForRecalculation()
 			}
 
