@@ -55,9 +55,11 @@ func updateWorldTimers(bState *battleState) {
 			for x := uint8(1); x < boardMaxX-1; x++ {
 				currentTile := &bState.Board.Tiles[x][y]
 
+				// Zarządzanie efektem odrastania trawy.
 				switch currentTile.GrazedOverlayID {
 				case uint8(spriteGrassStubbed):
 					currentTile.GrazedOverlayID = uint8(spriteGrassGrazed)
+				// Czyli zawsze jest nakładka spriteGrassGrazed i trzeba patrzeć też na IsGrazed
 				case uint8(spriteGrassGrazed):
 					currentTile.IsGrazed = false
 				}

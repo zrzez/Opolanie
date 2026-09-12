@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
 )
@@ -11,7 +12,7 @@ import (
 const (
 	grazingRadius         = 12  // Promień pastwiska od obory
 	eatingDelay           = 12  // Czas trwania jedzenia jednej kępki
-	fullUdderAmount       = 100 // Pojemność wymienia
+	fullUdderAmount       = 100 // Pojemność wymion
 	milkingSpeed    uint8 = 3   // celuję w 1,6 sekundy dojenia
 )
 
@@ -104,54 +105,45 @@ func (u *unit) grazeCowPhase(pathfindingBudget int, bState *battleState) {
 	u.findNewPasture(pathfindingBudget, bState)
 }
 
-var (
-	isHealthyGrass bool
-	isGrazedGrass  bool
+const (
+	milkGainHealthyGrass = 25
+	milkGainGrazedGrass  = 13
 )
 
+// Odpowiada za obsłużenie wszystkich przypadków przy wypasaniu krowy.
 func (u *unit) tryEatGrass(bState *battleState) bool {
 	currentTile := &bState.Board.Tiles[u.X][u.Y]
-	texID := currentTile.TextureID
-	isHealthyGrass = isGrass(texID) && !currentTile.IsGrazed
-	isGrazedGrass = isGrass(texID) && currentTile.IsGrazed && uint16(currentTile.GrazedOverlayID) != spriteGrassStubbed
 
-	if isHealthyGrass {
-		// Krok 1: Cała → nadgryziona
+	// Jeśli nie trawa, to wychodzimy
+	if !isGrass(currentTile.TextureID) {
+		return false
+	}
+
+	var milkGain uint8
+
+	switch {
+	// Pełna trawa
+	case !currentTile.IsGrazed:
 		currentTile.IsGrazed = true
 		currentTile.GrazedOverlayID = uint8(spriteGrassGrazed)
-
-		u.State = stateGrazing
-		u.setAnimationType()
-		u.Udder += 25
-
-		if u.Udder > fullUdderAmount {
-			u.Udder = fullUdderAmount
-		}
-
-		u.Delay = eatingDelay
-
-		return true
-	}
-
-	if isGrazedGrass {
-		// Krok 2: Nadgryziona → wyżarta
+		milkGain = milkGainHealthyGrass
+	// Nadgryziona trawa
+	case uint16(currentTile.GrazedOverlayID) == spriteGrassGrazed:
 		currentTile.GrazedOverlayID = uint8(spriteGrassStubbed)
+		milkGain = milkGainGrazedGrass
+	// Wyżarta w pełni lub coś innego czego nie przewidziałem
+	default:
+		fmt.Println("tryEatGrass(), przełącznik, przypadek domyślny zwraca false")
 
-		u.State = stateGrazing
-		u.setAnimationType()
-		u.Udder += 13
-
-		if u.Udder > fullUdderAmount {
-			u.Udder = fullUdderAmount
-		}
-
-		u.Delay = eatingDelay
-
-		return true
+		return false
 	}
 
-	// Jeśli to ściernisko lub inny teren → nie da się zjeść
-	return false
+	u.State = stateGrazing
+	u.setAnimationType()
+	u.Udder = min(u.Udder+milkGain, fullUdderAmount)
+	u.Delay = eatingDelay
+
+	return true
 }
 
 // Szuka nowej trawy i wydaje rozkaz ruchu.
