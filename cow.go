@@ -82,11 +82,12 @@ func (u *unit) milkCowPhase(pathfindingBudget int, bState *battleState) {
 
 // Faza 2 i 3: Logika wypasania
 func (u *unit) grazeCowPhase(pathfindingBudget int, bState *battleState) {
-	// Krok A: Jeśli stoimy na trawie → jedz
+	// Krok A: Jeśli stoimy na trawie → jedz - 12.09.2026 sprawdzone i posprzątane
 	if u.tryEatGrass(bState) {
 		return
 	}
 
+	// @reminder: wygląda jak coś co powinno być ogarnięte w MSS jak u innych jednostek
 	// Jeśli mamy rozkaz ruchu (np. gracz kliknął), a nie doszliśmy → idź
 	if u.Command == cmdUMove && !u.isAtTarget() {
 		u.move(pathfindingBudget, bState)
@@ -94,6 +95,7 @@ func (u *unit) grazeCowPhase(pathfindingBudget int, bState *battleState) {
 		return
 	}
 
+	// @reminder: wygląda jak coś co powinno być ogarnięte w MSS jak u innych jednostek
 	// Krok B: Jeśli nie jemy, a jesteśmy w ruchu → idź dalej
 	if u.State == stateMoving && !u.isAtTarget() {
 		u.move(pathfindingBudget, bState)
@@ -101,7 +103,7 @@ func (u *unit) grazeCowPhase(pathfindingBudget int, bState *battleState) {
 		return
 	}
 
-	// Krok C: Znajdź nowy kawałek trawy
+	// Krok C: Znajdź nowy kawałek trawy - @todo: ogarnij
 	u.findNewPasture(pathfindingBudget, bState)
 }
 
