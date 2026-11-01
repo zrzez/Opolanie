@@ -16,6 +16,8 @@ const (
 	milkingSpeed    uint8 = 3   // celuję w 1,6 sekundy dojenia
 )
 
+// @todo: @reminder: zwinę to później w MSS dla wszystkich jednostek, bo tutaj nie bardzo
+//   jest sens trzymać osobno. O ile dobrze rozumiem - 29.10.2026
 func (u *unit) handleCowBehavior(pathfindingBudget int, bState *battleState) {
 	// 0. Obsługa techniczna, opóźnienia i blokady
 	if u.Delay > 0 {
@@ -24,27 +26,34 @@ func (u *unit) handleCowBehavior(pathfindingBudget int, bState *battleState) {
 		return
 	}
 
-	// 0. Ucieczka
+	// 1. Ucieczka
 	if u.Command == cmdUFlee {
-		bState.handleCowFlee(u)
+		if u.isAtTarget() {
+			u.setIdle()
+		} else {
+			u.move(pathfindingBudget, bState)
+		}
+
+		return
 	}
 
-	// 1. Tryb: "Stać bezmyślnie", rozkaz od gracza
+	// 2. Tryb: "Stać bezmyślnie", rozkaz od gracza
 	// @todo: muszę to wypróbować i zobaczyć, jak to wyłączyć, krowa nie może w nieskończoność stać bezczynnie
 	if u.Command == cmdUStop {
+		// @reminder: jedyne użycie idleCow. Pewnie do zastąpienia zwykłym idle
 		u.idleCow()
 
 		return
 	}
 
-	// 2. Faza: Obora, pełne wymiona lub ucieczka
+	// 3. Faza: Obora, pełne wymiona lub ucieczka
 	if u.Udder >= fullUdderAmount || u.Command == cmdBMilking {
 		u.milkCowPhase(pathfindingBudget, bState)
 
 		return
 	}
 
-	// 3. Faza: Wypasanie
+	// 4. Faza: Wypasanie
 	// Obejmuje też tryb CMD_GRAZE i CMD_IDLE (szukanie jedzenia) to może być problematyczne dla 1.
 	u.grazeCowPhase(pathfindingBudget, bState)
 }
@@ -515,9 +524,11 @@ func findReachableGrass(u *unit, bState *battleState, originX, originY, radius u
 			nextX, nextY := uint8(calcX), uint8(calcY)
 
 			hash := int(nextY)*int(boardMaxX) + int(nextX)
+
 			if visited[hash] {
 				continue
 			}
+
 			visited[hash] = true
 
 			// 1. Sprawdź zasięg od "Domu".
@@ -548,20 +559,76 @@ func findReachableGrass(u *unit, bState *battleState, originX, originY, radius u
 	return 0, 0, false
 }
 
+// @reminder: używam tej funkcji w miejscu, które już gwarantuje, że u.Exists.
 func (bState *battleState) handleCowFlee(u *unit) {
-	if u.Type == unitCow && u.Exists {
-		if u.Udder < fullUdderAmount && u.Command != cmdUFlee {
-			barnX, barnY, foundBarn := findNearestBarnMilkingSpot(u, bState)
-			if foundBarn {
-				cmd := &command{
-					ActionType: cmdUFlee,
-					Target:     targetReference{Kind: targetBuilding, Position: point{X: barnX, Y: barnY}},
-				}
-				u.addUnitCommand(cmd, bState)
-				log.Printf("unit %d (COW): Otrzymała obrażenia, ucieka do obory na (%d,%d).", u.ID, barnX, barnY)
-			} else {
-				log.Printf("unit %d (COW): Otrzymała obrażenia, ale nie znalazła obory do ucieczki. ", u.ID)
+	if !u.wasAttacked || u.Type != unitCow {
+		return
+	}
+
+	u.wasAttacked = false
+
+	fleeCoords, found := bState.findCowFleeDestination(u)
+	if !found {
+		// @todo: krowa powinna zacząć uciekać w losowe miejsca zamiast stać bezczynnie
+		log.Println("Krowa otrzymała obrażenia, ale nie ma gdzie uciekać")
+		return
+	}
+
+	cmd := &command{
+		ActionType: cmdUFlee,
+		Target:     targetReference{Kind: targetBuilding, Position: fleeCoords},
+	}
+
+	u.addUnitCommand(cmd, bState)
+
+	log.Printf("Krowa otrzymała obrażenia, ucieka do obory na (%d,%d).", fleeCoords.X, fleeCoords.Y)
+}
+
+func (bState *battleState) findCowFleeDestination(u *unit) (point, bool) {
+	// 1. Sprawdzenie przynależnej obory
+	if u.BelongsTo != nil && u.BelongsTo.Exists {
+		if fleeCoords, ok := bState.Board.electSpawnTile(u.BelongsTo); ok {
+			return fleeCoords, true
+		}
+	}
+
+	// 2. Szukanie innego budynku lub budowli
+	return bState.findFallbackFleeSpot(u)
+}
+
+func (bState *battleState) findFallbackFleeSpot(u *unit) (point, bool) {
+	var bestCoords point
+	priority := 0 // 0 - brak, 1 - zwykły budynek, 2 - budynek główny
+
+	for _, bld := range bState.Buildings {
+		if bld.Owner != u.Owner || !bld.Exists || bld.Type == buildingPalisade || bld.Type == buildingBridge {
+			continue
+		}
+
+		fleeCoords, ok := bState.Board.electSpawnTile(bld)
+		if !ok {
+			continue
+		}
+
+		switch bld.Type {
+		case buildingBarn:
+			// Byle obora kończy poszukiwania
+			return fleeCoords, true
+
+		case buildingMain:
+			if priority < 2 {
+				bestCoords = fleeCoords
+				priority = 2
+			}
+
+		default:
+			// Dowolny inny budynek lub budowla
+			if priority < 1 {
+				bestCoords = fleeCoords
+				priority = 1
 			}
 		}
 	}
+
+	return bestCoords, priority > 0
 }

@@ -559,10 +559,8 @@ func (bState *battleState) updateBuildings() {
 // ================
 
 func (bState *battleState) updateUnit(u *unit) {
-	if u.wasAttacked {
-		bState.handleCowFlee(u)
-		u.wasAttacked = false
-	}
+	// @reminder: nad tym pracuję 01.11.2026
+	bState.handleCowFlee(u)
 
 	pathfindingBudget := bState.PathfindingBudget
 
