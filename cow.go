@@ -569,8 +569,8 @@ func (bState *battleState) handleCowFlee(u *unit) {
 
 	fleeCoords, found := bState.findCowFleeDestination(u)
 	if !found {
-		// @todo: krowa powinna zacząć uciekać w losowe miejsca zamiast stać bezczynnie
-		log.Println("Krowa otrzymała obrażenia, ale nie ma gdzie uciekać")
+		u.fleeBurningTile(bState)
+		u.Command = cmdUFlee
 		return
 	}
 
