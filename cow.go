@@ -159,7 +159,7 @@ func (u *unit) tryEatGrass(bState *battleState) bool {
 
 // Szuka nowej trawy i wydaje rozkaz ruchu.
 func (u *unit) findNewPasture(pathfindingBudget int, bState *battleState) {
-	originX, originY, ok := u.getGrazingAnchorPoint()
+	/*originX, originY, ok := u.getGrazingAnchorPoint()
 	if !ok {
 		return
 	}
@@ -167,10 +167,13 @@ func (u *unit) findNewPasture(pathfindingBudget int, bState *battleState) {
 	// Użycie deterministycznego algorytmu BFS
 	// Szuka najbliższej trawy, do której DA SIĘ dojść
 
-	grassX, grassY, found := findReachableGrass(u, bState, originX, originY, grazingRadius)
+	grassX, grassY, found := findReachableGrass(u, bState, originX, originY, grazingRadius)*/
+
+	grassTile, found := findReachableGrass2(u, bState)
+	fmt.Printf("Znalazłem trawę %d,%d", grassTile.X, grassTile.Y)
 
 	if found {
-		u.addAndMove(pathfindingBudget, cmdUGraze, grassX, grassY, 0, bState, "Znalazłam trawę.")
+		u.addAndMove(pathfindingBudget, cmdUGraze, grassTile.X, grassTile.Y, 0, bState, "Znalazłam trawę.")
 	} else {
 		// Nie ma trawy -> Wróć pod oborę i czekaj
 		u.returnToBarnArea(pathfindingBudget, bState)
@@ -486,7 +489,139 @@ func abs(x int) int {
 	return x
 }
 
+// Ma zastąpić findReachableGrass, nie biorę niczego za pewnik ani warte przeniesienia. Ma być lepsze i korzystać z
+// bieżącej architektury a nie przestarzałej, jak poprzednia wersja.
+// Krowa nie będzie zważać na odległość od obory. To był tymczasowy hack, anie ostateczne rozwiązanie.
+
+// Pierścien wewnętrzny. Bezpośrednio sąsiadujące z krową.
+var grazingRing1 = [8][2]int8{
+	{-1, -1},
+	{0, -1},
+	{1, -1},
+	{-1, 0},
+	{1, 0},
+	{-1, 1},
+	{0, 1},
+	{1, 1},
+}
+
+// Pierścień zewnętrzny do wypasu krowy.
+var grazingRing2 = [16][2]int8{
+	{-2, -2},
+	{-1, -2},
+	{0, -2},
+	{1, -2},
+	{2, -2},
+	{-2, -1},
+	{2, -1},
+	{-2, 0},
+	{2, 0},
+	{-2, 1},
+	{2, 1},
+	{-2, 2},
+	{-1, 2},
+	{0, 2},
+	{1, 2},
+	{2, 2},
+}
+
+// 0. Krowa szuka najbliższego „pełnego kafelka trawy”; odstępstwo od pierwowzoru, bo nie bawię się w dzielnie
+//  różnych traw na mniej i bardziej pożywne. Są trzy stany: pełna, nadgryziona, wyżarta i tego się trzymam
+// 1. Przeszukuje obszar 4na4
+// 1a. jeżeli nic nie znajdzie to idzie w losowy kafelek z przeszukanego obszaru i ponawia poszukiwania
+// 1b. jeżeli znajdzie coś to sprawdza priorytet - 2 pełna, 1 nadgryziona, wyżarta 0
+// 1c. wylicza najkrótszą drogę z listy priorytetów, w razie remisu losujemy
+// 2. idzie
+func findReachableGrass2(u *unit, bState *battleState) (point, bool) {
+	var fullGrass []point     // kafelki o najwyższym priorytecie
+	var grazedGrass []point   // zbieramy na wypadek gdyby ↑↑↑ nie było
+	var fallbackTiles []point // jeżeli nie ma gdzie się wypasać, to bierzemy byle co i tam idziemy
+
+	// 1. Sprawdzamy pierścień wewnętrzny
+	for _, offset := range grazingRing1 {
+		checkX := int8(u.X) + offset[0]
+		checkY := int8(u.Y) + offset[1]
+
+		// Jeśli nie można stanąć na danym kafelku to pomijamy.
+		if !bState.Board.isValidWalkableTile(checkX, checkY) || bState.Board.Tiles[checkX][checkY].IsBurning {
+			continue
+		}
+
+		pt := point{X: uint8(checkX), Y: uint8(checkY)}
+		// Dodajemy do listy awaryjnej
+		fallbackTiles = append(fallbackTiles, pt)
+
+		currentTile := &bState.Board.Tiles[checkX][checkY]
+
+		if isGrass(currentTile.TextureID) {
+			if !currentTile.IsGrazed {
+				fullGrass = append(fullGrass, pt)
+			} else if uint16(currentTile.GrazedOverlayID) == spriteGrassGrazed {
+				grazedGrass = append(grazedGrass, pt)
+			}
+		}
+	}
+
+	// Jeśli tuż obok krowy jest soczysta trawa, to przerywamy poszukiwania, zwracamy losowy kafelek.
+	if len(fullGrass) > 0 {
+		return fullGrass[rng.Intn(len(fullGrass))], true
+	}
+
+	// 2. Sprawdzamy pierścień zewnętrzny
+	for _, offset := range grazingRing2 {
+		checkX := int8(u.X) + offset[0]
+		checkY := int8(u.Y) + offset[1]
+
+		// Jeśli nie można stanąć na danym kafelku to pomijamy.
+		if !bState.Board.isValidWalkableTile(checkX, checkY) || bState.Board.Tiles[checkX][checkY].IsBurning {
+			continue
+		}
+
+		pt := point{X: uint8(checkX), Y: uint8(checkY)}
+		// Dodajemy do listy awaryjnej
+		fallbackTiles = append(fallbackTiles, pt)
+
+		currentTile := &bState.Board.Tiles[checkX][checkY]
+		if isGrass(currentTile.TextureID) {
+			if !currentTile.IsGrazed {
+				fullGrass = append(fullGrass, pt)
+			} else if uint16(currentTile.GrazedOverlayID) == spriteGrassGrazed {
+				grazedGrass = append(grazedGrass, pt)
+			}
+		}
+	}
+
+	// Jeśli jest soczysta trawa, to przerywamy poszukiwania, zwracamy losowy kafelek.
+	if len(fullGrass) > 0 {
+		return fullGrass[rng.Intn(len(fullGrass))], true
+	}
+
+	// Jeżeli nie było w obu pierścieniach nienaruszonej trawy, to zwracamy już lekko wyżartą
+	if len(grazedGrass) > 0 {
+		// @todo: później się zastanów, czy losowa wyżarta to dobre rozwiązanie. Pomijamy odległość!
+		//  w sumie ta z wewnętrznego powinna mieć pierwszeństwo
+		return grazedGrass[rng.Intn(len(grazedGrass))], true
+	}
+
+	// Przy braku jakiejkolwiek trawy do wypasania, idziemy w losowe wolne pole w zasięgu.
+	// W zamyśle to umożliwi przeszukanie innego obszaru do wypasania krów.
+	// @todo: sprawdź, czy działa jak myślę
+	if len(fallbackTiles) > 0 {
+		return fallbackTiles[rng.Intn(len(fallbackTiles))], true
+	}
+
+	return point{}, false
+}
+
 func findReachableGrass(u *unit, bState *battleState, originX, originY, radius uint8) (uint8, uint8, bool) {
+	// 0. Krowa szuka najbliższego „pełnego kafelka trawy”; odstępstwo od pierwowzoru, bo nie bawię się w dzielnie
+	// różnych traw na mniej i bardziej pożywne. Są trzy stany: pełna, nadgryziona, wyżarta i tego się trzymam
+	// 1. Przeszukuje obszar 4na4
+	// 1a. jeżeli nic nie znajdzie to idzie w losowy kafelek z przeszukanego obszaru i ponawia poszukiwania
+	// 1b. jeżeli znajdzie coś to sprawdza priorytet - 2 pełna, 1 nadgryziona, wyżarta 0
+	// 1c. wylicza najkrótszą drogę z listy priorytetów, w razie remisu losujemy
+	// 2. idzie
+
 	// Zakładam, że u.X i u.Y są uint8
 	queue := []point{{u.X, u.Y}}
 
