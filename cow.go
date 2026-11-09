@@ -169,6 +169,8 @@ func (u *unit) findNewPasture(pathfindingBudget int, bState *battleState) {
 
 	grassX, grassY, found := findReachableGrass(u, bState, originX, originY, grazingRadius)*/
 
+	//   ↓↓ zwraca true dla „fallback” czyli braku trawy do wypasania krowy!
+	//   ↓↓ czyli jest niekonsekwencja z dalszą częścią kodu.
 	grassTile, found := findReachableGrass(u, bState)
 	fmt.Printf("Znalazłem trawę %d,%d", grassTile.X, grassTile.Y)
 
@@ -489,107 +491,125 @@ func abs(x int) int {
 	return x
 }
 
-// Pierścien wewnętrzny. Bezpośrednio sąsiadujące z krową.
-var grazingRing1 = [8][2]int8{
-	{-1, -1},
-	{0, -1},
-	{1, -1},
-	{-1, 0},
-	{1, 0},
-	{-1, 1},
-	{0, 1},
-	{1, 1},
-}
-
-// Pierścień zewnętrzny do wypasu krowy.
-var grazingRing2 = [16][2]int8{
-	{-2, -2},
-	{-1, -2},
-	{0, -2},
-	{1, -2},
-	{2, -2},
-	{-2, -1},
-	{2, -1},
-	{-2, 0},
-	{2, 0},
-	{-2, 1},
-	{2, 1},
-	{-2, 2},
-	{-1, 2},
-	{0, 2},
-	{1, 2},
-	{2, 2},
-}
-
-// @reminder: krowa błądzi bez względu na odległość do trawy, z pewnością się to zemści przy rzecze
 func findReachableGrass(u *unit, bState *battleState) (point, bool) {
-	// 1. Sprawdzamy pierścień wewnętrzny
-	full1, grazed1, fallback1 := scanRing(u, bState, grazingRing1[:])
+	scan := scanReachableGrassBFS(u, bState, 3)
 
-	// Jeśli tuż obok krowy jest soczysta trawa, to przerywamy poszukiwania, zwracamy losowy kafelek.
-	if len(full1) > 0 {
-		return full1[rng.Intn(len(full1))], true
+	switch {
+	case len(scan.full1) > 0:
+		return scan.full1[rng.Intn(len(scan.full1))], true
+	case len(scan.grazed1) > 0:
+		return scan.grazed1[rng.Intn(len(scan.grazed1))], true
+	case len(scan.full2) > 0:
+		return scan.full2[rng.Intn(len(scan.full2))], true
+	case len(scan.grazed2) > 0:
+		return scan.grazed2[rng.Intn(len(scan.grazed2))], true
+	case len(scan.full3) > 0:
+		return scan.full3[rng.Intn(len(scan.full3))], true
+	case len(scan.grazed3) > 0:
+		return scan.grazed3[rng.Intn(len(scan.grazed3))], true
+	case len(scan.fallback) > 0:
+		return scan.fallback[rng.Intn(len(scan.fallback))], true
+	default:
+		return point{}, false
 	}
-
-	// Jeżeli nie było w nienaruszonej trawy, to zwracamy już lekko wyżartą
-	if len(grazed1) > 0 {
-		// @todo: później się zastanów, czy losowa wyżarta to dobre rozwiązanie. Pomijamy odległość!
-		//  w sumie ta z wewnętrznego powinna mieć pierwszeństwo
-		return grazed1[rng.Intn(len(grazed1))], true
-	}
-
-	// 2. Sprawdzamy pierścień zewnętrzny
-	full2, grazed2, fallback2 := scanRing(u, bState, grazingRing2[:])
-
-	// Jeśli jest soczysta trawa, to przerywamy poszukiwania, zwracamy losowy kafelek.
-	if len(full2) > 0 {
-		return full2[rng.Intn(len(full2))], true
-	}
-
-	// Jeżeli nie było w obu pierścieniach nienaruszonej trawy, to zwracamy już lekko wyżartą
-	if len(grazed2) > 0 {
-		// @todo: później się zastanów, czy losowa wyżarta to dobre rozwiązanie. Pomijamy odległość!
-		//  w sumie ta z wewnętrznego powinna mieć pierwszeństwo
-		return grazed2[rng.Intn(len(grazed2))], true
-	}
-
-	// Przy braku jakiejkolwiek trawy do wypasania, idziemy w losowe wolne pole w zasięgu.
-	// W zamyśle to umożliwi przeszukanie innego obszaru do wypasania krów.
-	// @todo: sprawdź, czy działa jak myślę
-	allFallbacks := append(fallback1, fallback2...)
-	if len(allFallbacks) > 0 {
-		return allFallbacks[rng.Intn(len(allFallbacks))], true
-	}
-
-	return point{}, false
 }
 
-func scanRing(u *unit, bState *battleState, ring [][2]int8) (full, grazed, fallback []point) {
-	for _, offset := range ring {
-		checkX := int8(u.X) + offset[0]
-		checkY := int8(u.Y) + offset[1]
+type bfsGrassNode struct {
+	x, y  int8
+	depth int8
+}
 
-		// Jeśli nie można stanąć na danym kafelku to pomijamy.
-		if !bState.Board.isValidWalkableTile(checkX, checkY) || bState.Board.Tiles[checkX][checkY].IsBurning {
+type grassScanResult struct {
+	full1, full2, full3       []point
+	grazed1, grazed2, grazed3 []point
+	fallback                  []point
+}
+
+func scanReachableGrassBFS(u *unit, bState *battleState, maxDepth int8) grassScanResult {
+	var res grassScanResult
+
+	// Siatka 7x7 wokół krowy
+	var visited [7][7]bool
+	visited[3][3] = true // bieżące położenie krowy
+
+	queue := make([]bfsGrassNode, 0, 49)
+	queue = append(queue, bfsGrassNode{x: int8(u.X), y: int8(u.Y), depth: 0})
+
+	for len(queue) > 0 {
+		curr := queue[0]
+		queue = queue[1:]
+
+		// jeśli zaszliśmy za daleko, to pomijamy
+		if curr.depth >= maxDepth {
 			continue
 		}
 
-		currentPoint := point{X: uint8(checkX), Y: uint8(checkY)}
-		// Dodajemy do listy awaryjnej
-		fallback = append(fallback, currentPoint)
+		nextDepth := curr.depth + 1
 
-		currentTile := &bState.Board.Tiles[checkX][checkY]
+		for dy := int8(-1); dy <= 1; dy++ {
+			for dx := int8(-1); dx <= 1; dx++ {
+				// jeśli jesteśmy na miejscu szukającej krowy, to pomijamy
+				if dx == 0 && dy == 0 {
+					continue
+				}
 
-		if isGrass(currentTile.TextureID) {
-			if !currentTile.IsGrazed {
-				full = append(full, currentPoint)
-			} else if uint16(currentTile.GrazedOverlayID) == spriteGrassGrazed {
-				grazed = append(grazed, currentPoint)
+				nx := curr.x + dx
+				ny := curr.y + dy
+
+				relX := nx - int8(u.X) + 3
+				relY := ny - int8(u.Y) + 3
+
+				// Ograniczenie aby nie wyjść poza visited
+				if relX < 0 || relX >= 7 || relY < 0 || relY >= 7 {
+					continue
+				}
+
+				// Bez powtórzeń
+				if visited[relX][relY] {
+					continue
+				}
+
+				visited[relX][relY] = true
+
+				// Sprawdzenie, czy można tam stanąć
+				if !bState.Board.isValidWalkableTile(nx, ny) || bState.Board.Tiles[nx][ny].IsBurning {
+					continue
+				}
+
+				pt := point{X: uint8(nx), Y: uint8(ny)}
+				res.fallback = append(res.fallback, pt)
+
+				// Podział kafelka według soczystości trawy
+				electedTile := &bState.Board.Tiles[nx][ny]
+				if isGrass(electedTile.TextureID) {
+					if !electedTile.IsGrazed {
+						switch nextDepth {
+						case 1:
+							res.full1 = append(res.full1, pt)
+						case 2:
+							res.full2 = append(res.full2, pt)
+						case 3:
+							res.full3 = append(res.full3, pt)
+						}
+					} else if uint16(electedTile.GrazedOverlayID) == spriteGrassGrazed {
+						switch nextDepth {
+						case 1:
+							res.grazed1 = append(res.grazed1, pt)
+						case 2:
+							res.grazed2 = append(res.grazed2, pt)
+						case 3:
+							res.grazed3 = append(res.grazed3, pt)
+						}
+					}
+				}
+
+				// Do kolejki dodajemy wyłącznie węzły przechodnie dla następnych kroków
+				queue = append(queue, bfsGrassNode{x: nx, y: ny, depth: nextDepth})
 			}
 		}
 	}
 
-	return full, grazed, fallback
+	return res
 }
 
 // @reminder: używam tej funkcji w miejscu, które już gwarantuje, że u.Exists.
