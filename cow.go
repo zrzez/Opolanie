@@ -169,7 +169,7 @@ func (u *unit) findNewPasture(pathfindingBudget int, bState *battleState) {
 
 	grassX, grassY, found := findReachableGrass(u, bState, originX, originY, grazingRadius)*/
 
-	grassTile, found := findReachableGrass2(u, bState)
+	grassTile, found := findReachableGrass(u, bState)
 	fmt.Printf("Znalazłem trawę %d,%d", grassTile.X, grassTile.Y)
 
 	if found {
@@ -489,10 +489,6 @@ func abs(x int) int {
 	return x
 }
 
-// Ma zastąpić findReachableGrass, nie biorę niczego za pewnik ani warte przeniesienia. Ma być lepsze i korzystać z
-// bieżącej architektury a nie przestarzałej, jak poprzednia wersja.
-// Krowa nie będzie zważać na odległość od obory. To był tymczasowy hack, anie ostateczne rozwiązanie.
-
 // Pierścien wewnętrzny. Bezpośrednio sąsiadujące z krową.
 var grazingRing1 = [8][2]int8{
 	{-1, -1},
@@ -525,173 +521,75 @@ var grazingRing2 = [16][2]int8{
 	{2, 2},
 }
 
-// 0. Krowa szuka najbliższego „pełnego kafelka trawy”; odstępstwo od pierwowzoru, bo nie bawię się w dzielnie
-//  różnych traw na mniej i bardziej pożywne. Są trzy stany: pełna, nadgryziona, wyżarta i tego się trzymam
-// 1. Przeszukuje obszar 4na4
-// 1a. jeżeli nic nie znajdzie to idzie w losowy kafelek z przeszukanego obszaru i ponawia poszukiwania
-// 1b. jeżeli znajdzie coś to sprawdza priorytet - 2 pełna, 1 nadgryziona, wyżarta 0
-// 1c. wylicza najkrótszą drogę z listy priorytetów, w razie remisu losujemy
-// 2. idzie
-func findReachableGrass2(u *unit, bState *battleState) (point, bool) {
-	var fullGrass []point     // kafelki o najwyższym priorytecie
-	var grazedGrass []point   // zbieramy na wypadek gdyby ↑↑↑ nie było
-	var fallbackTiles []point // jeżeli nie ma gdzie się wypasać, to bierzemy byle co i tam idziemy
-
+// @reminder: krowa błądzi bez względu na odległość do trawy, z pewnością się to zemści przy rzecze
+func findReachableGrass(u *unit, bState *battleState) (point, bool) {
 	// 1. Sprawdzamy pierścień wewnętrzny
-	for _, offset := range grazingRing1 {
-		checkX := int8(u.X) + offset[0]
-		checkY := int8(u.Y) + offset[1]
-
-		// Jeśli nie można stanąć na danym kafelku to pomijamy.
-		if !bState.Board.isValidWalkableTile(checkX, checkY) || bState.Board.Tiles[checkX][checkY].IsBurning {
-			continue
-		}
-
-		pt := point{X: uint8(checkX), Y: uint8(checkY)}
-		// Dodajemy do listy awaryjnej
-		fallbackTiles = append(fallbackTiles, pt)
-
-		currentTile := &bState.Board.Tiles[checkX][checkY]
-
-		if isGrass(currentTile.TextureID) {
-			if !currentTile.IsGrazed {
-				fullGrass = append(fullGrass, pt)
-			} else if uint16(currentTile.GrazedOverlayID) == spriteGrassGrazed {
-				grazedGrass = append(grazedGrass, pt)
-			}
-		}
-	}
+	full1, grazed1, fallback1 := scanRing(u, bState, grazingRing1[:])
 
 	// Jeśli tuż obok krowy jest soczysta trawa, to przerywamy poszukiwania, zwracamy losowy kafelek.
-	if len(fullGrass) > 0 {
-		return fullGrass[rng.Intn(len(fullGrass))], true
+	if len(full1) > 0 {
+		return full1[rng.Intn(len(full1))], true
+	}
+
+	// Jeżeli nie było w nienaruszonej trawy, to zwracamy już lekko wyżartą
+	if len(grazed1) > 0 {
+		// @todo: później się zastanów, czy losowa wyżarta to dobre rozwiązanie. Pomijamy odległość!
+		//  w sumie ta z wewnętrznego powinna mieć pierwszeństwo
+		return grazed1[rng.Intn(len(grazed1))], true
 	}
 
 	// 2. Sprawdzamy pierścień zewnętrzny
-	for _, offset := range grazingRing2 {
-		checkX := int8(u.X) + offset[0]
-		checkY := int8(u.Y) + offset[1]
-
-		// Jeśli nie można stanąć na danym kafelku to pomijamy.
-		if !bState.Board.isValidWalkableTile(checkX, checkY) || bState.Board.Tiles[checkX][checkY].IsBurning {
-			continue
-		}
-
-		pt := point{X: uint8(checkX), Y: uint8(checkY)}
-		// Dodajemy do listy awaryjnej
-		fallbackTiles = append(fallbackTiles, pt)
-
-		currentTile := &bState.Board.Tiles[checkX][checkY]
-		if isGrass(currentTile.TextureID) {
-			if !currentTile.IsGrazed {
-				fullGrass = append(fullGrass, pt)
-			} else if uint16(currentTile.GrazedOverlayID) == spriteGrassGrazed {
-				grazedGrass = append(grazedGrass, pt)
-			}
-		}
-	}
+	full2, grazed2, fallback2 := scanRing(u, bState, grazingRing2[:])
 
 	// Jeśli jest soczysta trawa, to przerywamy poszukiwania, zwracamy losowy kafelek.
-	if len(fullGrass) > 0 {
-		return fullGrass[rng.Intn(len(fullGrass))], true
+	if len(full2) > 0 {
+		return full2[rng.Intn(len(full2))], true
 	}
 
 	// Jeżeli nie było w obu pierścieniach nienaruszonej trawy, to zwracamy już lekko wyżartą
-	if len(grazedGrass) > 0 {
+	if len(grazed2) > 0 {
 		// @todo: później się zastanów, czy losowa wyżarta to dobre rozwiązanie. Pomijamy odległość!
 		//  w sumie ta z wewnętrznego powinna mieć pierwszeństwo
-		return grazedGrass[rng.Intn(len(grazedGrass))], true
+		return grazed2[rng.Intn(len(grazed2))], true
 	}
 
 	// Przy braku jakiejkolwiek trawy do wypasania, idziemy w losowe wolne pole w zasięgu.
 	// W zamyśle to umożliwi przeszukanie innego obszaru do wypasania krów.
 	// @todo: sprawdź, czy działa jak myślę
-	if len(fallbackTiles) > 0 {
-		return fallbackTiles[rng.Intn(len(fallbackTiles))], true
+	allFallbacks := append(fallback1, fallback2...)
+	if len(allFallbacks) > 0 {
+		return allFallbacks[rng.Intn(len(allFallbacks))], true
 	}
 
 	return point{}, false
 }
 
-func findReachableGrass(u *unit, bState *battleState, originX, originY, radius uint8) (uint8, uint8, bool) {
-	// 0. Krowa szuka najbliższego „pełnego kafelka trawy”; odstępstwo od pierwowzoru, bo nie bawię się w dzielnie
-	// różnych traw na mniej i bardziej pożywne. Są trzy stany: pełna, nadgryziona, wyżarta i tego się trzymam
-	// 1. Przeszukuje obszar 4na4
-	// 1a. jeżeli nic nie znajdzie to idzie w losowy kafelek z przeszukanego obszaru i ponawia poszukiwania
-	// 1b. jeżeli znajdzie coś to sprawdza priorytet - 2 pełna, 1 nadgryziona, wyżarta 0
-	// 1c. wylicza najkrótszą drogę z listy priorytetów, w razie remisu losujemy
-	// 2. idzie
+func scanRing(u *unit, bState *battleState, ring [][2]int8) (full, grazed, fallback []point) {
+	for _, offset := range ring {
+		checkX := int8(u.X) + offset[0]
+		checkY := int8(u.Y) + offset[1]
 
-	// Zakładam, że u.X i u.Y są uint8
-	queue := []point{{u.X, u.Y}}
-
-	// Hashmapa odwiedzonych
-	visited := make(map[int]bool) // Klucz int jest bezpieczniejszy dla hasha
-	visited[int(u.Y)*int(boardMaxX)+int(u.X)] = true
-
-	const maxSearchSteps = 400
-	steps := 0
-
-	// Definicja kierunków musi być na intach!
-	// Nie używaj tu struktury `point` jeśli ona ma pola uint.
-	dirs := [][2]int{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}
-
-	for len(queue) > 0 {
-		steps++
-		if steps > maxSearchSteps {
-			break
+		// Jeśli nie można stanąć na danym kafelku to pomijamy.
+		if !bState.Board.isValidWalkableTile(checkX, checkY) || bState.Board.Tiles[checkX][checkY].IsBurning {
+			continue
 		}
 
-		curr := queue[0]
-		queue = queue[1:]
+		currentPoint := point{X: uint8(checkX), Y: uint8(checkY)}
+		// Dodajemy do listy awaryjnej
+		fallback = append(fallback, currentPoint)
 
-		for _, d := range dirs {
-			// KLUCZOWE: Rzutowanie na int przed dodaniem offsetu
-			calcX := int(curr.X) + d[0]
-			calcY := int(curr.Y) + d[1]
+		currentTile := &bState.Board.Tiles[checkX][checkY]
 
-			// Sprawdzenie granic na intach
-			if calcX < 0 || calcX >= int(boardMaxX) || calcY < 0 || calcY >= int(boardMaxY) {
-				continue
-			}
-
-			// Bezpieczny powrót na uint8
-			nextX, nextY := uint8(calcX), uint8(calcY)
-
-			hash := int(nextY)*int(boardMaxX) + int(nextX)
-
-			if visited[hash] {
-				continue
-			}
-
-			visited[hash] = true
-
-			// 1. Sprawdź zasięg od "Domu".
-			// Musimy rzutować na int LUB float, żeby odjąć bezpiecznie.
-			// math.Abs wymaga float64, więc najpierw robimy diff na intach.
-			distX := abs(int(nextX) - int(originX))
-			distY := abs(int(nextY) - int(originY))
-
-			if distX+distY > int(radius) {
-				continue
-			}
-
-			// 2. Sprawdź cel (Trawa)
-			currentTile := &bState.Board.Tiles[nextX][nextY]
-			texID := currentTile.TextureID
-
-			if isGrass(texID) && !currentTile.IsGrazed && currentTile.Unit == nil && currentTile.Building == nil {
-				return nextX, nextY, true
-			}
-
-			// 3. Sprawdź drogę
-			if isWalkable(bState.Board, nextX, nextY) {
-				queue = append(queue, point{nextX, nextY})
+		if isGrass(currentTile.TextureID) {
+			if !currentTile.IsGrazed {
+				full = append(full, currentPoint)
+			} else if uint16(currentTile.GrazedOverlayID) == spriteGrassGrazed {
+				grazed = append(grazed, currentPoint)
 			}
 		}
 	}
 
-	return 0, 0, false
+	return full, grazed, fallback
 }
 
 // @reminder: używam tej funkcji w miejscu, które już gwarantuje, że u.Exists.
